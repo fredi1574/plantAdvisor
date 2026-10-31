@@ -45,6 +45,8 @@ interface PlantStoreState {
   addPlant: (payload: AddPlantPayload) => UserPlant;
   logCareEvent: (payload: LogCareEventPayload) => NotebookEntry;
   waterPlantNow: (plantId: string, notes?: string) => void;
+  waterAllNeedingWater: () => number;
+  waterAllPlants: () => number;
   saveHealthAssessment: (
     plantId: string,
     diagnosis: PlantDiagnosisResult,
@@ -210,6 +212,92 @@ export const usePlantStore = create<PlantStoreState>()(
             soilMoisture: isSucculent ? 'bone_dry' : 'slightly_damp',
           },
         });
+      },
+
+      waterAllNeedingWater: () => {
+        const state = get();
+        const needing = state.plants.filter(doesPlantNeedWatering);
+        if (needing.length === 0) return 0;
+
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const nowMs = now.getTime();
+        const needingIds = new Set(needing.map((p) => p.id));
+
+        const batchEntries: NotebookEntry[] = needing.map((plant, idx) => {
+          const isPropagation = plant.species.plantType === 'propagation';
+          const isSucculent = plant.species.plantType === 'succulent';
+
+          return {
+            id: `log-water-batch-${nowMs}-${idx}`,
+            plantId: plant.id,
+            eventType: 'water',
+            timestamp: nowIso,
+            title: isPropagation
+              ? 'Refreshed Propagation Water'
+              : isSucculent
+                ? 'Deep Soak & Dry Watering'
+                : 'Thorough Watering',
+            notes: isPropagation
+              ? 'Batch care: Replaced reservoir water with fresh oxygenated room-temperature water.'
+              : isSucculent
+                ? 'Batch care: Verified 100% dry gritty mix before deep drenching until runoff.'
+                : 'Batch care: Watered thoroughly until excess drained freely from bottom hole.',
+            metrics: {
+              soilMoisture: isSucculent ? 'bone_dry' : 'slightly_damp',
+            },
+          };
+        });
+
+        set((s) => ({
+          plants: s.plants.map((p) =>
+            needingIds.has(p.id) ? { ...p, lastWateredAt: nowIso } : p
+          ),
+          entries: [...batchEntries, ...s.entries],
+        }));
+
+        return needing.length;
+      },
+
+      waterAllPlants: () => {
+        const state = get();
+        if (state.plants.length === 0) return 0;
+
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const nowMs = now.getTime();
+
+        const batchEntries: NotebookEntry[] = state.plants.map((plant, idx) => {
+          const isPropagation = plant.species.plantType === 'propagation';
+          const isSucculent = plant.species.plantType === 'succulent';
+
+          return {
+            id: `log-water-all-${nowMs}-${idx}`,
+            plantId: plant.id,
+            eventType: 'water',
+            timestamp: nowIso,
+            title: isPropagation
+              ? 'Refreshed Propagation Water'
+              : isSucculent
+                ? 'Deep Soak & Dry Watering'
+                : 'Thorough Watering',
+            notes: isPropagation
+              ? 'Full garden care: Replaced reservoir water with fresh oxygenated room-temperature water.'
+              : isSucculent
+                ? 'Full garden care: Verified 100% dry gritty mix before deep drenching until runoff.'
+                : 'Full garden care: Watered thoroughly until excess drained freely from bottom hole.',
+            metrics: {
+              soilMoisture: isSucculent ? 'bone_dry' : 'slightly_damp',
+            },
+          };
+        });
+
+        set((s) => ({
+          plants: s.plants.map((p) => ({ ...p, lastWateredAt: nowIso })),
+          entries: [...batchEntries, ...s.entries],
+        }));
+
+        return state.plants.length;
       },
 
       saveHealthAssessment: (plantId, diagnosis, imageUri) => {

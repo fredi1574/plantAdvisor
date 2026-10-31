@@ -1,0 +1,52 @@
+<rules>
+1. Pre-Flight & Alignment: Before generating application code, check the current workspace and local environment (Node.js, npm/npx, git). Surface up to 3 brief clarifying questions if any requirement is ambiguous, then present a concise execution plan.
+2. Autonomous Execution with Verification: Once aligned, execute Phase 1 and Phase 2 end-to-end. After creating or modifying files in each milestone, verify your work by running `npx tsc --noEmit` to ensure zero TypeScript errors and testing the web target (`npx expo export --platform web`) to confirm clean bundling. Fix any errors autonomously in a loop until all checks pass.
+3. Pause Before External/Paid Credentials: Pause and ask for my confirmation before running commands that require external API keys or cloud account logins (such as Supabase remote linking or EAS login). Use typed mock services with a clean environment toggle (`EXPO_PUBLIC_USE_MOCK_AI=true`) so the app is 100% testable locally from day one.
+4. No Native Folders Locally: Use Expo Managed Workflow (Continuous Native Generation). Do not run `expo prebuild` locally; keep the project pure TypeScript so builds can run on Windows/Linux and compile via EAS Build in the cloud.
+</rules>
+
+<project_context>
+We are building "FloraLog" (working title), a cross-platform mobile and web app (Android, iOS, and Web) for personal plant & succulent growth tracking powered by AI.
+Users can:
+- Add a plant or succulent by searching its name or snapping/uploading a photo for AI identification.
+- Log care events (watering, fertilizing, repotting, pruning, propagation progress, notes) in a chronological notebook timeline.
+- Run an "AI Health & Condition Scan" where the AI analyzes a new photo ALONGSIDE the plant's historical care log (e.g., last watered date, pot drainage, indoor/outdoor location, species profile) to diagnose abiotic/biotic issues (overwatering, etiolation, pests) and generate actionable next steps.
+</project_context>
+
+<architecture_spec>
+- Framework: React Native with Expo (SDK 54+, Expo Router for file-based navigation, TypeScript strict mode, React Native Web support enabled).
+- Styling: NativeWind (Tailwind CSS for React Native) or clean StyleSheet with a cohesive botanical design system.
+- State & Local Persistence: Zustand + AsyncStorage (or Expo SQLite) for immediate offline-first local storage, structured so we can plug in Supabase (PostgreSQL + Auth + Storage) in Phase 3.
+- Camera & Media: `expo-camera` and `expo-image-picker` with `expo-image-manipulator` to resize/compress images to <= 1024x1024 WebP/JPEG before AI analysis.
+- AI Service Layer (`src/services/aiPlantService.ts`):
+  - Define strict TypeScript interfaces and JSON schemas for two core workflows:
+    1. `identifyPlant(imageUriOrName)`: Returns `commonName`, `scientificName`, `plantType` ('succulent' | 'foliage' | 'propagation' | 'flowering'), `confidence`, and `baselineCare` (`idealLight`, `baseWateringDays`, `soilRecommendation`, `succulentGuardrails`).
+    2. `diagnosePlantHealth(imageUri, plantProfile, recentLogs)`: Combines visual input with temporal care history. Returns `healthStatus` ('thriving' | 'needs_attention' | 'critical'), `detectedSymptoms[]`, `diagnosisSummary`, `followUpQuestions[]` (if visual symptoms are ambiguous), `recommendedActions[]` (with urgency & checkable instructions), and `adjustedWateringIntervalDays`.
+</architecture_spec>
+
+<task>
+Execute the initial project bootstrap across the following steps:
+
+Step 1: Design System (`DESIGN.md`)
+Create a `DESIGN.md` file defining an earthy, clean botanical UI palette (sage greens, terracotta accents, warm off-white surfaces, high-contrast status badges for plant health), typography scale, and card layout rules.
+
+Step 2: Project Scaffold & Dependencies
+Initialize the Expo TypeScript project with Expo Router, `expo-image-picker`, `expo-image-manipulator`, `lucide-react-native` (for icons), and local storage.
+
+Step 3: Data Models & AI Service Layer
+Create `src/types/plant.ts` with complete TypeScript interfaces for `SpeciesCatalog`, `UserPlant`, `NotebookEntry`, and `HealthAssessment`. Implement `src/services/aiPlantService.ts` with a realistic mock mode AND a live multimodal LLM fetch implementation (ready for an API key in `.env`). Include succulent-specific prompt guardrails so the AI never recommends misting or frequent shallow watering for `Crassulaceae`/`Cactaceae`.
+
+Step 4: Core Screens (Expo Router `app/`)
+Build a working, navigable MVP with sample seed data (including a Jade Plant succulent and an Avocado seed propagation log):
+1. `app/(tabs)/index.tsx`: "My Garden" dashboard showing plant cards, health status badges, and "Needs Watering" indicators.
+2. `app/(tabs)/scan.tsx`: "Add / AI Scan" screen allowing photo upload/capture or name entry, triggering the AI Identification or Health Diagnosis flow.
+3. `app/plant/[id].tsx`: Individual Plant Notebook view featuring:
+   - Header with species info, location, pot drainage badge, and next water countdown.
+   - Latest AI Health Assessment card with interactive checkable "Next Steps".
+   - Chronological Notebook Timeline (waterings, photo logs, propagation milestones) + quick-action buttons to log a care event.
+
+Definition of Done:
+- `DESIGN.md` and `ARCHITECTURE.md` exist in the root directory.
+- `npx tsc --noEmit` returns 0 errors.
+- The web preview (`npx expo start --web`) or Expo Go launches cleanly with seeded plants, working navigation between all 3 screens, and a functional end-to-end mock AI scan flow.
+</task>

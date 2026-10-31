@@ -1,6 +1,6 @@
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   AlertCircle,
   Camera,
@@ -10,8 +10,8 @@ import {
   Sparkles,
   Sprout,
   Stethoscope,
-} from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+} from "lucide-react-native";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -21,8 +21,8 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   CardShadow,
@@ -32,37 +32,34 @@ import {
   Radius,
   Spacing,
   UrgencyBadgeTheme,
-} from '@/constants/theme';
-import {
-  diagnosePlantHealth,
-  identifyPlant,
-} from '@/services/aiPlantService';
-import { prepareImageForAI } from '@/services/imageUtils';
-import { usePlantStore } from '@/store/usePlantStore';
+} from "@/constants/theme";
+import { diagnosePlantHealth, identifyPlant } from "@/services/aiPlantService";
+import { prepareImageForAI } from "@/services/imageUtils";
+import { usePlantStore } from "@/store/usePlantStore";
 import type {
   LightExposure,
   PlantDiagnosisResult,
   PlantIdentificationResult,
   PotMaterial,
-} from '@/types/plant';
+} from "@/types/plant";
 
-type ScanWorkflowMode = 'identify' | 'diagnose';
+type ScanWorkflowMode = "identify" | "diagnose";
 
 const DEMO_PRESETS = [
   {
-    label: 'Jade Succulent',
-    query: 'Crassula ovata Jade Plant',
-    uri: 'https://images.unsplash.com/photo-1509423350716-97f9360b4e09?auto=format&fit=crop&w=900&q=80',
+    label: "Jade Succulent",
+    query: "Crassula ovata Jade Plant",
+    uri: "https://images.unsplash.com/photo-1509423350716-97f9360b4e09?auto=format&fit=crop&w=900&q=80",
   },
   {
-    label: 'Echeveria Rosette',
-    query: 'Echeveria elegans succulent',
-    uri: 'https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?auto=format&fit=crop&w=900&q=80',
+    label: "Echeveria Rosette",
+    query: "Echeveria elegans succulent",
+    uri: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?auto=format&fit=crop&w=900&q=80",
   },
   {
-    label: 'Avocado Pit Prop',
-    query: 'Persea americana Avocado seed propagation',
-    uri: 'https://images.unsplash.com/photo-1592150621744-aca64f48394a?auto=format&fit=crop&w=900&q=80',
+    label: "Avocado Pit Prop",
+    query: "Persea americana Avocado seed propagation",
+    uri: "https://images.unsplash.com/photo-1592150621744-aca64f48394a?auto=format&fit=crop&w=900&q=80",
   },
 ];
 
@@ -74,34 +71,35 @@ export default function ScanScreen() {
   const saveHealthAssessment = usePlantStore((s) => s.saveHealthAssessment);
 
   const [mode, setMode] = useState<ScanWorkflowMode>(
-    params.mode === 'diagnose' ? 'diagnose' : 'identify'
+    params.mode === "diagnose" ? "diagnose" : "identify",
   );
 
   // Shared media state
-  const [imageUri, setImageUri] = useState<string>('');
-  const [imageDimensions, setImageDimensions] = useState<string>('');
+  const [imageUri, setImageUri] = useState<string>("");
+  const [imageDimensions, setImageDimensions] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Workflow 1: Identify & Add Plant state
-  const [searchQuery, setSearchQuery] = useState<string>('Crassula ovata Jade Plant');
-  const [idResult, setIdResult] = useState<PlantIdentificationResult | null>(null);
-  const [nickname, setNickname] = useState<string>('');
-  const [location, setLocation] = useState<string>('South Living Room Sill');
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [idResult, setIdResult] = useState<PlantIdentificationResult | null>(
+    null,
+  );
+  const [nickname, setNickname] = useState<string>("");
+  const [location, setLocation] = useState<string>("South Living Room Sill");
   const [hasDrainageHole, setHasDrainageHole] = useState<boolean>(true);
-  const [potMaterial, setPotMaterial] = useState<PotMaterial>('terracotta');
-  const [lightExposure] = useState<LightExposure>('bright_direct');
+  const [potMaterial, setPotMaterial] = useState<PotMaterial>("terracotta");
+  const [lightExposure] = useState<LightExposure>("bright_direct");
 
   // Workflow 2: Health Diagnosis state
   const [selectedPlantId, setSelectedPlantId] = useState<string>(
-    params.plantId || plants[0]?.id || ''
+    params.plantId || plants[0]?.id || "",
   );
   const [observationNotes, setObservationNotes] = useState<string>(
-    'Two lower leaves look slightly yellow and plump after recent waterings.'
+    "Two lower leaves look slightly yellow and plump after recent waterings.",
   );
-  const [diagnosisResult, setDiagnosisResult] = useState<PlantDiagnosisResult | null>(
-    null
-  );
+  const [diagnosisResult, setDiagnosisResult] =
+    useState<PlantDiagnosisResult | null>(null);
 
   const [prevParams, setPrevParams] = useState({
     mode: params.mode,
@@ -112,8 +110,8 @@ export default function ScanScreen() {
     params.plantId !== prevParams.plantId
   ) {
     setPrevParams({ mode: params.mode, plantId: params.plantId });
-    if (params.mode === 'diagnose') {
-      setMode('diagnose');
+    if (params.mode === "diagnose") {
+      setMode("diagnose");
     }
     if (params.plantId) {
       setSelectedPlantId(params.plantId);
@@ -122,7 +120,7 @@ export default function ScanScreen() {
 
   const selectedPlant = useMemo(
     () => plants.find((p) => p.id === selectedPlantId) ?? plants[0],
-    [plants, selectedPlantId]
+    [plants, selectedPlantId],
   );
 
   const selectedPlantLogs = useMemo(
@@ -131,21 +129,23 @@ export default function ScanScreen() {
         .filter((e) => e.plantId === selectedPlant?.id)
         .sort(
           (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         ),
-    [entries, selectedPlant]
+    [entries, selectedPlant],
   );
 
   const handlePickFromLibrary = async () => {
     setErrorMessage(null);
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setErrorMessage('Photo library permission is required to upload a plant photo.');
+      setErrorMessage(
+        "Photo library permission is required to upload a plant photo.",
+      );
       return;
     }
 
     const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       quality: 0.9,
     });
@@ -153,7 +153,11 @@ export default function ScanScreen() {
     if (!picked.canceled && picked.assets[0]?.uri) {
       const prepared = await prepareImageForAI(picked.assets[0].uri);
       setImageUri(prepared.uri);
-      setImageDimensions(`${prepared.width}×${prepared.height}px (${prepared.mimeType})`);
+      setImageDimensions(
+        `${prepared.width}×${prepared.height}px (${prepared.mimeType})`,
+      );
+      setSearchQuery("");
+      setIdResult(null);
     }
   };
 
@@ -161,7 +165,7 @@ export default function ScanScreen() {
     setErrorMessage(null);
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      setErrorMessage('Camera permission is required to snap a photo.');
+      setErrorMessage("Camera permission is required to snap a photo.");
       return;
     }
 
@@ -173,13 +177,19 @@ export default function ScanScreen() {
     if (!snapped.canceled && snapped.assets[0]?.uri) {
       const prepared = await prepareImageForAI(snapped.assets[0].uri);
       setImageUri(prepared.uri);
-      setImageDimensions(`${prepared.width}×${prepared.height}px (${prepared.mimeType})`);
+      setImageDimensions(
+        `${prepared.width}×${prepared.height}px (${prepared.mimeType})`,
+      );
+      setSearchQuery("");
+      setIdResult(null);
     }
   };
 
   const handleRunIdentification = async () => {
     if (!imageUri && !searchQuery.trim()) {
-      setErrorMessage('Please enter a plant name or select/capture a photo first.');
+      setErrorMessage(
+        "Please enter a plant name or select/capture a photo first.",
+      );
       return;
     }
     setErrorMessage(null);
@@ -190,7 +200,7 @@ export default function ScanScreen() {
       setNickname(result.commonName);
     } catch (err) {
       setErrorMessage(
-        err instanceof Error ? err.message : 'Failed to identify plant.'
+        err instanceof Error ? err.message : "Failed to identify plant.",
       );
     } finally {
       setIsLoading(false);
@@ -212,14 +222,14 @@ export default function ScanScreen() {
 
     setIdResult(null);
     router.push({
-      pathname: '/plant/[id]',
+      pathname: "/plant/[id]",
       params: { id: created.id },
     });
   };
 
   const handleRunHealthDiagnosis = async () => {
     if (!selectedPlant) {
-      setErrorMessage('No plant selected for diagnosis.');
+      setErrorMessage("No plant selected for diagnosis.");
       return;
     }
     setErrorMessage(null);
@@ -229,17 +239,19 @@ export default function ScanScreen() {
         imageUri || selectedPlant.photoUri,
         selectedPlant,
         selectedPlantLogs,
-        observationNotes
+        observationNotes,
       );
       setDiagnosisResult(diagnosis);
       saveHealthAssessment(
         selectedPlant.id,
         diagnosis,
-        imageUri || selectedPlant.photoUri
+        imageUri || selectedPlant.photoUri,
       );
     } catch (err) {
       setErrorMessage(
-        err instanceof Error ? err.message : 'Failed to run AI health diagnosis.'
+        err instanceof Error
+          ? err.message
+          : "Failed to run AI health diagnosis.",
       );
     } finally {
       setIsLoading(false);
@@ -247,18 +259,20 @@ export default function ScanScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.maxContainer}>
           {/* Screen Title */}
           <View style={styles.headerBlock}>
             <Text style={styles.eyebrow}>MULTIMODAL BOTANICAL AI</Text>
             <Text style={styles.headerTitle}>Add or Scan Plant</Text>
             <Text style={styles.headerSubtitle}>
-              Identify a new plant or run a context-aware AI Health Scan combining leaf photos with your care timeline.
+              Identify a new plant or run a context-aware AI Health Scan
+              combining leaf photos with your care timeline.
             </Text>
           </View>
 
@@ -266,44 +280,56 @@ export default function ScanScreen() {
           <View style={styles.segmentedBar}>
             <Pressable
               onPress={() => {
-                setMode('identify');
+                setMode("identify");
                 setErrorMessage(null);
               }}
               style={[
                 styles.segmentBtn,
-                mode === 'identify' && styles.segmentBtnActive,
-              ]}>
+                mode === "identify" && styles.segmentBtnActive,
+              ]}
+            >
               <Sprout
                 size={16}
-                color={mode === 'identify' ? Palette.textInverse : Palette.textSecondary}
+                color={
+                  mode === "identify"
+                    ? Palette.textInverse
+                    : Palette.textSecondary
+                }
               />
               <Text
                 style={[
                   styles.segmentBtnText,
-                  mode === 'identify' && styles.segmentBtnTextActive,
-                ]}>
+                  mode === "identify" && styles.segmentBtnTextActive,
+                ]}
+              >
                 1. Identify & Add Plant
               </Text>
             </Pressable>
 
             <Pressable
               onPress={() => {
-                setMode('diagnose');
+                setMode("diagnose");
                 setErrorMessage(null);
               }}
               style={[
                 styles.segmentBtn,
-                mode === 'diagnose' && styles.segmentBtnActive,
-              ]}>
+                mode === "diagnose" && styles.segmentBtnActive,
+              ]}
+            >
               <Stethoscope
                 size={16}
-                color={mode === 'diagnose' ? Palette.textInverse : Palette.textSecondary}
+                color={
+                  mode === "diagnose"
+                    ? Palette.textInverse
+                    : Palette.textSecondary
+                }
               />
               <Text
                 style={[
                   styles.segmentBtnText,
-                  mode === 'diagnose' && styles.segmentBtnTextActive,
-                ]}>
+                  mode === "diagnose" && styles.segmentBtnTextActive,
+                ]}
+              >
                 2. AI Health Scan
               </Text>
             </Pressable>
@@ -311,7 +337,9 @@ export default function ScanScreen() {
 
           {/* Photo Capture / Upload & Demo Presets Card */}
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Step 1 — Photo or Sample Preset</Text>
+            <Text style={styles.sectionTitle}>
+              Step 1 — Photo or Sample Preset
+            </Text>
 
             {imageUri ? (
               <View style={styles.previewWrapper}>
@@ -335,7 +363,8 @@ export default function ScanScreen() {
                   Snap a leaf photo or choose a sample below
                 </Text>
                 <Text style={styles.emptyPreviewSub}>
-                  Auto-resized & compressed to ≤1024×1024 via expo-image-manipulator
+                  Auto-resized & compressed to ≤1024×1024 via
+                  expo-image-manipulator
                 </Text>
               </View>
             )}
@@ -346,7 +375,8 @@ export default function ScanScreen() {
                 style={({ pressed }) => [
                   styles.secondaryMediaBtn,
                   pressed && { opacity: 0.8 },
-                ]}>
+                ]}
+              >
                 <Camera size={16} color={Palette.primary} />
                 <Text style={styles.secondaryMediaBtnText}>Camera</Text>
               </Pressable>
@@ -356,7 +386,8 @@ export default function ScanScreen() {
                 style={({ pressed }) => [
                   styles.secondaryMediaBtn,
                   pressed && { opacity: 0.8 },
-                ]}>
+                ]}
+              >
                 <ImageIcon size={16} color={Palette.primary} />
                 <Text style={styles.secondaryMediaBtnText}>Photo Library</Text>
               </Pressable>
@@ -375,7 +406,8 @@ export default function ScanScreen() {
                       setImageUri(prep.uri);
                       setImageDimensions(`${prep.width}×${prep.height}px`);
                     }}
-                    style={styles.presetChip}>
+                    style={styles.presetChip}
+                  >
                     <Text style={styles.presetChipText}>{preset.label}</Text>
                   </Pressable>
                 ))}
@@ -391,7 +423,7 @@ export default function ScanScreen() {
           )}
 
           {/* WORKFLOW 1: IDENTIFY & ADD PLANT */}
-          {mode === 'identify' ? (
+          {mode === "identify" ? (
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>
                 Step 2 — Botanical Name or Visual Clues
@@ -410,14 +442,17 @@ export default function ScanScreen() {
                 style={({ pressed }) => [
                   styles.primaryActionBtn,
                   (pressed || isLoading) && { opacity: 0.85 },
-                ]}>
+                ]}
+              >
                 {isLoading ? (
                   <ActivityIndicator color={Palette.textInverse} size="small" />
                 ) : (
                   <Sparkles size={17} color={Palette.textInverse} />
                 )}
                 <Text style={styles.primaryActionBtnText}>
-                  {isLoading ? 'Analyzing Specimen...' : 'Run AI Plant Identification'}
+                  {isLoading
+                    ? "Analyzing Specimen..."
+                    : "Run AI Plant Identification"}
                 </Text>
               </Pressable>
 
@@ -461,11 +496,15 @@ export default function ScanScreen() {
                   </View>
 
                   {/* Succulent Guardrail Callout */}
-                  {idResult.baselineCare.succulentGuardrails.isSucculentOrCactus && (
+                  {idResult.baselineCare.succulentGuardrails
+                    .isSucculentOrCactus && (
                     <View style={styles.guardrailBox}>
                       <ShieldAlert size={16} color={Palette.attentionText} />
                       <Text style={styles.guardrailText}>
-                        {idResult.baselineCare.succulentGuardrails.rotWarningNote}
+                        {
+                          idResult.baselineCare.succulentGuardrails
+                            .rotWarningNote
+                        }
                       </Text>
                     </View>
                   )}
@@ -487,7 +526,9 @@ export default function ScanScreen() {
                   </View>
 
                   <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>Location in Home / Garden</Text>
+                    <Text style={styles.fieldLabel}>
+                      Location in Home / Garden
+                    </Text>
                     <TextInput
                       value={location}
                       onChangeText={setLocation}
@@ -501,10 +542,10 @@ export default function ScanScreen() {
                     <View style={styles.presetRow}>
                       {(
                         [
-                          { key: 'terracotta', label: 'Terracotta' },
-                          { key: 'ceramic_glazed', label: 'Glazed Ceramic' },
-                          { key: 'plastic_nursery', label: 'Nursery Pot' },
-                          { key: 'glass_vessel', label: 'Glass Jar' },
+                          { key: "terracotta", label: "Terracotta" },
+                          { key: "ceramic_glazed", label: "Glazed Ceramic" },
+                          { key: "plastic_nursery", label: "Nursery Pot" },
+                          { key: "glass_vessel", label: "Glass Jar" },
                         ] as const
                       ).map((pm) => (
                         <Pressable
@@ -513,12 +554,15 @@ export default function ScanScreen() {
                           style={[
                             styles.presetChip,
                             potMaterial === pm.key && styles.presetChipActive,
-                          ]}>
+                          ]}
+                        >
                           <Text
                             style={[
                               styles.presetChipText,
-                              potMaterial === pm.key && styles.presetChipTextActive,
-                            ]}>
+                              potMaterial === pm.key &&
+                                styles.presetChipTextActive,
+                            ]}
+                          >
                             {pm.label}
                           </Text>
                         </Pressable>
@@ -550,7 +594,8 @@ export default function ScanScreen() {
                     style={({ pressed }) => [
                       styles.terracottaBtn,
                       pressed && { opacity: 0.85 },
-                    ]}>
+                    ]}
+                  >
                     <CheckCircle2 size={17} color={Palette.textInverse} />
                     <Text style={styles.primaryActionBtnText}>
                       Add to My Garden & Open Notebook
@@ -576,12 +621,14 @@ export default function ScanScreen() {
                       style={[
                         styles.presetChip,
                         active && styles.presetChipActive,
-                      ]}>
+                      ]}
+                    >
                       <Text
                         style={[
                           styles.presetChipText,
                           active && styles.presetChipTextActive,
-                        ]}>
+                        ]}
+                      >
                         {plant.nickname} ({plant.species.commonName})
                       </Text>
                     </Pressable>
@@ -596,17 +643,20 @@ export default function ScanScreen() {
                   </Text>
                   <Text style={styles.contextSummaryItem}>
                     • Species: {selectedPlant.species.commonName} (
-                    {selectedPlant.species.scientificName}, {selectedPlant.species.family})
+                    {selectedPlant.species.scientificName},{" "}
+                    {selectedPlant.species.family})
                   </Text>
                   <Text style={styles.contextSummaryItem}>
-                    • Container: {selectedPlant.potMaterial.replace('_', ' ')} •{' '}
+                    • Container: {selectedPlant.potMaterial.replace("_", " ")} •{" "}
                     {selectedPlant.hasDrainageHole
-                      ? 'Has drainage hole'
-                      : 'NO drainage hole'}
+                      ? "Has drainage hole"
+                      : "NO drainage hole"}
                   </Text>
                   <Text style={styles.contextSummaryItem}>
-                    • Care Timeline: {selectedPlantLogs.length} logged events (Last watered:{' '}
-                    {new Date(selectedPlant.lastWateredAt).toLocaleDateString()})
+                    • Care Timeline: {selectedPlantLogs.length} logged events
+                    (Last watered:{" "}
+                    {new Date(selectedPlant.lastWateredAt).toLocaleDateString()}
+                    )
                   </Text>
                 </View>
               )}
@@ -620,7 +670,10 @@ export default function ScanScreen() {
                   onChangeText={setObservationNotes}
                   multiline
                   numberOfLines={3}
-                  style={[styles.textInput, { minHeight: 72, textAlignVertical: 'top' }]}
+                  style={[
+                    styles.textInput,
+                    { minHeight: 72, textAlignVertical: "top" },
+                  ]}
                   placeholder="Describe any yellowing, wrinkling, stretching, spots, or root growth..."
                   placeholderTextColor={Palette.textMuted}
                 />
@@ -632,7 +685,8 @@ export default function ScanScreen() {
                 style={({ pressed }) => [
                   styles.primaryActionBtn,
                   (pressed || isLoading) && { opacity: 0.85 },
-                ]}>
+                ]}
+              >
                 {isLoading ? (
                   <ActivityIndicator color={Palette.textInverse} size="small" />
                 ) : (
@@ -640,8 +694,8 @@ export default function ScanScreen() {
                 )}
                 <Text style={styles.primaryActionBtnText}>
                   {isLoading
-                    ? 'Cross-Referencing Photo & Care Logs...'
-                    : 'Run AI Health & Condition Scan'}
+                    ? "Cross-Referencing Photo & Care Logs..."
+                    : "Run AI Health & Condition Scan"}
                 </Text>
               </Pressable>
 
@@ -659,17 +713,21 @@ export default function ScanScreen() {
                           backgroundColor:
                             HealthBadgeTheme[diagnosisResult.healthStatus].bg,
                           borderColor:
-                            HealthBadgeTheme[diagnosisResult.healthStatus].border,
+                            HealthBadgeTheme[diagnosisResult.healthStatus]
+                              .border,
                         },
-                      ]}>
+                      ]}
+                    >
                       <Text
                         style={[
                           styles.statusPillText,
                           {
                             color:
-                              HealthBadgeTheme[diagnosisResult.healthStatus].text,
+                              HealthBadgeTheme[diagnosisResult.healthStatus]
+                                .text,
                           },
-                        ]}>
+                        ]}
+                      >
                         {HealthBadgeTheme[diagnosisResult.healthStatus].label}
                       </Text>
                     </View>
@@ -696,13 +754,21 @@ export default function ScanScreen() {
                         <View
                           style={[
                             styles.urgencyPill,
-                            { backgroundColor: urg.bg, borderColor: urg.border },
-                          ]}>
-                          <Text style={[styles.urgencyText, { color: urg.text }]}>
+                            {
+                              backgroundColor: urg.bg,
+                              borderColor: urg.border,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.urgencyText, { color: urg.text }]}
+                          >
                             {urg.label}
                           </Text>
                         </View>
-                        <Text style={styles.actionRowText}>{act.instruction}</Text>
+                        <Text style={styles.actionRowText}>
+                          {act.instruction}
+                        </Text>
                       </View>
                     );
                   })}
@@ -710,14 +776,15 @@ export default function ScanScreen() {
                   <Pressable
                     onPress={() =>
                       router.push({
-                        pathname: '/plant/[id]',
+                        pathname: "/plant/[id]",
                         params: { id: selectedPlant.id },
                       })
                     }
                     style={({ pressed }) => [
                       styles.terracottaBtn,
                       pressed && { opacity: 0.85 },
-                    ]}>
+                    ]}
+                  >
                     <CheckCircle2 size={16} color={Palette.textInverse} />
                     <Text style={styles.primaryActionBtnText}>
                       View in {selectedPlant.nickname} Notebook
@@ -745,10 +812,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xxl * 1.5,
-    alignItems: 'center',
+    alignItems: "center",
   },
   maxContainer: {
-    width: '100%',
+    width: "100%",
     maxWidth: MaxContentWidth,
     gap: Spacing.md,
   },
@@ -757,14 +824,14 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.8,
     color: Palette.primary,
   },
   headerTitle: {
     fontSize: 28,
     lineHeight: 34,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.textPrimary,
   },
   headerSubtitle: {
@@ -773,7 +840,7 @@ const styles = StyleSheet.create({
     color: Palette.textSecondary,
   },
   segmentedBar: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: Palette.bgSubtle,
     padding: 4,
     borderRadius: Radius.md,
@@ -783,9 +850,9 @@ const styles = StyleSheet.create({
   },
   segmentBtn: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
     borderRadius: Radius.sm,
@@ -795,7 +862,7 @@ const styles = StyleSheet.create({
   },
   segmentBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.textSecondary,
   },
   segmentBtnTextActive: {
@@ -812,74 +879,74 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.textPrimary,
   },
   previewWrapper: {
-    position: 'relative',
+    position: "relative",
     borderRadius: Radius.md,
-    overflow: 'hidden',
+    overflow: "hidden",
     height: 190,
     backgroundColor: Palette.bgSubtle,
   },
   previewImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   compressionBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 8,
     right: 8,
-    backgroundColor: 'rgba(28, 40, 32, 0.82)',
+    backgroundColor: "rgba(28, 40, 32, 0.82)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: Radius.full,
   },
   compressionBadgeText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Palette.textInverse,
   },
   emptyPreviewBox: {
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderColor: Palette.borderSubtle,
     backgroundColor: Palette.bgPrimary,
     borderRadius: Radius.md,
     paddingVertical: 24,
     paddingHorizontal: 16,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 6,
   },
   emptyPreviewTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Palette.textPrimary,
   },
   emptyPreviewSub: {
     fontSize: 12,
     color: Palette.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
   },
   mediaButtonsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.sm,
   },
   secondaryMediaBtn: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
     borderRadius: Radius.md,
     backgroundColor: Palette.primarySoft,
     borderWidth: 1,
-    borderColor: '#C5DEC9',
+    borderColor: "#C5DEC9",
   },
   secondaryMediaBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.primary,
   },
   presetBlock: {
@@ -887,12 +954,12 @@ const styles = StyleSheet.create({
   },
   presetLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Palette.textSecondary,
   },
   presetRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   presetChip: {
@@ -909,15 +976,15 @@ const styles = StyleSheet.create({
   },
   presetChipText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Palette.textPrimary,
   },
   presetChipTextActive: {
     color: Palette.textInverse,
   },
   errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     backgroundColor: Palette.criticalBg,
     borderColor: Palette.criticalBorder,
@@ -928,7 +995,7 @@ const styles = StyleSheet.create({
   errorBannerText: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Palette.criticalText,
   },
   textInput: {
@@ -942,18 +1009,18 @@ const styles = StyleSheet.create({
     color: Palette.textPrimary,
   },
   primaryActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     backgroundColor: Palette.primary,
     paddingVertical: 13,
     borderRadius: Radius.md,
   },
   terracottaBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     backgroundColor: Palette.accentTerracotta,
     paddingVertical: 13,
@@ -962,7 +1029,7 @@ const styles = StyleSheet.create({
   },
   primaryActionBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.textInverse,
   },
   resultContainer: {
@@ -973,19 +1040,19 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   resultHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: 8,
   },
   resultCommonName: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.textPrimary,
   },
   resultScientific: {
     fontSize: 13,
-    fontStyle: 'italic',
+    fontStyle: "italic",
     color: Palette.textSecondary,
   },
   confidenceBadge: {
@@ -998,7 +1065,7 @@ const styles = StyleSheet.create({
   },
   confidenceText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.thrivingText,
   },
   resultNotes: {
@@ -1020,12 +1087,12 @@ const styles = StyleSheet.create({
     color: Palette.textPrimary,
   },
   careSpecLabel: {
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.primary,
   },
   guardrailBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 8,
     backgroundColor: Palette.attentionBg,
     borderColor: Palette.attentionBorder,
@@ -1037,7 +1104,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     lineHeight: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Palette.attentionText,
   },
   formDivider: {
@@ -1050,13 +1117,13 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.textPrimary,
   },
   switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 12,
     paddingVertical: 4,
   },
@@ -1074,7 +1141,7 @@ const styles = StyleSheet.create({
   },
   contextSummaryTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.primary,
     marginBottom: 2,
   },
@@ -1090,17 +1157,17 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   subHeader: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Palette.textPrimary,
   },
   actionRowItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 8,
     backgroundColor: Palette.bgPrimary,
     padding: 10,
@@ -1116,8 +1183,8 @@ const styles = StyleSheet.create({
   },
   urgencyText: {
     fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   actionRowText: {
     flex: 1,
@@ -1126,4 +1193,3 @@ const styles = StyleSheet.create({
     color: Palette.textPrimary,
   },
 });
-
