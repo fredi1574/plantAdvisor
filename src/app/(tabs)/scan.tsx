@@ -33,7 +33,7 @@ import {
   Spacing,
   UrgencyBadgeTheme,
 } from "@/constants/theme";
-import { diagnosePlantHealth, identifyPlant } from "@/services/aiPlantService";
+import { diagnosePlantHealth, identifyPlant, isMockAiEnabled } from "@/services/aiPlantService";
 import { prepareImageForAI } from "@/services/imageUtils";
 import { usePlantStore } from "@/store/usePlantStore";
 import type {
@@ -90,6 +90,7 @@ export default function ScanScreen() {
   const [hasDrainageHole, setHasDrainageHole] = useState<boolean>(true);
   const [potMaterial, setPotMaterial] = useState<PotMaterial>("terracotta");
   const [lightExposure] = useState<LightExposure>("bright_direct");
+  const isLiveAi = useMemo(() => !isMockAiEnabled(), []);
 
   // Workflow 2: Health Diagnosis state
   const [selectedPlantId, setSelectedPlantId] = useState<string>(
@@ -268,7 +269,32 @@ export default function ScanScreen() {
         <View style={styles.maxContainer}>
           {/* Screen Title */}
           <View style={styles.headerBlock}>
-            <Text style={styles.eyebrow}>MULTIMODAL BOTANICAL AI</Text>
+            <View style={styles.eyebrowRow}>
+              <Text style={styles.eyebrow}>MULTIMODAL BOTANICAL AI</Text>
+              <View
+                style={[
+                  styles.engineBadge,
+                  isLiveAi ? styles.engineBadgeLive : styles.engineBadgeMock,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.engineDot,
+                    isLiveAi ? styles.engineDotLive : styles.engineDotMock,
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.engineBadgeText,
+                    isLiveAi
+                      ? styles.engineBadgeTextLive
+                      : styles.engineBadgeTextMock,
+                  ]}
+                >
+                  {isLiveAi ? "Live Gemini AI" : "Offline Mock"}
+                </Text>
+              </View>
+            </View>
             <Text style={styles.headerTitle}>Add or Scan Plant</Text>
             <Text style={styles.headerSubtitle}>
               Identify a new plant or run a context-aware AI Health Scan
@@ -821,6 +847,49 @@ const styles = StyleSheet.create({
   },
   headerBlock: {
     gap: 4,
+  },
+  eyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  engineBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+  },
+  engineBadgeLive: {
+    backgroundColor: Palette.thrivingBg,
+    borderColor: Palette.thrivingBorder,
+  },
+  engineBadgeMock: {
+    backgroundColor: Palette.bgSubtle,
+    borderColor: Palette.borderSubtle,
+  },
+  engineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  engineDotLive: {
+    backgroundColor: Palette.thrivingText,
+  },
+  engineDotMock: {
+    backgroundColor: Palette.textMuted,
+  },
+  engineBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  engineBadgeTextLive: {
+    color: Palette.thrivingText,
+  },
+  engineBadgeTextMock: {
+    color: Palette.textSecondary,
   },
   eyebrow: {
     fontSize: 11,

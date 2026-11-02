@@ -15,6 +15,7 @@ import type {
   NotebookEntry,
   PlantDiagnosisResult,
   PlantIdentificationResult,
+  PlantType,
   PotMaterial,
   UserPlant,
 } from '@/types/plant';
@@ -30,6 +31,21 @@ export interface AddPlantPayload {
   identification: PlantIdentificationResult;
 }
 
+export interface UpdatePlantPayload {
+  nickname?: string;
+  location?: string;
+  isIndoor?: boolean;
+  lightExposure?: LightExposure;
+  hasDrainageHole?: boolean;
+  potMaterial?: PotMaterial;
+  customWateringIntervalDays?: number;
+  photoUri?: string;
+  commonName?: string;
+  scientificName?: string;
+  family?: string;
+  plantType?: PlantType;
+}
+
 export interface LogCareEventPayload {
   plantId: string;
   eventType: CareEventType;
@@ -43,6 +59,8 @@ interface PlantStoreState {
   plants: UserPlant[];
   entries: NotebookEntry[];
   addPlant: (payload: AddPlantPayload) => UserPlant;
+  updatePlant: (plantId: string, payload: UpdatePlantPayload) => void;
+  deletePlant: (plantId: string) => void;
   logCareEvent: (payload: LogCareEventPayload) => NotebookEntry;
   waterPlantNow: (plantId: string, notes?: string) => void;
   waterAllNeedingWater: () => number;
@@ -158,6 +176,62 @@ export const usePlantStore = create<PlantStoreState>()(
         }));
 
         return newPlant;
+      },
+
+      updatePlant: (plantId, payload) => {
+        set((state) => ({
+          plants: state.plants.map((plant) => {
+            if (plant.id !== plantId) return plant;
+
+            const nextInterval =
+              payload.customWateringIntervalDays !== undefined &&
+              !Number.isNaN(payload.customWateringIntervalDays) &&
+              payload.customWateringIntervalDays >= 1
+                ? Math.round(payload.customWateringIntervalDays)
+                : plant.customWateringIntervalDays;
+
+            return {
+              ...plant,
+              nickname:
+                payload.nickname !== undefined
+                  ? payload.nickname.trim() || plant.nickname
+                  : plant.nickname,
+              location:
+                payload.location !== undefined
+                  ? payload.location.trim() || plant.location
+                  : plant.location,
+              isIndoor: payload.isIndoor ?? plant.isIndoor,
+              lightExposure: payload.lightExposure ?? plant.lightExposure,
+              hasDrainageHole: payload.hasDrainageHole ?? plant.hasDrainageHole,
+              potMaterial: payload.potMaterial ?? plant.potMaterial,
+              customWateringIntervalDays: nextInterval,
+              photoUri: payload.photoUri || plant.photoUri,
+              species: {
+                ...plant.species,
+                commonName:
+                  payload.commonName !== undefined
+                    ? payload.commonName.trim() || plant.species.commonName
+                    : plant.species.commonName,
+                scientificName:
+                  payload.scientificName !== undefined
+                    ? payload.scientificName.trim() || plant.species.scientificName
+                    : plant.species.scientificName,
+                family:
+                  payload.family !== undefined
+                    ? payload.family.trim() || plant.species.family
+                    : plant.species.family,
+                plantType: payload.plantType ?? plant.species.plantType,
+              },
+            };
+          }),
+        }));
+      },
+
+      deletePlant: (plantId) => {
+        set((state) => ({
+          plants: state.plants.filter((p) => p.id !== plantId),
+          entries: state.entries.filter((e) => e.plantId !== plantId),
+        }));
       },
 
       logCareEvent: (payload) => {
@@ -387,4 +461,3 @@ export const usePlantStore = create<PlantStoreState>()(
     }
   )
 );
-

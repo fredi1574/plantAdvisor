@@ -1,12 +1,10 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import {
+  ArrowLeftRight,
   CheckCircle2,
-  ChevronRight,
   Droplet,
   Droplets,
   Leaf,
-  MapPin,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
@@ -24,9 +22,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EditPlantModal } from '@/components/edit-plant-modal';
+import { SwipeablePlantCard } from '@/components/swipeable-plant-card';
 import {
   CardShadow,
-  HealthBadgeTheme,
   MaxContentWidth,
   Palette,
   Radius,
@@ -35,26 +34,33 @@ import {
 import { isMockAiEnabled } from '@/services/aiPlantService';
 import {
   doesPlantNeedWatering,
-  getDaysUntilNextWater,
   usePlantStore,
 } from '@/store/usePlantStore';
 import type { UserPlant } from '@/types/plant';
 
-type FilterMode = 'all' | 'needs_water' | 'needs_attention' | 'succulent' | 'propagation';
-
-const PLANT_TYPE_LABELS: Record<UserPlant['species']['plantType'], string> = {
-  succulent: 'Succulent',
-  propagation: 'Propagation',
-  foliage: 'Foliage',
-  flowering: 'Flowering',
-};
+type FilterMode =
+  | 'all'
+  | 'needs_water'
+  | 'needs_attention'
+  | 'succulent'
+  | 'propagation';
 
 export default function MyGardenScreen() {
   const plants = usePlantStore((s) => s.plants);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
   const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
+  const deletePlant = usePlantStore((s) => s.deletePlant);
+
   const [filter, setFilter] = useState<FilterMode>('all');
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [editingPlant, setEditingPlant] = useState<UserPlant | null>(null);
+
+  const showToast = (message: string) => {
+    setFeedbackMessage(message);
+    setTimeout(() => {
+      setFeedbackMessage(null);
+    }, 3500);
+  };
 
   const stats = useMemo(() => {
     const needsWaterCount = plants.filter(doesPlantNeedWatering).length;
@@ -76,12 +82,9 @@ export default function MyGardenScreen() {
     const performWatering = () => {
       const count = waterAllNeedingWater();
       if (count > 0) {
-        setFeedbackMessage(
+        showToast(
           `All ${count} ${count === 1 ? 'plant' : 'plants'} marked as watered! 🌿`
         );
-        setTimeout(() => {
-          setFeedbackMessage(null);
-        }, 3500);
       }
     };
 
@@ -101,6 +104,26 @@ export default function MyGardenScreen() {
     }
   };
 
+  const handleDeletePlant = (plant: UserPlant) => {
+    const performDelete = () => {
+      deletePlant(plant.id);
+      showToast(`Removed "${plant.nickname}" from My Garden.`);
+    };
+
+    const confirmText = `Are you sure you want to delete "${plant.nickname}" (${plant.species.commonName}) and its care history?`;
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(confirmText)) {
+        performDelete();
+      }
+    } else {
+      Alert.alert('Delete Plant', confirmText, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: performDelete },
+      ]);
+    }
+  };
+
   const filteredPlants = useMemo(() => {
     return plants.filter((plant) => {
       if (filter === 'needs_water') return doesPlantNeedWatering(plant);
@@ -109,7 +132,8 @@ export default function MyGardenScreen() {
         return status === 'needs_attention' || status === 'critical';
       }
       if (filter === 'succulent') return plant.species.plantType === 'succulent';
-      if (filter === 'propagation') return plant.species.plantType === 'propagation';
+      if (filter === 'propagation')
+        return plant.species.plantType === 'propagation';
       return true;
     });
   }, [plants, filter]);
@@ -128,7 +152,9 @@ export default function MyGardenScreen() {
             <View style={styles.brandBlock}>
               <View style={styles.brandBadgeRow}>
                 <Sprout size={18} color={Palette.primary} />
-                <Text style={styles.brandEyebrow}>FLORALOG BOTANICAL NOTEBOOK</Text>
+                <Text style={styles.brandEyebrow}>
+                  FLORALOG BOTANICAL NOTEBOOK
+                </Text>
               </View>
               <Text style={styles.headerTitle}>My Garden</Text>
             </View>
@@ -204,7 +230,9 @@ export default function MyGardenScreen() {
                 </View>
                 <Text style={[styles.kpiTag, styles.kpiTagLeaf]}>Garden</Text>
               </View>
-              <Text style={[styles.kpiValue, styles.kpiValueLeaf]}>{stats.total}</Text>
+              <Text style={[styles.kpiValue, styles.kpiValueLeaf]}>
+                {stats.total}
+              </Text>
               <Text style={styles.kpiLabel}>Active{'\n'}Specimens</Text>
             </Pressable>
 
@@ -216,7 +244,9 @@ export default function MyGardenScreen() {
               style={({ pressed }) => [
                 styles.kpiCardBase,
                 styles.kpiCardDrop,
-                stats.needsWaterCount > 0 ? styles.kpiDropAlert : styles.kpiDropCalm,
+                stats.needsWaterCount > 0
+                  ? styles.kpiDropAlert
+                  : styles.kpiDropCalm,
                 filter === 'needs_water' && styles.kpiCardActiveRing,
                 pressed && styles.kpiCardPressed,
               ]}
@@ -261,7 +291,9 @@ export default function MyGardenScreen() {
             {/* Card 3: Health Alerts (Vitality Shield Silhouette) */}
             <Pressable
               onPress={() =>
-                setFilter(filter === 'needs_attention' ? 'all' : 'needs_attention')
+                setFilter(
+                  filter === 'needs_attention' ? 'all' : 'needs_attention'
+                )
               }
               style={({ pressed }) => [
                 styles.kpiCardBase,
@@ -385,6 +417,16 @@ export default function MyGardenScreen() {
             </View>
           )}
 
+          {/* Swipe Gesture Helper Strip */}
+          {filteredPlants.length > 0 && (
+            <View style={styles.swipeHintRow}>
+              <ArrowLeftRight size={13} color={Palette.textSecondary} />
+              <Text style={styles.swipeHintText}>
+                Swipe right to edit or swipe left to delete a plant
+              </Text>
+            </View>
+          )}
+
           {/* Plant Cards List */}
           <View style={styles.cardsColumn}>
             {filteredPlants.length === 0 ? (
@@ -406,158 +448,42 @@ export default function MyGardenScreen() {
                   <Pressable
                     onPress={() => setFilter('all')}
                     style={styles.emptyFilterBtn}>
-                    <Text style={styles.emptyFilterBtnText}>View All Plants</Text>
+                    <Text style={styles.emptyFilterBtnText}>
+                      View All Plants
+                    </Text>
                   </Pressable>
                 )}
               </View>
             ) : (
-              filteredPlants.map((plant) => {
-                const healthStatus =
-                  plant.latestHealthAssessment?.healthStatus ?? 'thriving';
-                const badge = HealthBadgeTheme[healthStatus];
-                const daysUntilWater = getDaysUntilNextWater(plant);
-                const needsWater = daysUntilWater <= 0;
-
-                return (
-                  <Pressable
-                    key={plant.id}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/plant/[id]',
-                        params: { id: plant.id },
-                      })
-                    }
-                    style={({ pressed }) => [
-                      styles.plantCard,
-                      pressed && styles.plantCardPressed,
-                    ]}>
-                    {/* Top Row: Thumbnail + Title + Health Status Badge */}
-                    <View style={styles.cardTopRow}>
-                      <Image
-                        source={{ uri: plant.photoUri }}
-                        style={styles.thumbnail}
-                        contentFit="cover"
-                      />
-
-                      <View style={styles.cardHeaderMeta}>
-                        <View style={styles.titleBadgeRow}>
-                          <Text style={styles.plantNickname} numberOfLines={1}>
-                            {plant.nickname}
-                          </Text>
-
-                          <View
-                            style={[
-                              styles.healthBadge,
-                              {
-                                backgroundColor: badge.bg,
-                                borderColor: badge.border,
-                              },
-                            ]}>
-                            <View
-                              style={[
-                                styles.statusDot,
-                                { backgroundColor: badge.dot },
-                              ]}
-                            />
-                            <Text
-                              style={[
-                                styles.healthBadgeText,
-                                { color: badge.text },
-                              ]}
-                            >
-                              {badge.label}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <Text style={styles.speciesLine} numberOfLines={1}>
-                          {plant.species.commonName} •{' '}
-                          <Text style={styles.scientificItalic}>
-                            {plant.species.scientificName}
-                          </Text>
-                        </Text>
-
-                        <View style={styles.metaChipsRow}>
-                          <View style={styles.typeChip}>
-                            <Text style={styles.typeChipText}>
-                              {PLANT_TYPE_LABELS[plant.species.plantType]}
-                            </Text>
-                          </View>
-
-                          <View style={styles.locationChip}>
-                            <MapPin size={12} color={Palette.textSecondary} />
-                            <Text style={styles.locationText} numberOfLines={1}>
-                              {plant.location}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Latest AI Health Summary Snippet */}
-                    {plant.latestHealthAssessment && (
-                      <View style={styles.diagnosisSnippetBox}>
-                        <Text style={styles.diagnosisSnippetText} numberOfLines={2}>
-                          <Text style={styles.diagnosisSnippetPrefix}>AI Note: </Text>
-                          {plant.latestHealthAssessment.diagnosisSummary}
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* Footer Strip: Watering Indicator + Quick Water Action */}
-                    <View style={styles.cardFooter}>
-                      {needsWater ? (
-                        <View style={styles.needsWaterBadge}>
-                          <Droplets size={14} color={Palette.waterAlertText} />
-                          <Text style={styles.needsWaterBadgeText}>
-                            {daysUntilWater === 0
-                              ? 'Needs Watering Today'
-                              : `Needs Watering (${Math.abs(daysUntilWater)}d overdue)`}
-                          </Text>
-                        </View>
-                      ) : (
-                        <View style={styles.waterScheduleInfo}>
-                          <CheckCircle2 size={14} color={Palette.primaryMuted} />
-                          <Text style={styles.waterScheduleText}>
-                            Next water in {daysUntilWater}d (every{' '}
-                            {plant.customWateringIntervalDays}d)
-                          </Text>
-                        </View>
-                      )}
-
-                      <View style={styles.cardFooterRight}>
-                        {needsWater && (
-                          <Pressable
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              waterPlantNow(plant.id);
-                            }}
-                            style={({ pressed }) => [
-                              styles.quickWaterBtn,
-                              pressed && { opacity: 0.8 },
-                            ]}>
-                            <Droplets size={13} color={Palette.textInverse} />
-                            <Text style={styles.quickWaterBtnText}>
-                              {plant.species.plantType === 'propagation'
-                                ? 'Refresh Water'
-                                : 'Log Water'}
-                            </Text>
-                          </Pressable>
-                        )}
-
-                        <View style={styles.openNotebookLink}>
-                          <Text style={styles.openNotebookText}>Notebook</Text>
-                          <ChevronRight size={15} color={Palette.primary} />
-                        </View>
-                      </View>
-                    </View>
-                  </Pressable>
-                );
-              })
+              filteredPlants.map((plant) => (
+                <SwipeablePlantCard
+                  key={plant.id}
+                  plant={plant}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/plant/[id]',
+                      params: { id: plant.id },
+                    })
+                  }
+                  onWaterNow={() => waterPlantNow(plant.id)}
+                  onEdit={(target) => setEditingPlant(target)}
+                  onDelete={handleDeletePlant}
+                />
+              ))
             )}
           </View>
         </View>
       </ScrollView>
+
+      <EditPlantModal
+        plant={editingPlant}
+        visible={Boolean(editingPlant)}
+        onClose={() => setEditingPlant(null)}
+        onSaved={(updatedName) =>
+          showToast(`Updated "${updatedName}" details! 🌿`)
+        }
+        onRequestDelete={handleDeletePlant}
+      />
     </SafeAreaView>
   );
 }
@@ -645,7 +571,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Palette.primary,
   },
-  // 1. Leaf Shape: diagonal organic corners
   kpiCardLeaf: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 8,
@@ -654,7 +579,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#EDF5EF',
     borderColor: '#C3DEC8',
   },
-  // 2. Water Drop Shape: pointed tip, rounded belly
   kpiCardDrop: {
     borderTopLeftRadius: 32,
     borderTopRightRadius: 6,
@@ -669,7 +593,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F9FF',
     borderColor: '#BAE6FD',
   },
-  // 3. Shield Shape: arched top, tapered base
   kpiCardShield: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -786,186 +709,19 @@ const styles = StyleSheet.create({
   filterPillTextActive: {
     color: Palette.textInverse,
   },
+  swipeHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  swipeHintText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: Palette.textSecondary,
+  },
   cardsColumn: {
     gap: Spacing.md,
-  },
-  plantCard: {
-    backgroundColor: Palette.bgSurface,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Palette.borderSubtle,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    ...CardShadow,
-  },
-  plantCardPressed: {
-    backgroundColor: '#FAF8F4',
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  thumbnail: {
-    width: 78,
-    height: 78,
-    borderRadius: 14,
-    backgroundColor: Palette.bgSubtle,
-  },
-  cardHeaderMeta: {
-    flex: 1,
-    gap: 5,
-    justifyContent: 'center',
-  },
-  titleBadgeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  plantNickname: {
-    flex: 1,
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: '700',
-    color: Palette.textPrimary,
-  },
-  healthBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  healthBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  speciesLine: {
-    fontSize: 13,
-    color: Palette.textSecondary,
-    fontWeight: '500',
-  },
-  scientificItalic: {
-    fontStyle: 'italic',
-  },
-  metaChipsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 2,
-  },
-  typeChip: {
-    backgroundColor: Palette.bgSubtle,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.sm,
-  },
-  typeChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Palette.primary,
-  },
-  locationChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  locationText: {
-    fontSize: 12,
-    color: Palette.textSecondary,
-    fontWeight: '500',
-  },
-  diagnosisSnippetBox: {
-    backgroundColor: Palette.bgPrimary,
-    borderRadius: Radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderWidth: 1,
-    borderColor: Palette.borderSubtle,
-  },
-  diagnosisSnippetPrefix: {
-    fontWeight: '700',
-    color: Palette.primary,
-  },
-  diagnosisSnippetText: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: Palette.textSecondary,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: Palette.bgSubtle,
-  },
-  needsWaterBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Palette.waterAlertBg,
-    borderColor: Palette.waterAlertBorder,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: Radius.full,
-  },
-  needsWaterBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Palette.waterAlertText,
-  },
-  waterScheduleInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  waterScheduleText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Palette.textSecondary,
-  },
-  cardFooterRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  quickWaterBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: Palette.waterBlue,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-  },
-  quickWaterBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Palette.textInverse,
-  },
-  openNotebookLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  openNotebookText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Palette.primary,
   },
   headerWaterAllBtn: {
     flexDirection: 'row',
@@ -1110,4 +866,3 @@ const styles = StyleSheet.create({
     color: Palette.textInverse,
   },
 });
-

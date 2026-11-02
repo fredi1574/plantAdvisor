@@ -134,11 +134,20 @@ export const PLANT_DIAGNOSIS_JSON_SCHEMA = {
 };
 
 export function isMockAiEnabled(): boolean {
-  const envFlag = process.env.EXPO_PUBLIC_USE_MOCK_AI;
-  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-  if (envFlag === "false" && apiKey && apiKey.trim().length > 0) {
+  const envFlag = process.env.EXPO_PUBLIC_USE_MOCK_AI?.trim().toLowerCase();
+  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY?.trim();
+
+  // If mock mode is explicitly set to "true", honor it
+  if (envFlag === "true") {
+    return true;
+  }
+
+  // If an API key is provided and mock mode is not forced to true, use live Gemini
+  if (apiKey && apiKey.length > 0) {
     return false;
   }
+
+  // Fallback to mock mode if no API key is provided
   return true;
 }
 
@@ -218,8 +227,12 @@ function enforceSucculentDiagnosisGuardrails(
  */
 function resolveGeminiModel(): string {
   const configured = process.env.EXPO_PUBLIC_GEMINI_MODEL?.trim();
-  if (!configured || configured === "gemini-2.5-flash") {
-    return "gemini-3.8-flash";
+  if (
+    !configured ||
+    configured === "gemini-2.5-flash" ||
+    configured === "gemini-2.0-flash"
+  ) {
+    return "gemini-3.5-flash";
   }
   return configured;
 }
@@ -229,37 +242,38 @@ async function fetchGeminiWithFallback(
   options: RequestInit,
 ): Promise<Response> {
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+  const primaryModel = resolveGeminiModel();
   const candidates = Array.from(
     new Set([
-      resolveGeminiModel(),
+      primaryModel,
+      "gemini-3.5-flash",
+      "gemini-3.5-flash-lite",
       "gemini-3.8-flash",
-      "gemini-3.0-flash",
-      "gemini-3-flash-preview",
+      "gemini-3.6-flash",
       "gemini-flash-latest",
     ]),
   );
 
   let lastResponse = await fetch(initialEndpoint, options);
-  if (lastResponse.ok || lastResponse.status !== 404) {
+  if (lastResponse.ok) {
     return lastResponse;
   }
 
   for (let i = 0; i < candidates.length; i++) {
-    const errText = await lastResponse.clone().text();
-    const match = errText.match(/use models\/([a-zA-Z0-9._-]+)/i);
-    if (match?.[1] && !candidates.includes(match[1])) {
-      candidates.splice(i, 0, match[1]);
-    }
-
     const fallbackModel = candidates[i];
     const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${apiKey}`;
     if (fallbackUrl === initialEndpoint) {
       continue;
     }
 
-    lastResponse = await fetch(fallbackUrl, options);
-    if (lastResponse.ok || lastResponse.status !== 404) {
-      return lastResponse;
+    try {
+      const resp = await fetch(fallbackUrl, options);
+      if (resp.ok) {
+        return resp;
+      }
+      lastResponse = resp;
+    } catch {
+      // Continue to next candidate
     }
   }
 
@@ -556,31 +570,109 @@ async function mockIdentifyPlant(
     };
   }
 
-  // 4. Default / Jade Plant (Crassula ovata) match (works great for photo-only demo scans too!)
-  return {
-    commonName: "Jade Plant",
-    scientificName: "Crassula ovata",
-    family: "Crassulaceae",
-    plantType: "succulent",
-    confidence: 0.97,
-    identificationNotes:
-      "Crassula ovata (Crassulaceae) identified by opposite decussate obovate fleshy leaves, woody mature stems, and subtle carmine leaf margins under high light.",
-    baselineCare: {
-      idealLight:
-        "Bright direct to strong indirect sun (South or West exposure, 4–6 hrs)",
-      baseWateringDays: 14,
-      soilRecommendation:
-        "Gritty succulent mix (50% pumice or perlite + 50% cactus soil) in an unglazed terracotta pot with a drainage hole.",
-      succulentGuardrails: {
-        isSucculentOrCactus: true,
-        neverMistFoliage: true,
-        soakAndDryRequired: true,
-        minimumDryBackDays: 12,
-        rotWarningNote:
-          "Crassulaceae Guardrail: Never mist foliage or water on a shallow daily/weekly routine. Wait until substrate is 100% bone-dry and lower leaves feel slightly pliable.",
+  // 4. Diverse mock catalog rotation for photo scans (so distinct photos don't all look identical)
+  const mockCatalog: PlantIdentificationResult[] = [
+    {
+      commonName: "Jade Plant",
+      scientificName: "Crassula ovata",
+      family: "Crassulaceae",
+      plantType: "succulent",
+      confidence: 0.96,
+      identificationNotes:
+        "Crassula ovata (Crassulaceae) identified by opposite decussate obovate fleshy leaves, woody mature stems, and subtle carmine leaf margins under high light.",
+      baselineCare: {
+        idealLight: "Bright direct to strong indirect sun (South or West exposure, 4–6 hrs)",
+        baseWateringDays: 14,
+        soilRecommendation:
+          "Gritty succulent mix (50% pumice or perlite + 50% cactus soil) in an unglazed terracotta pot with a drainage hole.",
+        succulentGuardrails: {
+          isSucculentOrCactus: true,
+          neverMistFoliage: true,
+          soakAndDryRequired: true,
+          minimumDryBackDays: 12,
+          rotWarningNote:
+            "Crassulaceae Guardrail: Never mist foliage or water on a shallow daily/weekly routine. Wait until substrate is 100% bone-dry and lower leaves feel slightly pliable.",
+        },
       },
     },
-  };
+    {
+      commonName: "Swiss Cheese Plant",
+      scientificName: "Monstera deliciosa",
+      family: "Araceae",
+      plantType: "foliage",
+      confidence: 0.94,
+      identificationNotes:
+        "Monstera deliciosa identified by broad cordate leaves displaying early lateral fenestrations and sturdy aerial roots.",
+      baselineCare: {
+        idealLight: "Bright indirect light; protect from harsh midday sun",
+        baseWateringDays: 7,
+        soilRecommendation:
+          "Aerated aroid blend: 40% chunky orchid bark, 30% perlite, 30% coco peat.",
+        succulentGuardrails: {
+          isSucculentOrCactus: false,
+          neverMistFoliage: false,
+          soakAndDryRequired: false,
+          minimumDryBackDays: 4,
+          rotWarningNote:
+            "Allow top 2 inches of soil to dry out between waterings to prevent root suffocation.",
+        },
+      },
+    },
+    {
+      commonName: "Snake Plant",
+      scientificName: "Sansevieria trifasciata",
+      family: "Asparagaceae",
+      plantType: "succulent",
+      confidence: 0.95,
+      identificationNotes:
+        "Sansevieria trifasciata recognized by erect sword-shaped leaves with distinct grey-green variegated cross-banding and yellow margins.",
+      baselineCare: {
+        idealLight: "Adaptable from low indirect light to bright filtered sun",
+        baseWateringDays: 16,
+        soilRecommendation:
+          "Fast-draining cactus and succulent mix with perlite or pumice in a porous pot.",
+        succulentGuardrails: {
+          isSucculentOrCactus: true,
+          neverMistFoliage: true,
+          soakAndDryRequired: true,
+          minimumDryBackDays: 14,
+          rotWarningNote:
+            "Extremely susceptible to root rot if overwatered. Keep potting substrate dry between infrequent waterings.",
+        },
+      },
+    },
+    {
+      commonName: "Fiddle Leaf Fig",
+      scientificName: "Ficus lyrata",
+      family: "Moraceae",
+      plantType: "foliage",
+      confidence: 0.93,
+      identificationNotes:
+        "Ficus lyrata identified by prominent violin-shaped glossy coriaceous leaves with pronounced pale veins.",
+      baselineCare: {
+        idealLight: "Consistent bright indirect light; avoid drafty windows and sudden temperature swings",
+        baseWateringDays: 9,
+        soilRecommendation:
+          "Well-draining rich indoor potting mix amended with perlite and bark for root aeration.",
+        succulentGuardrails: {
+          isSucculentOrCactus: false,
+          neverMistFoliage: false,
+          soakAndDryRequired: false,
+          minimumDryBackDays: 5,
+          rotWarningNote:
+            "Avoid letting the bottom sit in standing saucer drainage water to prevent fungal edema and brown leaf edges.",
+        },
+      },
+    },
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0;
+  }
+  const pickedIndex = Math.abs(hash) % mockCatalog.length;
+  return mockCatalog[pickedIndex];
 }
 
 async function mockDiagnosePlantHealth(

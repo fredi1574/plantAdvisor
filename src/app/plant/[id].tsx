@@ -8,6 +8,7 @@ import {
   FlaskConical,
   HelpCircle,
   MapPin,
+  Pencil,
   Scissors,
   ShieldAlert,
   Sparkles,
@@ -15,10 +16,13 @@ import {
   Square,
   Stethoscope,
   Sun,
+  Trash2,
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -28,6 +32,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EditPlantModal } from '@/components/edit-plant-modal';
 import {
   CardShadow,
   HealthBadgeTheme,
@@ -103,14 +108,16 @@ export default function PlantDetailNotebookScreen() {
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
   const toggleRecommendedAction = usePlantStore((s) => s.toggleRecommendedAction);
   const saveHealthAssessment = usePlantStore((s) => s.saveHealthAssessment);
+  const deletePlant = usePlantStore((s) => s.deletePlant);
 
   const [customNote, setCustomNote] = useState<string>('');
   const [selectedQuickType, setSelectedQuickType] =
     useState<CareEventType>('water');
   const [isRescanning, setIsRescanning] = useState<boolean>(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
 
   const plant = useMemo(
-    () => plants.find((p) => p.id === id) ?? plants[0],
+    () => (id ? plants.find((p) => p.id === id) : plants[0]),
     [plants, id]
   );
 
@@ -145,6 +152,30 @@ export default function PlantDetailNotebookScreen() {
   const assessment = plant.latestHealthAssessment;
   const healthStatus = assessment?.healthStatus ?? 'thriving';
   const healthTheme = HealthBadgeTheme[healthStatus];
+
+  const handleDeleteCurrentPlant = () => {
+    const performDelete = () => {
+      deletePlant(plant.id);
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)');
+      }
+    };
+
+    const confirmText = `Are you sure you want to delete "${plant.nickname}" (${plant.species.commonName}) and its care history?`;
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(confirmText)) {
+        performDelete();
+      }
+    } else {
+      Alert.alert('Delete Plant', confirmText, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: performDelete },
+      ]);
+    }
+  };
 
   const handleQuickLog = (actionType: CareEventType) => {
     setSelectedQuickType(actionType);
@@ -205,20 +236,45 @@ export default function PlantDetailNotebookScreen() {
               <Text style={styles.navBackText}>My Garden</Text>
             </Pressable>
 
-            <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: '/(tabs)/scan',
-                  params: { mode: 'diagnose', plantId: plant.id },
-                })
-              }
-              style={({ pressed }) => [
-                styles.scanShortcutBtn,
-                pressed && { opacity: 0.85 },
-              ]}>
-              <Stethoscope size={15} color={Palette.textInverse} />
-              <Text style={styles.scanShortcutText}>Photo Health Scan</Text>
-            </Pressable>
+            <View style={styles.topNavActionsRow}>
+              <Pressable
+                onPress={() => setIsEditModalOpen(true)}
+                style={({ pressed }) => [
+                  styles.iconActionBtn,
+                  pressed && { opacity: 0.75 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Edit ${plant.nickname}`}>
+                <Pencil size={15} color={Palette.primary} />
+                <Text style={styles.iconActionBtnText}>Edit</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleDeleteCurrentPlant}
+                style={({ pressed }) => [
+                  styles.deleteIconBtn,
+                  pressed && { opacity: 0.75 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${plant.nickname}`}>
+                <Trash2 size={15} color={Palette.criticalText} />
+              </Pressable>
+
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/(tabs)/scan',
+                    params: { mode: 'diagnose', plantId: plant.id },
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.scanShortcutBtn,
+                  pressed && { opacity: 0.85 },
+                ]}>
+                <Stethoscope size={15} color={Palette.textInverse} />
+                <Text style={styles.scanShortcutText}>Photo Health Scan</Text>
+              </Pressable>
+            </View>
           </View>
 
           {/* 1. SPECIMEN HEADER CARD */}
@@ -640,6 +696,13 @@ export default function PlantDetailNotebookScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <EditPlantModal
+        plant={plant}
+        visible={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onRequestDelete={handleDeleteCurrentPlant}
+      />
     </SafeAreaView>
   );
 }
@@ -688,6 +751,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
     paddingVertical: 4,
   },
   navBackBtn: {
@@ -701,6 +766,37 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: Palette.textPrimary,
+  },
+  topNavActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Palette.bgSurface,
+    borderWidth: 1,
+    borderColor: Palette.borderSubtle,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+  },
+  iconActionBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.primary,
+  },
+  deleteIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Palette.criticalBg,
+    borderWidth: 1,
+    borderColor: Palette.criticalBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scanShortcutBtn: {
     flexDirection: 'row',
@@ -1146,4 +1242,3 @@ const styles = StyleSheet.create({
     color: Palette.primary,
   },
 });
-
