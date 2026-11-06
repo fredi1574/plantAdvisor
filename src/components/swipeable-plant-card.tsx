@@ -9,12 +9,15 @@ import {
 } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import {
-  type GestureResponderEvent,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import {
+  GestureDetector,
+  usePanGesture,
+} from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -42,14 +45,29 @@ const PLANT_TYPE_LABELS: Record<UserPlant['species']['plantType'], string> = {
 
 const RIGHT_OPEN_WIDTH = 96; // Swiping right reveals Edit on left
 const LEFT_OPEN_WIDTH = -96; // Swiping left reveals Delete on right
-const FULL_SWIPE_RIGHT_THRESHOLD = 155;
-const FULL_SWIPE_LEFT_THRESHOLD = -155;
+const MAX_ELASTIC_STRETCH = 148; // Extra elastic "give" past the open action width
+const SNAP_OPEN_THRESHOLD = 32; // Forgiving threshold to snap open
+const FULL_SWIPE_THRESHOLD = 182; // Deep elastic pull required to trigger action immediately
 
 const SPRING_CONFIG = {
-  damping: 20,
-  stiffness: 220,
-  mass: 0.8,
+  damping: 17,
+  stiffness: 155,
+  mass: 0.85,
+  overshootClamping: false,
 };
+
+function applyRubberBandGive(rawX: number): number {
+  const absX = Math.abs(rawX);
+  if (absX <= RIGHT_OPEN_WIDTH) {
+    return rawX;
+  }
+  const sign = rawX < 0 ? -1 : 1;
+  const extra = absX - RIGHT_OPEN_WIDTH;
+  const dampedExtra =
+    (extra * 0.72 * MAX_ELASTIC_STRETCH) /
+    (MAX_ELASTIC_STRETCH + extra * 0.72);
+  return sign * (RIGHT_OPEN_WIDTH + dampedExtra);
+}
 
 interface SwipeablePlantCardProps {
   plant: UserPlant;
@@ -70,137 +88,184 @@ export function SwipeablePlantCard({
   const [isOpen, setIsOpen] = useState(false);
 
   const gestureRef = useRef({
-    startX: 0,
-    startY: 0,
     startOffset: 0,
-    lastX: 0,
-    lastTime: 0,
-    velocityX: 0,
-    isSwiping: false,
     currentOffset: 0,
+    lastTranslationX: 0,
+    lastVelocityX: 0,
+    isSwiping: false,
   });
 
-  const snapTo = (toValue: number) => {
+  const snapTo = (toValue: number, velocityX = 0) => {
     gestureRef.current.currentOffset = toValue;
     setIsOpen(toValue !== 0);
-    translateX.value = withSpring(toValue, SPRING_CONFIG);
+    const clampedVelocity = Math.max(-900, Math.min(900, velocityX));
+    translateX.value = withSpring(toValue, {
+      ...SPRING_CONFIG,
+      velocity: clampedVelocity,
+    });
   };
 
   const closeSwipe = (afterClose?: () => void) => {
     snapTo(0);
     if (afterClose) {
-      setTimeout(afterClose, 140);
+      setTimeout(afterClose, 150);
     }
   };
 
-  const handleStartShouldSetResponderCapture = (e: GestureResponderEvent) => {
-    const { pageX, pageY } = e.nativeEvent;
-    gestureRef.current.startX = pageX;
-    gestureRef.current.startY = pageY;
-    gestureRef.current.lastX = pageX;
-    gestureRef.current.lastTime = Date.now();
-    gestureRef.current.velocityX = 0;
-    return false;
-  };
-
-  const handleMoveShouldSetResponder = (e: GestureResponderEvent) => {
-    const { pageX, pageY } = e.nativeEvent;
-    const dx = pageX - gestureRef.current.startX;
-    const dy = pageY - gestureRef.current.startY;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
-    return absDx > 10 && absDx > absDy * 1.25;
-  };
-
-  const handleResponderGrant = (e: GestureResponderEvent) => {
-    const { pageX, pageY } = e.nativeEvent;
-    gestureRef.current.startX = pageX;
-    gestureRef.current.startY = pageY;
-    gestureRef.current.lastX = pageX;
-    gestureRef.current.lastTime = Date.now();
-    gestureRef.current.startOffset = gestureRef.current.currentOffset;
-    gestureRef.current.isSwiping = true;
-  };
-
-  const handleResponderMove = (e: GestureResponderEvent) => {
-    const { pageX } = e.nativeEvent;
-    const now = Date.now();
-    const dt = Math.max(1, now - gestureRef.current.lastTime);
-    gestureRef.current.velocityX = (pageX - gestureRef.current.lastX) / dt;
-    gestureRef.current.lastX = pageX;
-    gestureRef.current.lastTime = now;
-
-    const dx = pageX - gestureRef.current.startX;
-    const rawX = gestureRef.current.startOffset + dx;
-    const clampedX = Math.max(-190, Math.min(190, rawX));
-    translateX.value = clampedX;
-  };
-
-  const handleResponderRelease = (e: GestureResponderEvent) => {
-    const { pageX } = e.nativeEvent;
-    const dx = pageX - gestureRef.current.startX;
-    const finalX = gestureRef.current.startOffset + dx;
-    const vx = gestureRef.current.velocityX;
+  const settleSwipe = (translationX: number, velocityX: number) => {
+    const startOffset = gestureRef.current.startOffset;
+    const rawX = startOffset + translationX;
+    const elasticX = applyRubberBandGive(rawX);
 
     setTimeout(() => {
       gestureRef.current.isSwiping = false;
-    }, 60);
+    }, 80);
 
-    // Full swipe right -> trigger Edit immediately
-    if (finalX > FULL_SWIPE_RIGHT_THRESHOLD || (finalX > 85 && vx > 0.75)) {
-      snapTo(0);
-      setTimeout(() => onEdit(plant), 120);
+    // Deep full swipe right -> trigger Edit immediately
+    if (
+      elasticX > FULL_SWIPE_THRESHOLD ||
+      (elasticX > RIGHT_OPEN_WIDTH + 44 && velocityX > 1350)
+    ) {
+      snapTo(0, velocityX * 0.35);
+      setTimeout(() => onEdit(plant), 130);
       return;
     }
 
-    // Full swipe left -> trigger Delete confirmation immediately
-    if (finalX < FULL_SWIPE_LEFT_THRESHOLD || (finalX < -85 && vx < -0.75)) {
-      snapTo(0);
-      setTimeout(() => onDelete(plant), 120);
+    // Deep full swipe left -> trigger Delete confirmation immediately
+    if (
+      elasticX < -FULL_SWIPE_THRESHOLD ||
+      (elasticX < LEFT_OPEN_WIDTH - 44 && velocityX < -1350)
+    ) {
+      snapTo(0, velocityX * 0.35);
+      setTimeout(() => onDelete(plant), 130);
+      return;
+    }
+
+    // If starting from an already-open right state and user nudges back left, close smoothly
+    if (startOffset > 0 && (rawX < RIGHT_OPEN_WIDTH - 20 || velocityX < -220)) {
+      if (rawX < -SNAP_OPEN_THRESHOLD * 1.8 && velocityX < -500) {
+        snapTo(LEFT_OPEN_WIDTH, velocityX);
+      } else {
+        snapTo(0, velocityX);
+      }
+      return;
+    }
+
+    // If starting from an already-open left state and user nudges back right, close smoothly
+    if (startOffset < 0 && (rawX > LEFT_OPEN_WIDTH + 20 || velocityX > 220)) {
+      if (rawX > SNAP_OPEN_THRESHOLD * 1.8 && velocityX > 500) {
+        snapTo(RIGHT_OPEN_WIDTH, velocityX);
+      } else {
+        snapTo(0, velocityX);
+      }
       return;
     }
 
     // Snap open right (revealing Edit on left side)
-    if (finalX > 48 || (finalX > 24 && vx > 0.35)) {
-      snapTo(RIGHT_OPEN_WIDTH);
+    if (
+      elasticX > SNAP_OPEN_THRESHOLD ||
+      (elasticX > 14 && velocityX > 260)
+    ) {
+      snapTo(RIGHT_OPEN_WIDTH, velocityX);
       return;
     }
 
     // Snap open left (revealing Delete on right side)
-    if (finalX < -48 || (finalX < -24 && vx < -0.35)) {
-      snapTo(LEFT_OPEN_WIDTH);
+    if (
+      elasticX < -SNAP_OPEN_THRESHOLD ||
+      (elasticX < -14 && velocityX < -260)
+    ) {
+      snapTo(LEFT_OPEN_WIDTH, velocityX);
       return;
     }
 
-    snapTo(0);
+    snapTo(0, velocityX);
   };
 
-  const handleResponderTerminate = () => {
-    gestureRef.current.isSwiping = false;
-    snapTo(0);
-  };
+  const panGesture = usePanGesture({
+    activeOffsetX: [-8, 8],
+    failOffsetY: [-20, 20],
+    runOnJS: true,
+    onActivate: () => {
+      gestureRef.current.startOffset = gestureRef.current.currentOffset;
+      gestureRef.current.lastTranslationX = 0;
+      gestureRef.current.lastVelocityX = 0;
+      gestureRef.current.isSwiping = true;
+    },
+    onUpdate: (e) => {
+      gestureRef.current.lastTranslationX = e.translationX;
+      gestureRef.current.lastVelocityX = e.velocityX;
+      const rawX = gestureRef.current.startOffset + e.translationX;
+      translateX.value = applyRubberBandGive(rawX);
+    },
+    onDeactivate: (e) => {
+      const tx = e.translationX ?? gestureRef.current.lastTranslationX;
+      const vx = e.velocityX ?? gestureRef.current.lastVelocityX;
+      settleSwipe(tx, vx);
+    },
+  });
 
   const cardAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
 
-  const leftActionAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      translateX.value,
-      [0, 20, RIGHT_OPEN_WIDTH],
-      [0, 0.7, 1],
-      Extrapolation.CLAMP
-    ),
-  }));
+  const leftActionAnimatedStyle = useAnimatedStyle(() => {
+    const pull = Math.max(0, translateX.value);
+    return {
+      width: Math.max(RIGHT_OPEN_WIDTH, pull + 14),
+      opacity: interpolate(
+        pull,
+        [0, 12, RIGHT_OPEN_WIDTH * 0.65],
+        [0, 0.75, 1],
+        Extrapolation.CLAMP
+      ),
+    };
+  });
 
-  const rightActionAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      translateX.value,
-      [LEFT_OPEN_WIDTH, -20, 0],
-      [1, 0.7, 0],
-      Extrapolation.CLAMP
-    ),
-  }));
+  const rightActionAnimatedStyle = useAnimatedStyle(() => {
+    const pull = Math.max(0, -translateX.value);
+    return {
+      width: Math.max(Math.abs(LEFT_OPEN_WIDTH), pull + 14),
+      opacity: interpolate(
+        pull,
+        [0, 12, Math.abs(LEFT_OPEN_WIDTH) * 0.65],
+        [0, 0.75, 1],
+        Extrapolation.CLAMP
+      ),
+    };
+  });
+
+  const leftActionContentStyle = useAnimatedStyle(() => {
+    const pull = Math.max(0, translateX.value);
+    return {
+      transform: [
+        {
+          scale: interpolate(
+            pull,
+            [0, RIGHT_OPEN_WIDTH, FULL_SWIPE_THRESHOLD],
+            [0.86, 1, 1.15],
+            Extrapolation.CLAMP
+          ),
+        },
+      ],
+    };
+  });
+
+  const rightActionContentStyle = useAnimatedStyle(() => {
+    const pull = Math.max(0, -translateX.value);
+    return {
+      transform: [
+        {
+          scale: interpolate(
+            pull,
+            [0, Math.abs(LEFT_OPEN_WIDTH), FULL_SWIPE_THRESHOLD],
+            [0.86, 1, 1.15],
+            Extrapolation.CLAMP
+          ),
+        },
+      ],
+    };
+  });
 
   const healthStatus =
     plant.latestHealthAssessment?.healthStatus ?? 'thriving';
@@ -234,8 +299,10 @@ export function SwipeablePlantCard({
             ]}
             accessibilityRole="button"
             accessibilityLabel={`Edit ${plant.nickname}`}>
-            <Pencil size={18} color={Palette.textInverse} />
-            <Text style={styles.actionBtnLabel}>Edit</Text>
+            <Animated.View style={[styles.actionBtnContent, leftActionContentStyle]}>
+              <Pencil size={18} color={Palette.textInverse} />
+              <Text style={styles.actionBtnLabel}>Edit</Text>
+            </Animated.View>
           </Pressable>
         </Animated.View>
 
@@ -251,29 +318,23 @@ export function SwipeablePlantCard({
             ]}
             accessibilityRole="button"
             accessibilityLabel={`Delete ${plant.nickname}`}>
-            <Trash2 size={18} color={Palette.textInverse} />
-            <Text style={styles.actionBtnLabel}>Delete</Text>
+            <Animated.View style={[styles.actionBtnContent, rightActionContentStyle]}>
+              <Trash2 size={18} color={Palette.textInverse} />
+              <Text style={styles.actionBtnLabel}>Delete</Text>
+            </Animated.View>
           </Pressable>
         </Animated.View>
       </View>
 
       {/* Foreground Animated Plant Card */}
-      <Animated.View
-        style={[styles.animatedCardWrap, cardAnimatedStyle]}
-        onStartShouldSetResponderCapture={handleStartShouldSetResponderCapture}
-        onMoveShouldSetResponder={handleMoveShouldSetResponder}
-        onMoveShouldSetResponderCapture={handleMoveShouldSetResponder}
-        onResponderGrant={handleResponderGrant}
-        onResponderMove={handleResponderMove}
-        onResponderRelease={handleResponderRelease}
-        onResponderTerminate={handleResponderTerminate}
-        onResponderTerminationRequest={() => false}>
-        <Pressable
-          onPress={handleCardPress}
-          style={({ pressed }) => [
-            styles.plantCard,
-            pressed && !isOpen && styles.plantCardPressed,
-          ]}>
+      <GestureDetector gesture={panGesture} touchAction="pan-y">
+        <Animated.View style={[styles.animatedCardWrap, cardAnimatedStyle]}>
+          <Pressable
+            onPress={handleCardPress}
+            style={({ pressed }) => [
+              styles.plantCard,
+              pressed && !isOpen && styles.plantCardPressed,
+            ]}>
           {/* Top Row: Thumbnail + Title + Health Status Badge */}
           <View style={styles.cardTopRow}>
             <Image
@@ -393,8 +454,9 @@ export function SwipeablePlantCard({
               </View>
             </View>
           </View>
-        </Pressable>
-      </Animated.View>
+          </Pressable>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }
@@ -428,8 +490,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     paddingHorizontal: 8,
+  },
+  actionBtnContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   editActionBtn: {
     backgroundColor: Palette.primary,

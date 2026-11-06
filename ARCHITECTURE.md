@@ -12,13 +12,17 @@ plantAdvisor/
 ├── DESIGN.md                        # Botanical design system tokens & layout rules
 ├── ARCHITECTURE.md                  # System architecture, AI pipelines, and storage layer
 ├── app.json                         # Expo CNG configuration (camera & photo permissions)
+├── supabase/
+│   └── schema.sql                   # PostgreSQL tables, FK indexes, RLS policies & Storage bucket
 ├── src/
 │   ├── app/                         # Expo Router file-based navigation
-│   │   ├── _layout.tsx              # Root Stack navigator (Tabs + Plant Detail route)
+│   │   ├── _layout.tsx              # Root Stack navigator (Tabs + Plant Detail + Auth modal)
+│   │   ├── auth.tsx                 # Botanical Sign In & Create Account screen
 │   │   ├── (tabs)/
-│   │   │   ├── _layout.tsx          # Bottom Tab navigator ("My Garden" & "Add / AI Scan")
+│   │   │   ├── _layout.tsx          # Bottom Tab navigator ("My Garden", "Add / AI Scan", "Account")
 │   │   │   ├── index.tsx            # "My Garden" dashboard with filters & watering alerts
-│   │   │   └── scan.tsx             # "Add / AI Scan" flow (Identify new plant or Diagnose existing)
+│   │   │   ├── scan.tsx             # "Add / AI Scan" flow (Identify new plant or Diagnose existing)
+│   │   │   └── profile.tsx          # Gardener Profile, Cloud Sync & Account Management tab
 │   │   └── plant/
 │   │       └── [id].tsx             # Individual Plant Notebook & AI Health Assessment screen
 │   ├── constants/
@@ -28,9 +32,11 @@ plantAdvisor/
 │   │   └── plant.ts                 # Strict TypeScript domain models & AI schemas
 │   ├── services/
 │   │   ├── imageUtils.ts            # Image compression/resizing (<=1024x1024 JPEG/WebP)
-│   │   └── aiPlantService.ts        # Mock + Live Gemini Multimodal AI service with Succulent Guardrails
+│   │   ├── aiPlantService.ts        # Mock + Live Gemini Multimodal AI service with Succulent Guardrails
+│   │   └── supabase.ts              # Supabase client, Auth profile helpers, Storage uploader & CRUD sync
 │   └── store/
-│       └── usePlantStore.ts         # Zustand + AsyncStorage offline-first repository store
+│       ├── useAuthStore.ts          # Supabase Auth session & Gardener Profile store
+│       └── usePlantStore.ts         # Zustand + AsyncStorage + Supabase offline-first repository store
 ```
 
 ---
