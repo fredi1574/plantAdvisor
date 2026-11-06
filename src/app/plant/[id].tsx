@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft,
+  CheckCircle2,
   CheckSquare,
   Droplets,
   FileText,
@@ -16,9 +17,9 @@ import {
   Square,
   Stethoscope,
   Sun,
-  Trash2,
+  Trash2
 } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -32,7 +33,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { EditLogModal } from '@/components/edit-log-modal';
 import { EditPlantModal } from '@/components/edit-plant-modal';
+import { SwipeableLogItem } from '@/components/swipeable-log-item';
 import {
   CardShadow,
   HealthBadgeTheme,
@@ -47,7 +50,7 @@ import {
   getDaysUntilNextWater,
   usePlantStore,
 } from '@/store/usePlantStore';
-import type { CareEventType } from '@/types/plant';
+import type { CareEventType, NotebookEntry } from '@/types/plant';
 
 const QUICK_ACTIONS: {
   type: CareEventType;
@@ -56,49 +59,49 @@ const QUICK_ACTIONS: {
   defaultNotes: string;
   color: string;
 }[] = [
-  {
-    type: 'water',
-    label: 'Log Water',
-    defaultTitle: 'Thorough Watering',
-    defaultNotes: 'Watered after checking substrate dryness.',
-    color: Palette.waterBlue,
-  },
-  {
-    type: 'propagation',
-    label: 'Prop Milestone',
-    defaultTitle: 'Propagation Growth Check',
-    defaultNotes: 'Logged new root/shoot elongation milestone.',
-    color: Palette.accentTerracotta,
-  },
-  {
-    type: 'fertilize',
-    label: 'Fertilize',
-    defaultTitle: 'Diluted Nutrient Feed',
-    defaultNotes: 'Applied balanced liquid fertilizer at 1/2 strength.',
-    color: Palette.primary,
-  },
-  {
-    type: 'prune',
-    label: 'Prune',
-    defaultTitle: 'Canopy & Leaf Pruning',
-    defaultNotes: 'Removed spent lower foliage and pinched apical tip.',
-    color: Palette.primaryMuted,
-  },
-  {
-    type: 'repot',
-    label: 'Repot',
-    defaultTitle: 'Substrate & Pot Refresh',
-    defaultNotes: 'Checked root health and refreshed gritty aerated substrate.',
-    color: Palette.accentTerracotta,
-  },
-  {
-    type: 'note',
-    label: 'Add Note',
-    defaultTitle: 'Botanical Observation Note',
-    defaultNotes: 'Leaves looking turgid and well-oriented toward window light.',
-    color: Palette.textSecondary,
-  },
-];
+    {
+      type: 'water',
+      label: 'Log Water',
+      defaultTitle: 'Thorough Watering',
+      defaultNotes: 'Watered after checking substrate dryness.',
+      color: Palette.waterBlue,
+    },
+    {
+      type: 'propagation',
+      label: 'Prop Milestone',
+      defaultTitle: 'Propagation Growth Check',
+      defaultNotes: 'Logged new root/shoot elongation milestone.',
+      color: Palette.accentTerracotta,
+    },
+    {
+      type: 'fertilize',
+      label: 'Fertilize',
+      defaultTitle: 'Diluted Nutrient Feed',
+      defaultNotes: 'Applied balanced liquid fertilizer at 1/2 strength.',
+      color: Palette.primary,
+    },
+    {
+      type: 'prune',
+      label: 'Prune',
+      defaultTitle: 'Canopy & Leaf Pruning',
+      defaultNotes: 'Removed spent lower foliage and pinched apical tip.',
+      color: Palette.primaryMuted,
+    },
+    {
+      type: 'repot',
+      label: 'Repot',
+      defaultTitle: 'Substrate & Pot Refresh',
+      defaultNotes: 'Checked root health and refreshed gritty aerated substrate.',
+      color: Palette.accentTerracotta,
+    },
+    {
+      type: 'note',
+      label: 'Add Note',
+      defaultTitle: 'Botanical Observation Note',
+      defaultNotes: 'Leaves looking turgid and well-oriented toward window light.',
+      color: Palette.textSecondary,
+    },
+  ];
 
 export default function PlantDetailNotebookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -109,12 +112,22 @@ export default function PlantDetailNotebookScreen() {
   const toggleRecommendedAction = usePlantStore((s) => s.toggleRecommendedAction);
   const saveHealthAssessment = usePlantStore((s) => s.saveHealthAssessment);
   const deletePlant = usePlantStore((s) => s.deletePlant);
+  const deleteCareEntry = usePlantStore((s) => s.deleteCareEntry);
 
   const [customNote, setCustomNote] = useState<string>('');
   const [selectedQuickType, setSelectedQuickType] =
     useState<CareEventType>('water');
   const [isRescanning, setIsRescanning] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [editingEntry, setEditingEntry] = useState<NotebookEntry | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setFeedbackMessage(message);
+    setTimeout(() => {
+      setFeedbackMessage(null);
+    }, 3500);
+  };
 
   const plant = useMemo(
     () => (id ? plants.find((p) => p.id === id) : plants[0]),
@@ -171,6 +184,26 @@ export default function PlantDetailNotebookScreen() {
       }
     } else {
       Alert.alert('Delete Plant', confirmText, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: performDelete },
+      ]);
+    }
+  };
+
+  const handleDeleteLogEntry = (entry: NotebookEntry) => {
+    const performDelete = () => {
+      deleteCareEntry(entry.id);
+      showToast(`Removed log "${entry.title}".`);
+    };
+
+    const confirmText = `Are you sure you want to delete the log "${entry.title}"?`;
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(confirmText)) {
+        performDelete();
+      }
+    } else {
+      Alert.alert('Delete Care Log', confirmText, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: performDelete },
       ]);
@@ -236,46 +269,29 @@ export default function PlantDetailNotebookScreen() {
               <Text style={styles.navBackText}>My Garden</Text>
             </Pressable>
 
-            <View style={styles.topNavActionsRow}>
-              <Pressable
-                onPress={() => setIsEditModalOpen(true)}
-                style={({ pressed }) => [
-                  styles.iconActionBtn,
-                  pressed && { opacity: 0.75 },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Edit ${plant.nickname}`}>
-                <Pencil size={15} color={Palette.primary} />
-                <Text style={styles.iconActionBtnText}>Edit</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleDeleteCurrentPlant}
-                style={({ pressed }) => [
-                  styles.deleteIconBtn,
-                  pressed && { opacity: 0.75 },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Delete ${plant.nickname}`}>
-                <Trash2 size={15} color={Palette.criticalText} />
-              </Pressable>
-
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: '/(tabs)/scan',
-                    params: { mode: 'diagnose', plantId: plant.id },
-                  })
-                }
-                style={({ pressed }) => [
-                  styles.scanShortcutBtn,
-                  pressed && { opacity: 0.85 },
-                ]}>
-                <Stethoscope size={15} color={Palette.textInverse} />
-                <Text style={styles.scanShortcutText}>Photo Health Scan</Text>
-              </Pressable>
-            </View>
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/(tabs)/scan',
+                  params: { mode: 'diagnose', plantId: plant.id },
+                })
+              }
+              style={({ pressed }) => [
+                styles.scanShortcutBtn,
+                pressed && { opacity: 0.85 },
+              ]}>
+              <Stethoscope size={15} color={Palette.textInverse} />
+              <Text style={styles.scanShortcutText}>Photo Health Scan</Text>
+            </Pressable>
           </View>
+
+          {/* User Feedback Toast */}
+          {feedbackMessage && (
+            <View style={styles.feedbackBanner}>
+              <CheckCircle2 size={16} color="#15803D" />
+              <Text style={styles.feedbackBannerText}>{feedbackMessage}</Text>
+            </View>
+          )}
 
           {/* 1. SPECIMEN HEADER CARD */}
           <View style={styles.heroCard}>
@@ -340,8 +356,8 @@ export default function PlantDetailNotebookScreen() {
                 style={[
                   styles.specBadge,
                   !plant.hasDrainageHole &&
-                    plant.species.plantType === 'succulent' &&
-                    styles.specBadgeWarning,
+                  plant.species.plantType === 'succulent' &&
+                  styles.specBadgeWarning,
                 ]}>
                 <Text style={styles.specBadgeLabel}>CONTAINER & DRAINAGE</Text>
                 <Text style={styles.specBadgeValue}>
@@ -425,14 +441,14 @@ export default function PlantDetailNotebookScreen() {
               {(assessment.succulentGuardrailApplied ||
                 plant.species.baselineCare.succulentGuardrails
                   .isSucculentOrCactus) && (
-                <View style={styles.guardrailCallout}>
-                  <ShieldAlert size={16} color={Palette.attentionText} />
-                  <Text style={styles.guardrailCalloutText}>
-                    {assessment.succulentGuardrailApplied ??
-                      plant.species.baselineCare.succulentGuardrails.rotWarningNote}
-                  </Text>
-                </View>
-              )}
+                  <View style={styles.guardrailCallout}>
+                    <ShieldAlert size={16} color={Palette.attentionText} />
+                    <Text style={styles.guardrailCalloutText}>
+                      {assessment.succulentGuardrailApplied ??
+                        plant.species.baselineCare.succulentGuardrails.rotWarningNote}
+                    </Text>
+                  </View>
+                )}
 
               {/* Diagnosis Summary */}
               <Text style={styles.diagnosisBody}>
@@ -598,101 +614,50 @@ export default function PlantDetailNotebookScreen() {
 
             <View style={styles.timelineDivider} />
 
-            <Text style={styles.sectionHeaderTitle}>
-              Chronological Notebook Timeline ({plantEntries.length})
-            </Text>
+            <View style={styles.timelineHeaderBlock}>
+              <Text style={styles.sectionHeaderTitle}>
+                Chronological Notebook Timeline ({plantEntries.length})
+              </Text>
+            </View>
 
             <View style={styles.timelineList}>
-              {plantEntries.map((entry, idx) => {
-                const isLast = idx === plantEntries.length - 1;
-                const nodeColor =
-                  entry.eventType === 'water'
-                    ? Palette.waterBlue
-                    : entry.eventType === 'propagation' ||
-                        entry.eventType === 'repot'
-                      ? Palette.accentTerracotta
-                      : Palette.primary;
-
-                return (
-                  <View key={entry.id} style={styles.timelineRow}>
-                    {/* Left Rail & Node */}
-                    <View style={styles.timelineRailCol}>
-                      <View
-                        style={[
-                          styles.timelineNode,
-                          { backgroundColor: nodeColor },
-                        ]}
-                      />
-                      {!isLast && <View style={styles.timelineVerticalLine} />}
-                    </View>
-
-                    {/* Event Content Card */}
-                    <View style={styles.timelineEventBox}>
-                      <View style={styles.timelineEventHeader}>
-                        <Text style={styles.timelineEventTitle}>
-                          {entry.title}
-                        </Text>
-                        <Text style={styles.timelineEventDate}>
-                          {new Date(entry.timestamp).toLocaleDateString(
-                            undefined,
-                            {
-                              month: 'short',
-                              day: 'numeric',
-                            }
-                          )}
-                        </Text>
-                      </View>
-
-                      <Text style={styles.timelineEventNotes}>
-                        {entry.notes}
-                      </Text>
-
-                      {/* Optional Propagation / Moisture Metrics Pills */}
-                      {entry.metrics && (
-                        <View style={styles.metricsPillsRow}>
-                          {entry.metrics.rootLengthCm !== undefined && (
-                            <View style={styles.metricPill}>
-                              <Text style={styles.metricPillText}>
-                                Root: {entry.metrics.rootLengthCm} cm
-                              </Text>
-                            </View>
-                          )}
-                          {entry.metrics.stemHeightCm !== undefined && (
-                            <View style={styles.metricPill}>
-                              <Text style={styles.metricPillText}>
-                                Stem: {entry.metrics.stemHeightCm} cm
-                              </Text>
-                            </View>
-                          )}
-                          {entry.metrics.leafCount !== undefined && (
-                            <View style={styles.metricPill}>
-                              <Text style={styles.metricPillText}>
-                                Leaves: {entry.metrics.leafCount}
-                              </Text>
-                            </View>
-                          )}
-                          {entry.metrics.waterAmountMl !== undefined && (
-                            <View style={styles.metricPill}>
-                              <Text style={styles.metricPillText}>
-                                Volume: {entry.metrics.waterAmountMl} ml
-                              </Text>
-                            </View>
-                          )}
-                          {entry.metrics.soilMoisture !== undefined && (
-                            <View style={styles.metricPill}>
-                              <Text style={styles.metricPillText}>
-                                Soil prior:{' '}
-                                {entry.metrics.soilMoisture.replace('_', ' ')}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
+              {plantEntries.map((entry, idx) => (
+                <SwipeableLogItem
+                  key={entry.id}
+                  entry={entry}
+                  isLast={idx === plantEntries.length - 1}
+                  onEdit={(target) => setEditingEntry(target)}
+                  onDelete={handleDeleteLogEntry}
+                />
+              ))}
             </View>
+          </View>
+
+          {/* 4. BOTTOM SPECIMEN MANAGEMENT ACTIONS (Edit & Delete Plant) */}
+          <View style={styles.bottomActionsRow}>
+            <Pressable
+              onPress={() => setIsEditModalOpen(true)}
+              style={({ pressed }) => [
+                styles.bottomEditBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit ${plant.nickname}`}>
+              <Pencil size={16} color={Palette.primary} />
+              <Text style={styles.bottomEditBtnText}>Edit Plant Details</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleDeleteCurrentPlant}
+              style={({ pressed }) => [
+                styles.bottomDeleteBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete ${plant.nickname}`}>
+              <Trash2 size={16} color={Palette.criticalText} />
+              <Text style={styles.bottomDeleteBtnText}>Delete Plant</Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -701,7 +666,20 @@ export default function PlantDetailNotebookScreen() {
         plant={plant}
         visible={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
+        onSaved={(updatedName) =>
+          showToast(`Updated "${updatedName}" details! 🌿`)
+        }
         onRequestDelete={handleDeleteCurrentPlant}
+      />
+
+      <EditLogModal
+        entry={editingEntry}
+        visible={Boolean(editingEntry)}
+        onClose={() => setEditingEntry(null)}
+        onSaved={(updatedTitle) =>
+          showToast(`Updated log "${updatedTitle}"! 🌿`)
+        }
+        onRequestDelete={handleDeleteLogEntry}
       />
     </SafeAreaView>
   );
@@ -767,37 +745,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Palette.textPrimary,
   },
-  topNavActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: Palette.bgSurface,
-    borderWidth: 1,
-    borderColor: Palette.borderSubtle,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: Radius.full,
-  },
-  iconActionBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Palette.primary,
-  },
-  deleteIconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: Palette.criticalBg,
-    borderWidth: 1,
-    borderColor: Palette.criticalBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scanShortcutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -811,6 +758,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: Palette.textInverse,
+  },
+  feedbackBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#DCFCE7',
+    borderColor: '#86EFAC',
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: Radius.md,
+  },
+  feedbackBannerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#15803D',
   },
   heroCard: {
     backgroundColor: Palette.bgSurface,
@@ -1167,78 +1130,64 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.borderSubtle,
     marginVertical: 4,
   },
+  timelineHeaderBlock: {
+    gap: 4,
+  },
+  swipeHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  swipeHintText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: Palette.textSecondary,
+  },
   timelineList: {
     gap: 0,
   },
-  timelineRow: {
+  bottomActionsRow: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  timelineRailCol: {
     alignItems: 'center',
-    width: 18,
-  },
-  timelineNode: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 5,
-  },
-  timelineVerticalLine: {
-    flex: 1,
-    width: 2,
-    backgroundColor: Palette.borderSubtle,
-    marginVertical: 4,
-  },
-  timelineEventBox: {
-    flex: 1,
-    backgroundColor: Palette.bgPrimary,
-    borderWidth: 1,
-    borderColor: Palette.borderSubtle,
-    borderRadius: Radius.md,
-    padding: 12,
-    marginBottom: 12,
-    gap: 5,
-  },
-  timelineEventHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  timelineEventTitle: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-    color: Palette.textPrimary,
-  },
-  timelineEventDate: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Palette.textMuted,
-  },
-  timelineEventNotes: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: Palette.textSecondary,
-  },
-  metricsPillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    gap: Spacing.sm,
     marginTop: 4,
   },
-  metricPill: {
+  bottomEditBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: Palette.bgSurface,
     borderWidth: 1,
     borderColor: Palette.borderSubtle,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.sm,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: Radius.lg,
+    ...CardShadow,
   },
-  metricPillText: {
-    fontSize: 11,
+  bottomEditBtnText: {
+    fontSize: 14,
     fontWeight: '700',
     color: Palette.primary,
+  },
+  bottomDeleteBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Palette.criticalBg,
+    borderWidth: 1,
+    borderColor: Palette.criticalBorder,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: Radius.lg,
+    ...CardShadow,
+  },
+  bottomDeleteBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Palette.criticalText,
   },
 });

@@ -55,6 +55,13 @@ export interface LogCareEventPayload {
   metrics?: NotebookEntry['metrics'];
 }
 
+export interface UpdateCareEntryPayload {
+  eventType?: CareEventType;
+  title?: string;
+  notes?: string;
+  metrics?: NotebookEntry['metrics'];
+}
+
 interface PlantStoreState {
   plants: UserPlant[];
   entries: NotebookEntry[];
@@ -62,6 +69,8 @@ interface PlantStoreState {
   updatePlant: (plantId: string, payload: UpdatePlantPayload) => void;
   deletePlant: (plantId: string) => void;
   logCareEvent: (payload: LogCareEventPayload) => NotebookEntry;
+  updateCareEntry: (entryId: string, payload: UpdateCareEntryPayload) => void;
+  deleteCareEntry: (entryId: string) => void;
   waterPlantNow: (plantId: string, notes?: string) => void;
   waterAllNeedingWater: () => number;
   waterAllPlants: () => number;
@@ -258,6 +267,34 @@ export const usePlantStore = create<PlantStoreState>()(
         }));
 
         return newEntry;
+      },
+
+      updateCareEntry: (entryId, payload) => {
+        set((state) => ({
+          entries: state.entries.map((entry) => {
+            if (entry.id !== entryId) return entry;
+            return {
+              ...entry,
+              eventType: payload.eventType ?? entry.eventType,
+              title:
+                payload.title !== undefined
+                  ? payload.title.trim() || entry.title
+                  : entry.title,
+              notes:
+                payload.notes !== undefined
+                  ? payload.notes.trim() || entry.notes
+                  : entry.notes,
+              metrics:
+                payload.metrics !== undefined ? payload.metrics : entry.metrics,
+            };
+          }),
+        }));
+      },
+
+      deleteCareEntry: (entryId) => {
+        set((state) => ({
+          entries: state.entries.filter((e) => e.id !== entryId),
+        }));
       },
 
       waterPlantNow: (plantId, notes) => {
