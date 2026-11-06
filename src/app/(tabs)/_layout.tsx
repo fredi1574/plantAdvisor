@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Camera, Sprout } from 'lucide-react-native';
+import { Camera, Sprout, User } from 'lucide-react-native';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -54,6 +54,13 @@ export default function TabsLayout() {
         options={{
           title: 'Add / AI Scan',
           tabBarIcon: ({ color, size }) => <Camera color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Account',
+          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
     </Tabs>

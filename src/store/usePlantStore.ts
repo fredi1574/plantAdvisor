@@ -8,6 +8,15 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { SEED_NOTEBOOK_ENTRIES, SEED_PLANTS } from '@/constants/seedData';
+import {
+  deleteCareEntryFromSupabase,
+  deletePlantFromSupabase,
+  pullOrSeedGardenWithSupabase,
+  syncCareEntriesBatchToSupabase,
+  syncCareEntryToSupabase,
+  syncPlantsBatchToSupabase,
+  syncPlantToSupabase,
+} from '@/services/supabase';
 import type {
   CareEventType,
   HealthAssessment,
@@ -65,6 +74,8 @@ export interface UpdateCareEntryPayload {
 interface PlantStoreState {
   plants: UserPlant[];
   entries: NotebookEntry[];
+  isSyncing: boolean;
+  syncWithSupabase: () => Promise<void>;
   addPlant: (payload: AddPlantPayload) => UserPlant;
   updatePlant: (plantId: string, payload: UpdatePlantPayload) => void;
   deletePlant: (plantId: string) => void;
@@ -103,6 +114,26 @@ export const usePlantStore = create<PlantStoreState>()(
     (set, get) => ({
       plants: SEED_PLANTS,
       entries: SEED_NOTEBOOK_ENTRIES,
+      isSyncing: false,
+
+      syncWithSupabase: async () => {
+        if (get().isSyncing) return;
+        set({ isSyncing: true });
+        try {
+          const remote = await pullOrSeedGardenWithSupabase(
+            get().plants,
+            get().entries
+          );
+          if (remote) {
+            set({
+              plants: remote.plants,
+              entries: remote.entries,
+            });
+          }
+        } finally {
+          set({ isSyncing: false });
+        }
+      },
 
       addPlant: (payload) => {
         const nowIso = new Date().toISOString();
@@ -184,10 +215,27 @@ export const usePlantStore = create<PlantStoreState>()(
           entries: [initialEntry, ...state.entries],
         }));
 
+        void (async () => {
+          const uploadedUrl = await syncPlantToSupabase(newPlant);
+          if (uploadedUrl) {
+            set((state) => ({
+              plants: state.plants.map((p) =>
+                p.id === newPlant.id ? { ...p, photoUri: uploadedUrl } : p
+              ),
+            }));
+          }
+          await syncCareEntryToSupabase({
+            ...initialEntry,
+            photoUri: uploadedUrl ?? initialEntry.photoUri,
+          });
+        })();
+
         return newPlant;
       },
 
       updatePlant: (plantId, payload) => {
+        let updatedPlantRef: UserPlant | null = null;
+
         set((state) => ({
           plants: state.plants.map((plant) => {
             if (plant.id !== plantId) return plant;
@@ -199,7 +247,7 @@ export const usePlantStore = create<PlantStoreState>()(
                 ? Math.round(payload.customWateringIntervalDays)
                 : plant.customWateringIntervalDays;
 
-            return {
+            const updated: UserPlant = {
               ...plant,
               nickname:
                 payload.nickname !== undefined
@@ -232,8 +280,25 @@ export const usePlantStore = create<PlantStoreState>()(
                 plantType: payload.plantType ?? plant.species.plantType,
               },
             };
+
+            updatedPlantRef = updated;
+            return updated;
           }),
         }));
+
+        if (updatedPlantRef) {
+          const targetPlant = updatedPlantRef as UserPlant;
+          void (async () => {
+            const uploadedUrl = await syncPlantToSupabase(targetPlant);
+            if (uploadedUrl) {
+              set((state) => ({
+                plants: state.plants.map((p) =>
+                  p.id === targetPlant.id ? { ...p, photoUri: uploadedUrl } : p
+                ),
+              }));
+            }
+          })();
+        }
       },
 
       deletePlant: (plantId) => {
@@ -241,6 +306,8 @@ export const usePlantStore = create<PlantStoreState>()(
           plants: state.plants.filter((p) => p.id !== plantId),
           entries: state.entries.filter((e) => e.plantId !== plantId),
         }));
+
+        void deletePlantFromSupabase(plantId);
       },
 
       logCareEvent: (payload) => {
@@ -256,24 +323,38 @@ export const usePlantStore = create<PlantStoreState>()(
           metrics: payload.metrics,
         };
 
+        let updatedPlantRef: UserPlant | null = null;
+
         set((state) => ({
           entries: [newEntry, ...state.entries],
           plants:
             payload.eventType === 'water'
-              ? state.plants.map((p) =>
-                  p.id === payload.plantId ? { ...p, lastWateredAt: nowIso } : p
-                )
+              ? state.plants.map((p) => {
+                  if (p.id !== payload.plantId) return p;
+                  const updated = { ...p, lastWateredAt: nowIso };
+                  updatedPlantRef = updated;
+                  return updated;
+                })
               : state.plants,
         }));
+
+        void (async () => {
+          if (updatedPlantRef) {
+            await syncPlantToSupabase(updatedPlantRef as UserPlant);
+          }
+          await syncCareEntryToSupabase(newEntry);
+        })();
 
         return newEntry;
       },
 
       updateCareEntry: (entryId, payload) => {
+        let updatedEntryRef: NotebookEntry | null = null;
+
         set((state) => ({
           entries: state.entries.map((entry) => {
             if (entry.id !== entryId) return entry;
-            return {
+            const updated: NotebookEntry = {
               ...entry,
               eventType: payload.eventType ?? entry.eventType,
               title:
@@ -287,14 +368,22 @@ export const usePlantStore = create<PlantStoreState>()(
               metrics:
                 payload.metrics !== undefined ? payload.metrics : entry.metrics,
             };
+            updatedEntryRef = updated;
+            return updated;
           }),
         }));
+
+        if (updatedEntryRef) {
+          void syncCareEntryToSupabase(updatedEntryRef as NotebookEntry);
+        }
       },
 
       deleteCareEntry: (entryId) => {
         set((state) => ({
           entries: state.entries.filter((e) => e.id !== entryId),
         }));
+
+        void deleteCareEntryFromSupabase(entryId);
       },
 
       waterPlantNow: (plantId, notes) => {
@@ -360,12 +449,19 @@ export const usePlantStore = create<PlantStoreState>()(
           };
         });
 
+        const updatedPlants = needing.map((p) => ({ ...p, lastWateredAt: nowIso }));
+
         set((s) => ({
           plants: s.plants.map((p) =>
             needingIds.has(p.id) ? { ...p, lastWateredAt: nowIso } : p
           ),
           entries: [...batchEntries, ...s.entries],
         }));
+
+        void (async () => {
+          await syncPlantsBatchToSupabase(updatedPlants);
+          await syncCareEntriesBatchToSupabase(batchEntries);
+        })();
 
         return needing.length;
       },
@@ -403,10 +499,20 @@ export const usePlantStore = create<PlantStoreState>()(
           };
         });
 
+        const updatedPlants = state.plants.map((p) => ({
+          ...p,
+          lastWateredAt: nowIso,
+        }));
+
         set((s) => ({
-          plants: s.plants.map((p) => ({ ...p, lastWateredAt: nowIso })),
+          plants: updatedPlants,
           entries: [...batchEntries, ...s.entries],
         }));
+
+        void (async () => {
+          await syncPlantsBatchToSupabase(updatedPlants);
+          await syncCareEntriesBatchToSupabase(batchEntries);
+        })();
 
         return state.plants.length;
       },
@@ -449,30 +555,50 @@ export const usePlantStore = create<PlantStoreState>()(
           photoUri: imageUri,
         };
 
+        let updatedPlantRef: UserPlant | null = null;
+
         set((state) => ({
-          plants: state.plants.map((plant) =>
-            plant.id === plantId
-              ? {
-                  ...plant,
-                  photoUri: imageUri || plant.photoUri,
-                  customWateringIntervalDays: diagnosis.adjustedWateringIntervalDays,
-                  latestHealthAssessment: assessment,
-                }
-              : plant
-          ),
+          plants: state.plants.map((plant) => {
+            if (plant.id !== plantId) return plant;
+            const updated: UserPlant = {
+              ...plant,
+              photoUri: imageUri || plant.photoUri,
+              customWateringIntervalDays: diagnosis.adjustedWateringIntervalDays,
+              latestHealthAssessment: assessment,
+            };
+            updatedPlantRef = updated;
+            return updated;
+          }),
           entries: [scanLog, ...state.entries],
         }));
+
+        void (async () => {
+          if (updatedPlantRef) {
+            const targetPlant = updatedPlantRef as UserPlant;
+            const uploadedUrl = await syncPlantToSupabase(targetPlant);
+            if (uploadedUrl) {
+              set((state) => ({
+                plants: state.plants.map((p) =>
+                  p.id === targetPlant.id ? { ...p, photoUri: uploadedUrl } : p
+                ),
+              }));
+            }
+          }
+          await syncCareEntryToSupabase(scanLog);
+        })();
 
         return assessment;
       },
 
       toggleRecommendedAction: (plantId, actionId) => {
+        let updatedPlantRef: UserPlant | null = null;
+
         set((state) => ({
           plants: state.plants.map((plant) => {
             if (plant.id !== plantId || !plant.latestHealthAssessment) {
               return plant;
             }
-            return {
+            const updated: UserPlant = {
               ...plant,
               latestHealthAssessment: {
                 ...plant.latestHealthAssessment,
@@ -481,8 +607,14 @@ export const usePlantStore = create<PlantStoreState>()(
                 ),
               },
             };
+            updatedPlantRef = updated;
+            return updated;
           }),
         }));
+
+        if (updatedPlantRef) {
+          void syncPlantToSupabase(updatedPlantRef as UserPlant);
+        }
       },
 
       resetToSeedData: () => {
@@ -490,11 +622,25 @@ export const usePlantStore = create<PlantStoreState>()(
           plants: SEED_PLANTS,
           entries: SEED_NOTEBOOK_ENTRIES,
         });
+
+        void (async () => {
+          await syncPlantsBatchToSupabase(SEED_PLANTS);
+          await syncCareEntriesBatchToSupabase(SEED_NOTEBOOK_ENTRIES);
+        })();
       },
     }),
     {
       name: 'floralog-garden-storage-v1',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        plants: state.plants,
+        entries: state.entries,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          void state.syncWithSupabase();
+        }
+      },
     }
   )
 );

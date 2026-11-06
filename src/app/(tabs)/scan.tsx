@@ -11,7 +11,7 @@ import {
   Sprout,
   Stethoscope,
 } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -33,7 +33,11 @@ import {
   Spacing,
   UrgencyBadgeTheme,
 } from "@/constants/theme";
-import { diagnosePlantHealth, identifyPlant, isMockAiEnabled } from "@/services/aiPlantService";
+import {
+  diagnosePlantHealth,
+  identifyPlant,
+  isMockAiEnabled,
+} from "@/services/aiPlantService";
 import { prepareImageForAI } from "@/services/imageUtils";
 import { usePlantStore } from "@/store/usePlantStore";
 import type {
@@ -417,27 +421,6 @@ export default function ScanScreen() {
                 <ImageIcon size={16} color={Palette.primary} />
                 <Text style={styles.secondaryMediaBtnText}>Photo Library</Text>
               </Pressable>
-            </View>
-
-            {/* Quick Demo Presets for 1-Tap Local Testing */}
-            <View style={styles.presetBlock}>
-              <Text style={styles.presetLabel}>Quick Demo Specimens:</Text>
-              <View style={styles.presetRow}>
-                {DEMO_PRESETS.map((preset) => (
-                  <Pressable
-                    key={preset.label}
-                    onPress={async () => {
-                      setSearchQuery(preset.query);
-                      const prep = await prepareImageForAI(preset.uri);
-                      setImageUri(prep.uri);
-                      setImageDimensions(`${prep.width}×${prep.height}px`);
-                    }}
-                    style={styles.presetChip}
-                  >
-                    <Text style={styles.presetChipText}>{preset.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
             </View>
           </View>
 
