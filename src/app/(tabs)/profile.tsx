@@ -97,7 +97,7 @@ export default function ProfileScreen() {
   const handleSignOut = () => {
     const performSignOut = async () => {
       await signOut();
-      showToast('Signed out. Local garden remains available offline.');
+      router.replace('/auth');
     };
 
     if (Platform.OS === 'web') {

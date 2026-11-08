@@ -1,15 +1,12 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import {
   AlertCircle,
-  ArrowLeft,
-  CheckCircle2,
+  ArrowRight,
   Eye,
   EyeOff,
   Lock,
   Mail,
-  Sparkles,
-  Sprout,
-  User as UserIcon,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -32,57 +29,25 @@ import {
   Spacing,
 } from '@/constants/theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { ExperienceLevel } from '@/types/plant';
 
-const EXPERIENCE_OPTIONS: {
-  value: ExperienceLevel;
-  label: string;
-  subtitle: string;
-}[] = [
-  {
-    value: 'beginner',
-    label: 'Beginner Sprout',
-    subtitle: 'Learning watering rhythms & light basics',
-  },
-  {
-    value: 'enthusiast',
-    label: 'Plant Enthusiast',
-    subtitle: 'Growing succulents, foliage & cuttings',
-  },
-  {
-    value: 'master_gardener',
-    label: 'Master Botanist',
-    subtitle: 'Advanced substrates, propagation & diagnostics',
-  },
-];
+const LOGO_SOURCE = require('../../logo_transparent.png');
 
-export default function AuthScreen() {
+type FocusedField = 'email' | 'password' | null;
+
+export default function SignInScreen() {
   const signInWithEmail = useAuthStore((s) => s.signInWithEmail);
-  const signUpWithEmail = useAuthStore((s) => s.signUpWithEmail);
   const isLoading = useAuthStore((s) => s.isLoading);
   const authError = useAuthStore((s) => s.authError);
   const clearError = useAuthStore((s) => s.clearError);
 
-  const [mode, setMode] = useState<'sign_in' | 'sign_up'>('sign_in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [experienceLevel, setExperienceLevel] =
-    useState<ExperienceLevel>('enthusiast');
   const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<FocusedField>(null);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [confirmationSent, setConfirmationSent] = useState(false);
 
-  const switchMode = (nextMode: 'sign_in' | 'sign_up') => {
-    setMode(nextMode);
+  const handleSignIn = async () => {
     setLocalError(null);
-    setConfirmationSent(false);
-    clearError();
-  };
-
-  const handleSubmit = async () => {
-    setLocalError(null);
-    setConfirmationSent(false);
     clearError();
 
     const cleanEmail = email.trim();
@@ -95,32 +60,9 @@ export default function AuthScreen() {
       return;
     }
 
-    if (mode === 'sign_in') {
-      const result = await signInWithEmail(cleanEmail, password);
-      if (result.ok) {
-        if (router.canGoBack()) {
-          router.back();
-        } else {
-          router.replace('/(tabs)');
-        }
-      }
-    } else {
-      const result = await signUpWithEmail({
-        email: cleanEmail,
-        password,
-        displayName: displayName.trim() || cleanEmail.split('@')[0],
-        experienceLevel,
-      });
-
-      if (result.ok) {
-        if (result.needsEmailConfirmation) {
-          setConfirmationSent(true);
-        } else if (router.canGoBack()) {
-          router.back();
-        } else {
-          router.replace('/(tabs)');
-        }
-      }
+    const result = await signInWithEmail(cleanEmail, password);
+    if (result.ok) {
+      router.replace('/(tabs)');
     }
   };
 
@@ -128,6 +70,10 @@ export default function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      {/* Subtle Ambient Background Motifs */}
+      <View style={styles.ambientOrbTop} pointerEvents="none" />
+      <View style={styles.ambientOrbBottom} pointerEvents="none" />
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -137,214 +83,146 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           <View style={styles.container}>
-            {/* Top Back Button */}
-            <Pressable
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              style={({ pressed }) => [
-                styles.backBtn,
-                pressed && { opacity: 0.75 },
-              ]}>
-              <ArrowLeft size={18} color={Palette.textPrimary} />
-              <Text style={styles.backBtnText}>Back to Garden</Text>
-            </Pressable>
-
-            {/* Hero Header */}
-            <View style={styles.heroBlock}>
-              <View style={styles.iconCircle}>
-                <Sprout size={28} color={Palette.primary} />
+            {/* Minimal Centered Brand Identity */}
+            <View style={styles.brandHeader}>
+              <View style={styles.logoWrap}>
+                <View style={styles.logoHalo} />
+                <Image
+                  source={LOGO_SOURCE}
+                  style={styles.logoImage}
+                  contentFit="contain"
+                />
               </View>
-              <Text style={styles.eyebrow}>FLORALOG CLOUD SYNC</Text>
-              <Text style={styles.title}>
-                {mode === 'sign_in'
-                  ? 'Welcome Back, Gardener'
-                  : 'Create Your Botanical Account'}
-              </Text>
-              <Text style={styles.subtitle}>
-                {mode === 'sign_in'
-                  ? 'Sign in to sync your plants, care logs, and AI health scans across all your devices.'
-                  : 'Back up your garden in Supabase and track every watering, propagation, and AI diagnosis.'}
+              <Text style={styles.brandTitle}>FloraLog</Text>
+              <Text style={styles.brandSubtitle}>
+                Sign in to your botanical sanctuary
               </Text>
             </View>
 
-            {/* Segmented Mode Switcher */}
-            <View style={styles.tabSwitch}>
-              <Pressable
-                onPress={() => switchMode('sign_in')}
-                style={[
-                  styles.tabButton,
-                  mode === 'sign_in' && styles.tabButtonActive,
-                ]}>
-                <Text
-                  style={[
-                    styles.tabButtonText,
-                    mode === 'sign_in' && styles.tabButtonTextActive,
-                  ]}>
-                  Sign In
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => switchMode('sign_up')}
-                style={[
-                  styles.tabButton,
-                  mode === 'sign_up' && styles.tabButtonActive,
-                ]}>
-                <Text
-                  style={[
-                    styles.tabButtonText,
-                    mode === 'sign_up' && styles.tabButtonTextActive,
-                  ]}>
-                  Create Account
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Error Banner */}
-            {activeError && (
-              <View style={styles.errorBanner}>
-                <AlertCircle size={18} color={Palette.criticalText} />
-                <Text style={styles.errorText}>{activeError}</Text>
-              </View>
-            )}
-
-            {/* Confirmation Email Sent Banner */}
-            {confirmationSent && (
-              <View style={styles.successBanner}>
-                <CheckCircle2 size={18} color={Palette.thrivingText} />
-                <View style={styles.flex}>
-                  <Text style={styles.successTitle}>
-                    Check your email to confirm your account
-                  </Text>
-                  <Text style={styles.successBody}>
-                    We sent a verification link to {email.trim()}. Once confirmed,
-                    switch to Sign In above.
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Form Card */}
+            {/* Elevated Minimal Sign-In Card */}
             <View style={styles.card}>
-              {mode === 'sign_up' && (
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Gardener Name</Text>
-                  <View style={styles.inputRow}>
-                    <UserIcon size={18} color={Palette.textMuted} />
-                    <TextInput
-                      value={displayName}
-                      onChangeText={setDisplayName}
-                      placeholder="e.g. Clara Lin"
-                      placeholderTextColor={Palette.textMuted}
-                      style={styles.input}
-                      autoCapitalize="words"
-                    />
-                  </View>
+              {activeError && (
+                <View style={styles.errorBanner}>
+                  <AlertCircle size={16} color={Palette.criticalText} />
+                  <Text style={styles.errorText}>{activeError}</Text>
                 </View>
               )}
 
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Email Address</Text>
-                <View style={styles.inputRow}>
-                  <Mail size={18} color={Palette.textMuted} />
+              <View style={styles.inputsStack}>
+                <View
+                  style={[
+                    styles.inputField,
+                    focusedField === 'email' && styles.inputFieldFocused,
+                  ]}>
+                  <View
+                    style={[
+                      styles.inputIconWrap,
+                      focusedField === 'email' && styles.inputIconWrapFocused,
+                    ]}>
+                    <Mail
+                      size={16}
+                      color={
+                        focusedField === 'email'
+                          ? Palette.primary
+                          : Palette.textMuted
+                      }
+                    />
+                  </View>
                   <TextInput
                     value={email}
                     onChangeText={setEmail}
-                    placeholder="you@example.com"
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder="Email address"
                     placeholderTextColor={Palette.textMuted}
                     style={styles.input}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    returnKeyType="next"
                   />
                 </View>
-              </View>
 
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Password</Text>
-                <View style={styles.inputRow}>
-                  <Lock size={18} color={Palette.textMuted} />
+                <View
+                  style={[
+                    styles.inputField,
+                    focusedField === 'password' && styles.inputFieldFocused,
+                  ]}>
+                  <View
+                    style={[
+                      styles.inputIconWrap,
+                      focusedField === 'password' && styles.inputIconWrapFocused,
+                    ]}>
+                    <Lock
+                      size={16}
+                      color={
+                        focusedField === 'password'
+                          ? Palette.primary
+                          : Palette.textMuted
+                      }
+                    />
+                  </View>
                   <TextInput
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="At least 6 characters"
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder="Password"
                     placeholderTextColor={Palette.textMuted}
                     style={styles.input}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
+                    returnKeyType="go"
+                    onSubmitEditing={() => void handleSignIn()}
                   />
                   <Pressable
                     onPress={() => setShowPassword((prev) => !prev)}
-                    hitSlop={8}>
+                    hitSlop={10}
+                    style={styles.eyeBtn}>
                     {showPassword ? (
-                      <EyeOff size={18} color={Palette.textMuted} />
+                      <EyeOff size={16} color={Palette.textMuted} />
                     ) : (
-                      <Eye size={18} color={Palette.textMuted} />
+                      <Eye size={16} color={Palette.textMuted} />
                     )}
                   </Pressable>
                 </View>
               </View>
 
-              {mode === 'sign_up' && (
-                <View style={styles.fieldGroup}>
-                  <View style={styles.labelRow}>
-                    <Sparkles size={14} color={Palette.primary} />
-                    <Text style={styles.label}>Botanical Experience</Text>
-                  </View>
-                  <View style={styles.levelList}>
-                    {EXPERIENCE_OPTIONS.map((opt) => {
-                      const selected = experienceLevel === opt.value;
-                      return (
-                        <Pressable
-                          key={opt.value}
-                          onPress={() => setExperienceLevel(opt.value)}
-                          style={[
-                            styles.levelOption,
-                            selected && styles.levelOptionSelected,
-                          ]}>
-                          <View style={styles.levelRadioOuter}>
-                            {selected && <View style={styles.levelRadioInner} />}
-                          </View>
-                          <View style={styles.flex}>
-                            <Text
-                              style={[
-                                styles.levelTitle,
-                                selected && styles.levelTitleSelected,
-                              ]}>
-                              {opt.label}
-                            </Text>
-                            <Text style={styles.levelSubtitle}>
-                              {opt.subtitle}
-                            </Text>
-                          </View>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              )}
-
               <Pressable
-                onPress={handleSubmit}
+                onPress={() => void handleSignIn()}
                 disabled={isLoading}
                 style={({ pressed }) => [
                   styles.submitBtn,
-                  pressed && !isLoading && { opacity: 0.9 },
-                  isLoading && { opacity: 0.65 },
+                  pressed && !isLoading && styles.submitBtnPressed,
+                  isLoading && styles.submitBtnDisabled,
                 ]}>
                 {isLoading ? (
                   <ActivityIndicator color={Palette.textInverse} size="small" />
                 ) : (
-                  <Text style={styles.submitBtnText}>
-                    {mode === 'sign_in' ? 'Sign In & Sync Garden' : 'Create Account'}
-                  </Text>
+                  <>
+                    <Text style={styles.submitBtnText}>Enter My Garden</Text>
+                    <ArrowRight size={17} color={Palette.textInverse} />
+                  </>
                 )}
               </Pressable>
             </View>
+
+            {/* Bottom Navigation Button to Sign Up Page */}
+            <Pressable
+              onPress={() => {
+                setLocalError(null);
+                clearError();
+                router.push('/sign-up');
+              }}
+              style={({ pressed }) => [
+                styles.bottomSwitchBtn,
+                pressed && { opacity: 0.75 },
+              ]}>
+              <Text style={styles.footerText}>
+                Don&apos;t have an account?{' '}
+                <Text style={styles.footerLink}>Create account</Text>
+              </Text>
+            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -360,93 +238,90 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+  ambientOrbTop: {
+    position: 'absolute',
+    top: -90,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: '#E3EFE6',
+    opacity: 0.75,
+  },
+  ambientOrbBottom: {
+    position: 'absolute',
+    bottom: -100,
+    left: -80,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: '#EAE4D7',
+    opacity: 0.65,
+  },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.lg,
   },
   container: {
     width: '100%',
-    maxWidth: 480,
+    maxWidth: 390,
     alignSelf: 'center',
-    gap: Spacing.lg,
+    gap: 18,
   },
-  backBtn: {
-    flexDirection: 'row',
+  brandHeader: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: Radius.full,
-    backgroundColor: Palette.bgSubtle,
+    gap: 4,
   },
-  backBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Palette.textPrimary,
-  },
-  heroBlock: {
-    gap: 8,
-  },
-  iconCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: Radius.lg,
-    backgroundColor: Palette.primarySoft,
+  logoWrap: {
+    width: 112,
+    height: 124,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-    color: Palette.primary,
+  logoHalo: {
+    position: 'absolute',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: Palette.primarySoft,
+    borderWidth: 1,
+    borderColor: '#C5DEC9',
+    opacity: 0.8,
   },
-  title: {
-    fontSize: 26,
+  logoImage: {
+    width: 108,
+    height: 124,
+  },
+  brandTitle: {
+    fontSize: 28,
     fontWeight: '800',
     color: Palette.textPrimary,
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
   },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
+  brandSubtitle: {
+    fontSize: 13,
+    fontWeight: '500',
     color: Palette.textSecondary,
+    textAlign: 'center',
   },
-  tabSwitch: {
-    flexDirection: 'row',
-    backgroundColor: Palette.bgSubtle,
-    borderRadius: Radius.md,
-    padding: 4,
+  card: {
+    backgroundColor: Palette.bgSurface,
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
     borderColor: Palette.borderSubtle,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-  },
-  tabButtonActive: {
-    backgroundColor: Palette.bgSurface,
+    gap: 14,
     ...CardShadow,
-  },
-  tabButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Palette.textSecondary,
-  },
-  tabButtonTextActive: {
-    color: Palette.primary,
-    fontWeight: '700',
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: Spacing.md,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: Radius.md,
     backgroundColor: Palette.criticalBg,
     borderWidth: 1,
@@ -454,126 +329,87 @@ const styles = StyleSheet.create({
   },
   errorText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: Palette.criticalText,
   },
-  successBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  inputsStack: {
     gap: 10,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    backgroundColor: Palette.thrivingBg,
-    borderWidth: 1,
-    borderColor: Palette.thrivingBorder,
   },
-  successTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Palette.thrivingText,
-  },
-  successBody: {
-    fontSize: 13,
-    color: Palette.thrivingText,
-    marginTop: 2,
-    lineHeight: 18,
-  },
-  card: {
-    backgroundColor: Palette.bgSurface,
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Palette.borderSubtle,
-    gap: Spacing.md,
-    ...CardShadow,
-  },
-  fieldGroup: {
-    gap: 6,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Palette.textPrimary,
-  },
-  inputRow: {
+  inputField: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     backgroundColor: Palette.bgPrimary,
-    borderWidth: 1,
+    borderWidth: 1.2,
     borderColor: Palette.borderSubtle,
-    borderRadius: Radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 6,
+  },
+  inputFieldFocused: {
+    borderColor: Palette.primary,
+    backgroundColor: '#FAFDFB',
+  },
+  inputIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: Palette.bgSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inputIconWrapFocused: {
+    backgroundColor: Palette.primarySoft,
   },
   input: {
     flex: 1,
-    fontSize: 15,
-    color: Palette.textPrimary,
-  },
-  levelList: {
-    gap: 8,
-    marginTop: 2,
-  },
-  levelOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: Radius.md,
-    backgroundColor: Palette.bgPrimary,
-    borderWidth: 1,
-    borderColor: Palette.borderSubtle,
-  },
-  levelOptionSelected: {
-    backgroundColor: Palette.primarySoft,
-    borderColor: Palette.primary,
-  },
-  levelRadioOuter: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: Palette.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  levelRadioInner: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: Palette.primary,
-  },
-  levelTitle: {
     fontSize: 14,
-    fontWeight: '700',
     color: Palette.textPrimary,
+    paddingVertical: 4,
   },
-  levelTitleSelected: {
-    color: Palette.primary,
-  },
-  levelSubtitle: {
-    fontSize: 12,
-    color: Palette.textSecondary,
-    marginTop: 1,
+  eyeBtn: {
+    paddingHorizontal: 4,
   },
   submitBtn: {
-    marginTop: 6,
-    backgroundColor: Palette.primary,
-    borderRadius: Radius.md,
-    paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Palette.primary,
+    borderRadius: 14,
+    paddingVertical: 13,
+    marginTop: 2,
+    shadowColor: Palette.primary,
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  submitBtnPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.99 }],
+  },
+  submitBtnDisabled: {
+    opacity: 0.65,
   },
   submitBtnText: {
     color: Palette.textInverse,
     fontSize: 15,
+    fontWeight: '700',
+  },
+  bottomSwitchBtn: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: Radius.full,
+  },
+  footerText: {
+    fontSize: 13,
+    color: Palette.textSecondary,
+  },
+  footerLink: {
+    color: Palette.primary,
     fontWeight: '700',
   },
 });

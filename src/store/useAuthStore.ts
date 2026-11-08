@@ -1,8 +1,10 @@
 /**
  * FloraLog — Authentication & Gardener Profile Store
- * Powered by Supabase Auth + `public.profiles` table synchronization.
+ * Powered by Supabase Auth + `public.profiles` table synchronization,
+ * with automatic AsyncStorage session persistence when running locally.
  */
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Session, Subscription, User } from "@supabase/supabase-js";
 import { create } from "zustand";
 
@@ -13,6 +15,71 @@ import {
 } from "@/services/supabase";
 import { usePlantStore } from "@/store/usePlantStore";
 import type { ExperienceLevel, UserProfile } from "@/types/plant";
+
+const LOCAL_SESSION_STORAGE_KEY = "floralog-auth-session-v1";
+const LOCAL_ACCOUNTS_STORAGE_KEY = "floralog-auth-accounts-v1";
+
+interface LocalStoredAccount {
+  id: string;
+  email: string;
+  password: string;
+  profile: UserProfile;
+}
+
+interface LocalStoredSession {
+  user: User;
+  session: Session;
+  profile: UserProfile;
+}
+
+function buildLocalUserAndSession(profile: UserProfile): LocalStoredSession {
+  const nowIso = new Date().toISOString();
+  const user: User = {
+    id: profile.id,
+    app_metadata: { provider: "email", providers: ["email"] },
+    user_metadata: {
+      display_name: profile.displayName,
+      experience_level: profile.experienceLevel,
+    },
+    aud: "authenticated",
+    created_at: profile.createdAt || nowIso,
+    email: profile.email,
+  };
+
+  const session: Session = {
+    access_token: `local-token-${profile.id}`,
+    refresh_token: `local-refresh-${profile.id}`,
+    expires_in: 60 * 60 * 24 * 365,
+    expires_at: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 365,
+    token_type: "bearer",
+    user,
+  };
+
+  return { user, session, profile };
+}
+
+async function readLocalAccounts(): Promise<Record<string, LocalStoredAccount>> {
+  try {
+    const raw = await AsyncStorage.getItem(LOCAL_ACCOUNTS_STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, LocalStoredAccount>;
+  } catch {
+    return {};
+  }
+}
+
+async function writeLocalAccounts(
+  accounts: Record<string, LocalStoredAccount>,
+): Promise<void> {
+  try {
+    await AsyncStorage.setItem(
+      LOCAL_ACCOUNTS_STORAGE_KEY,
+      JSON.stringify(accounts),
+    );
+  } catch {
+    // Ignore storage write errors
+  }
+}
 
 export interface SignUpPayload {
   email: string;
@@ -61,7 +128,31 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
 
   initializeAuth: async () => {
     if (!supabase) {
-      set({ isInitialized: true });
+      try {
+        const rawSession = await AsyncStorage.getItem(
+          LOCAL_SESSION_STORAGE_KEY,
+        );
+        if (rawSession) {
+          const parsed = JSON.parse(rawSession) as LocalStoredSession;
+          if (parsed?.user && parsed?.session) {
+            set({
+              session: parsed.session,
+              user: parsed.user,
+              profile: parsed.profile,
+              isInitialized: true,
+            });
+            return;
+          }
+        }
+      } catch {
+        // Ignore corrupt local session
+      }
+      set({
+        session: null,
+        user: null,
+        profile: null,
+        isInitialized: true,
+      });
       return;
     }
 
@@ -115,14 +206,68 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   },
 
   signInWithEmail: async (email, password) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    set({ isLoading: true, authError: null });
+
     if (!supabase) {
-      return { ok: false, error: "Supabase is not configured in .env." };
+      try {
+        const accounts = await readLocalAccounts();
+        const existing = accounts[normalizedEmail];
+
+        if (existing && existing.password !== password) {
+          const msg = "Invalid email or password.";
+          set({ isLoading: false, authError: msg });
+          return { ok: false, error: msg };
+        }
+
+        const nowIso = new Date().toISOString();
+        const profile: UserProfile = existing
+          ? existing.profile
+          : {
+              id: `local-user-${Date.now()}`,
+              email: normalizedEmail,
+              displayName: normalizedEmail.split("@")[0] || "Gardener",
+              experienceLevel: "enthusiast",
+              bio: "",
+              createdAt: nowIso,
+              updatedAt: nowIso,
+            };
+
+        if (!existing) {
+          accounts[normalizedEmail] = {
+            id: profile.id,
+            email: normalizedEmail,
+            password,
+            profile,
+          };
+          await writeLocalAccounts(accounts);
+        }
+
+        const localSession = buildLocalUserAndSession(profile);
+        await AsyncStorage.setItem(
+          LOCAL_SESSION_STORAGE_KEY,
+          JSON.stringify(localSession),
+        );
+
+        set({
+          session: localSession.session,
+          user: localSession.user,
+          profile: localSession.profile,
+          isLoading: false,
+          authError: null,
+        });
+        return { ok: true };
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "Unable to sign in right now.";
+        set({ isLoading: false, authError: msg });
+        return { ok: false, error: msg };
+      }
     }
 
-    set({ isLoading: true, authError: null });
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password,
       });
 
@@ -157,15 +302,60 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     displayName,
     experienceLevel,
   }) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const cleanName =
+      displayName.trim() || normalizedEmail.split("@")[0] || "Gardener";
+    set({ isLoading: true, authError: null });
+
     if (!supabase) {
-      return { ok: false, error: "Supabase is not configured in .env." };
+      try {
+        const accounts = await readLocalAccounts();
+        const nowIso = new Date().toISOString();
+        const profile: UserProfile = {
+          id: accounts[normalizedEmail]?.id ?? `local-user-${Date.now()}`,
+          email: normalizedEmail,
+          displayName: cleanName,
+          experienceLevel,
+          bio: accounts[normalizedEmail]?.profile.bio ?? "",
+          createdAt: accounts[normalizedEmail]?.profile.createdAt ?? nowIso,
+          updatedAt: nowIso,
+        };
+
+        accounts[normalizedEmail] = {
+          id: profile.id,
+          email: normalizedEmail,
+          password,
+          profile,
+        };
+        await writeLocalAccounts(accounts);
+
+        const localSession = buildLocalUserAndSession(profile);
+        await AsyncStorage.setItem(
+          LOCAL_SESSION_STORAGE_KEY,
+          JSON.stringify(localSession),
+        );
+
+        set({
+          session: localSession.session,
+          user: localSession.user,
+          profile: localSession.profile,
+          isLoading: false,
+          authError: null,
+        });
+        return { ok: true, needsEmailConfirmation: false };
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Unable to create account right now.";
+        set({ isLoading: false, authError: msg });
+        return { ok: false, error: msg };
+      }
     }
 
-    set({ isLoading: true, authError: null });
     try {
-      const cleanName = displayName.trim() || email.split("@")[0] || "Gardener";
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password,
         options: {
           data: {
@@ -221,6 +411,63 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     }
 
     set({ isLoading: true, authError: null });
+
+    if (!supabase) {
+      try {
+        const nowIso = new Date().toISOString();
+        const prevProfile = get().profile;
+        const nextProfile: UserProfile = {
+          id: currentUser.id,
+          email: currentUser.email ?? prevProfile?.email ?? "",
+          displayName:
+            updates.displayName !== undefined
+              ? updates.displayName.trim() || "Gardener"
+              : (prevProfile?.displayName ?? "Gardener"),
+          experienceLevel:
+            updates.experienceLevel ??
+            prevProfile?.experienceLevel ??
+            "enthusiast",
+          bio:
+            updates.bio !== undefined
+              ? updates.bio.trim()
+              : (prevProfile?.bio ?? ""),
+          createdAt: prevProfile?.createdAt ?? nowIso,
+          updatedAt: nowIso,
+        };
+
+        const localSession = buildLocalUserAndSession(nextProfile);
+        await AsyncStorage.setItem(
+          LOCAL_SESSION_STORAGE_KEY,
+          JSON.stringify(localSession),
+        );
+
+        if (nextProfile.email) {
+          const accounts = await readLocalAccounts();
+          const key = nextProfile.email.toLowerCase();
+          if (accounts[key]) {
+            accounts[key] = {
+              ...accounts[key],
+              profile: nextProfile,
+            };
+            await writeLocalAccounts(accounts);
+          }
+        }
+
+        set({
+          profile: nextProfile,
+          user: localSession.user,
+          session: localSession.session,
+          isLoading: false,
+        });
+        return { ok: true };
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "Could not update profile.";
+        set({ isLoading: false, authError: msg });
+        return { ok: false, error: msg };
+      }
+    }
+
     try {
       const updated = await updateUserProfileInSupabase(
         currentUser.id,
@@ -241,10 +488,12 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   },
 
   signOut: async () => {
-    if (!supabase) return;
     set({ isLoading: true, authError: null });
     try {
-      await supabase.auth.signOut();
+      await AsyncStorage.removeItem(LOCAL_SESSION_STORAGE_KEY);
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
     } finally {
       set({
         session: null,

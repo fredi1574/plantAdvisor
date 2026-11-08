@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Sprout,
   Sun,
-  User as UserIcon,
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
@@ -37,7 +36,6 @@ import {
   doesPlantNeedWatering,
   usePlantStore,
 } from '@/store/usePlantStore';
-import { useAuthStore } from '@/store/useAuthStore';
 import type { UserPlant } from '@/types/plant';
 
 type FilterMode =
@@ -50,8 +48,6 @@ type FilterMode =
   | 'flowering';
 
 export default function MyGardenScreen() {
-  const user = useAuthStore((s) => s.user);
-  const profile = useAuthStore((s) => s.profile);
   const plants = usePlantStore((s) => s.plants);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
   const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
@@ -180,37 +176,6 @@ export default function MyGardenScreen() {
               </View>
               <Text style={styles.headerTitle}>My Garden</Text>
             </View>
-
-            <Pressable
-              onPress={() =>
-                router.push(user ? '/(tabs)/profile' : '/auth')
-              }
-              style={({ pressed }) => [
-                styles.accountPill,
-                user ? styles.accountPillSignedIn : styles.accountPillGuest,
-                pressed && { opacity: 0.8 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={
-                user ? 'Open gardener profile' : 'Sign in or create account'
-              }>
-              <UserIcon
-                size={15}
-                color={user ? Palette.primary : Palette.textPrimary}
-              />
-              <Text
-                style={[
-                  styles.accountPillText,
-                  user && styles.accountPillTextSignedIn,
-                ]}
-                numberOfLines={1}>
-                {user
-                  ? profile?.displayName ||
-                    user.email?.split('@')[0] ||
-                    'Account'
-                  : 'Sign In'}
-              </Text>
-            </Pressable>
           </View>
 
           {/* User Feedback Toast */}
