@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import {
   CheckCircle2,
-  Cloud,
   CloudOff,
   LogIn,
   LogOut,
@@ -9,7 +8,7 @@ import {
   Save,
   Sparkles,
   Sprout,
-  User as UserIcon,
+  User as UserIcon
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -202,17 +201,12 @@ export default function ProfileScreen() {
                         <Text style={styles.levelBadgeText}>
                           {
                             LEVEL_LABELS[
-                              profile?.experienceLevel ?? 'enthusiast'
+                            profile?.experienceLevel ?? 'enthusiast'
                             ]
                           }
                         </Text>
                       </View>
-                      <View style={styles.statusPillOnline}>
-                        <Cloud size={12} color={Palette.thrivingText} />
-                        <Text style={styles.statusPillOnlineText}>
-                          Supabase Synced
-                        </Text>
-                      </View>
+
                     </View>
                   </View>
                 </View>
