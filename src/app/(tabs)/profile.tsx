@@ -13,9 +13,8 @@ import {
   RefreshCw,
   Save,
   Send,
-  Sparkles,
   Sprout,
-  User as UserIcon,
+  User as UserIcon
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
@@ -317,19 +316,6 @@ export default function ProfileScreen() {
                       {profile?.displayName || 'Gardener'}
                     </Text>
                     <Text style={styles.profileEmail}>{user.email}</Text>
-                    <View style={styles.badgeRow}>
-                      <View style={styles.levelBadge}>
-                        <Sparkles size={12} color={Palette.primary} />
-                        <Text style={styles.levelBadgeText}>
-                          {
-                            LEVEL_LABELS[
-                            profile?.experienceLevel ?? 'enthusiast'
-                            ]
-                          }
-                        </Text>
-                      </View>
-
-                    </View>
                   </View>
                 </View>
 
@@ -379,31 +365,6 @@ export default function ProfileScreen() {
                     placeholderTextColor={Palette.textMuted}
                     style={styles.input}
                   />
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Experience Level</Text>
-                  <View style={styles.chipsRow}>
-                    {(
-                      ['beginner', 'enthusiast', 'master_gardener'] as const
-                    ).map((lvl) => {
-                      const active = experienceLevel === lvl;
-                      return (
-                        <Pressable
-                          key={lvl}
-                          onPress={() => setDraftLevel(lvl)}
-                          style={[styles.chip, active && styles.chipActive]}>
-                          <Text
-                            style={[
-                              styles.chipText,
-                              active && styles.chipTextActive,
-                            ]}>
-                            {LEVEL_LABELS[lvl]}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
                 </View>
 
                 <View style={styles.fieldGroup}>

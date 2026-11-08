@@ -39,10 +39,10 @@ const EXPERIENCE_PILLS: {
   value: ExperienceLevel;
   label: string;
 }[] = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'enthusiast', label: 'Enthusiast' },
-  { value: 'master_gardener', label: 'Botanist' },
-];
+    { value: 'beginner', label: 'Beginner' },
+    { value: 'enthusiast', label: 'Enthusiast' },
+    { value: 'master_gardener', label: 'Botanist' },
+  ];
 
 type FocusedField = 'name' | 'email' | 'password' | null;
 
@@ -266,32 +266,6 @@ export default function SignUpScreen() {
                     )}
                   </Pressable>
                 </View>
-
-                <View style={styles.experienceSection}>
-                  <Text style={styles.experienceLabel}>Experience Level</Text>
-                  <View style={styles.experiencePillsRow}>
-                    {EXPERIENCE_PILLS.map((opt) => {
-                      const selected = experienceLevel === opt.value;
-                      return (
-                        <Pressable
-                          key={opt.value}
-                          onPress={() => setExperienceLevel(opt.value)}
-                          style={[
-                            styles.experiencePill,
-                            selected && styles.experiencePillSelected,
-                          ]}>
-                          <Text
-                            style={[
-                              styles.experiencePillText,
-                              selected && styles.experiencePillTextSelected,
-                            ]}>
-                            {opt.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
               </View>
 
               <Pressable
@@ -501,32 +475,6 @@ const styles = StyleSheet.create({
     color: Palette.textSecondary,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
-  },
-  experiencePillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  experiencePill: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: Radius.md,
-    backgroundColor: Palette.bgPrimary,
-    borderWidth: 1,
-    borderColor: Palette.borderSubtle,
-    alignItems: 'center',
-  },
-  experiencePillSelected: {
-    backgroundColor: Palette.primarySoft,
-    borderColor: Palette.primary,
-  },
-  experiencePillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Palette.textSecondary,
-  },
-  experiencePillTextSelected: {
-    color: Palette.primary,
-    fontWeight: '700',
   },
   submitBtn: {
     flexDirection: 'row',
