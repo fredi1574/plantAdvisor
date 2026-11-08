@@ -56,7 +56,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: `Your Garden, ${userName}`,
+          title: `Garden`,
           tabBarIcon: ({ color, size }) => <Sprout color={color} size={size} />,
         }}
       />
