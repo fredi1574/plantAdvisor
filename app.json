@@ -47,7 +47,15 @@
         {
           "cameraPermission": "FloraLog uses your camera to snap photos of your plants for AI identification and health scans."
         }
-      ]
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#2D5A3C"
+        }
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
