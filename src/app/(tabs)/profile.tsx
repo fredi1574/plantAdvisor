@@ -1,16 +1,23 @@
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import {
+  Bell,
+  BellOff,
   CheckCircle2,
+  Clock,
   CloudOff,
   LogIn,
   LogOut,
   RefreshCw,
   Save,
+  Send,
   Sparkles,
   Sprout,
-  User as UserIcon
+  User as UserIcon,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +25,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -31,9 +39,23 @@ import {
   Radius,
   Spacing,
 } from '@/constants/theme';
+import {
+  getNotificationPermissionStatus,
+  getScheduledReminderCount,
+  requestNotificationPermissions,
+  sendTestCareNotification,
+} from '@/services/notificationService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePlantStore } from '@/store/usePlantStore';
 import type { ExperienceLevel } from '@/types/plant';
+
+function formatReminderTime(hour24: number, minute: number): string {
+  const period = hour24 >= 12 ? 'PM' : 'AM';
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  const hh = String(hour12).padStart(2, '0');
+  const mm = String(minute).padStart(2, '0');
+  return `${hh}:${mm} ${period}`;
+}
 
 const LEVEL_LABELS: Record<ExperienceLevel, string> = {
   beginner: 'Beginner Sprout',
@@ -52,11 +74,111 @@ export default function ProfileScreen() {
   const entries = usePlantStore((s) => s.entries);
   const isSyncing = usePlantStore((s) => s.isSyncing);
   const syncWithSupabase = usePlantStore((s) => s.syncWithSupabase);
+  const notificationPrefs = usePlantStore((s) => s.notificationPrefs);
+  const setNotificationPrefs = usePlantStore((s) => s.setNotificationPrefs);
 
   const [draftName, setDraftName] = useState<string | null>(null);
   const [draftLevel, setDraftLevel] = useState<ExperienceLevel | null>(null);
   const [draftBio, setDraftBio] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<
+    'granted' | 'denied' | 'undetermined' | 'unsupported'
+  >('undetermined');
+  const [scheduledCount, setScheduledCount] = useState<number>(0);
+
+  // Native OS Time Picker State
+  const [showNativePicker, setShowNativePicker] = useState(false);
+
+  const handleNativeTimeChange = async (
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) => {
+    // On Android, dismissing the dialog sends type 'dismissed'
+    if (Platform.OS === 'android') {
+      setShowNativePicker(false);
+    }
+
+    if (event.type === 'dismissed' || !selectedDate) {
+      return;
+    }
+
+    const hour = selectedDate.getHours();
+    const minute = selectedDate.getMinutes();
+    const label = formatReminderTime(hour, minute);
+
+    if (Platform.OS === 'ios') {
+      // iOS spinner/compact keeps running; we can hide or keep open
+      setShowNativePicker(false);
+    }
+
+    await handleSelectReminderTime(hour, minute, label);
+  };
+
+  useEffect(() => {
+    void (async () => {
+      const status = await getNotificationPermissionStatus();
+      setPermissionStatus(status);
+      const count = await getScheduledReminderCount();
+      setScheduledCount(count);
+    })();
+  }, [plants, notificationPrefs]);
+
+  const handleToggleNotifications = async (enabled: boolean) => {
+    if (enabled && permissionStatus !== 'granted') {
+      const granted = await requestNotificationPermissions();
+      setPermissionStatus(granted ? 'granted' : 'denied');
+      if (!granted) {
+        showToast(
+          'Notification permissions are disabled in system settings.'
+        );
+        return;
+      }
+    }
+    await setNotificationPrefs({ enabled });
+    const count = await getScheduledReminderCount();
+    setScheduledCount(count);
+    showToast(
+      enabled
+        ? 'Local plant care reminders enabled! 🔔'
+        : 'Care reminders paused.'
+    );
+  };
+
+  const handleToggleDailyDigest = async (dailyDigestEnabled: boolean) => {
+    await setNotificationPrefs({ dailyDigestEnabled });
+    const count = await getScheduledReminderCount();
+    setScheduledCount(count);
+    showToast(
+      dailyDigestEnabled
+        ? 'Daily morning garden digest enabled!'
+        : 'Daily morning digest turned off.'
+    );
+  };
+
+  const handleSelectReminderTime = async (
+    hour: number,
+    minute: number,
+    label: string
+  ) => {
+    await setNotificationPrefs({
+      reminderHour: hour,
+      reminderMinute: minute,
+    });
+    const count = await getScheduledReminderCount();
+    setScheduledCount(count);
+    showToast(`Reminders rescheduled for ${label}.`);
+  };
+
+  const handleSendTestReminder = async () => {
+    const ok = await sendTestCareNotification(plants);
+    const status = await getNotificationPermissionStatus();
+    setPermissionStatus(status);
+    if (ok) {
+      showToast('Test care reminder scheduled (arriving in ~2s)! 🌿');
+    } else {
+      showToast('Please grant notification permissions to receive reminders.');
+    }
+  };
 
   const displayName =
     draftName ??
@@ -320,18 +442,177 @@ export default function ProfileScreen() {
                   )}
                 </Pressable>
               </View>
-
-              {/* Sign Out Button */}
-              <Pressable
-                onPress={handleSignOut}
-                style={({ pressed }) => [
-                  styles.signOutBtn,
-                  pressed && { opacity: 0.8 },
-                ]}>
-                <LogOut size={16} color={Palette.criticalText} />
-                <Text style={styles.signOutText}>Sign Out</Text>
-              </Pressable>
             </>
+          )}
+
+          {/* Local Care Notifications Preferences Card */}
+          <View style={styles.card}>
+            <View style={styles.notificationHeaderRow}>
+              <View style={styles.sectionTitleRow}>
+                {notificationPrefs.enabled ? (
+                  <Bell size={17} color={Palette.primary} />
+                ) : (
+                  <BellOff size={17} color={Palette.textMuted} />
+                )}
+                <Text style={styles.sectionTitle}>Local Care Notifications</Text>
+              </View>
+              <View
+                style={
+                  notificationPrefs.enabled && permissionStatus === 'granted'
+                    ? styles.statusPillOnline
+                    : styles.statusPillOffline
+                }>
+                <Text
+                  style={
+                    notificationPrefs.enabled && permissionStatus === 'granted'
+                      ? styles.statusPillOnlineText
+                      : styles.statusPillOfflineText
+                  }>
+                  {!notificationPrefs.enabled
+                    ? 'Paused'
+                    : permissionStatus === 'granted'
+                      ? Platform.OS === 'web'
+                        ? 'Active'
+                        : `${scheduledCount} Scheduled`
+                      : 'Permission Needed'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.cardDescription}>
+              100% on-device watering alarms. Whenever you water a plant or update
+              its interval, FloraLog automatically reschedules its next due-date
+              reminder.
+            </Text>
+
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleTextCol}>
+                <Text style={styles.toggleLabel}>Watering Reminders</Text>
+                <Text style={styles.toggleSublabel}>
+                  Notify me on the day each plant is due for water
+                </Text>
+              </View>
+              <Switch
+                value={notificationPrefs.enabled}
+                onValueChange={(val) => void handleToggleNotifications(val)}
+                trackColor={{
+                  false: Palette.borderSubtle,
+                  true: Palette.primary,
+                }}
+                thumbColor={Palette.textInverse}
+              />
+            </View>
+
+            {notificationPrefs.enabled && (
+              <>
+                <View style={styles.toggleRow}>
+                  <View style={styles.toggleTextCol}>
+                    <Text style={styles.toggleLabel}>
+                      Daily Garden Morning Digest
+                    </Text>
+                    <Text style={styles.toggleSublabel}>
+                      Summary of plants needing attention today
+                    </Text>
+                  </View>
+                  <Switch
+                    value={notificationPrefs.dailyDigestEnabled}
+                    onValueChange={(val) => void handleToggleDailyDigest(val)}
+                    trackColor={{
+                      false: Palette.borderSubtle,
+                      true: Palette.primary,
+                    }}
+                    thumbColor={Palette.textInverse}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <View style={styles.timeLabelRow}>
+                    <Clock size={14} color={Palette.textSecondary} />
+                    <Text style={styles.label}>Preferred Reminder Time</Text>
+                  </View>
+
+                  <Pressable
+                    onPress={() => setShowNativePicker(true)}
+                    style={({ pressed }) => [
+                      styles.customTimePickerTrigger,
+                      pressed && { opacity: 0.85 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Preferred reminder time ${formatReminderTime(
+                      notificationPrefs.reminderHour,
+                      notificationPrefs.reminderMinute
+                    )}. Tap to change.`}>
+                    <View style={styles.customTimeDisplayRow}>
+                      <View style={styles.customTimeIconBadge}>
+                        <Clock size={16} color={Palette.primary} />
+                      </View>
+                      <View>
+                        <Text style={styles.customTimeValueText}>
+                          {formatReminderTime(
+                            notificationPrefs.reminderHour,
+                            notificationPrefs.reminderMinute
+                          )}
+                        </Text>
+                        <Text style={styles.customTimeSubText}>
+                          Opens system clock & time picker
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.customTimeChangePill}>
+                      <Text style={styles.customTimeChangePillText}>
+                        Change
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  {/* Native OS DateTimePicker */}
+                  {showNativePicker && (
+                    <DateTimePicker
+                      value={
+                        new Date(
+                          new Date().setHours(
+                            notificationPrefs.reminderHour,
+                            notificationPrefs.reminderMinute,
+                            0,
+                            0
+                          )
+                        )
+                      }
+                      mode="time"
+                      is24Hour={false}
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={handleNativeTimeChange}
+                    />
+                  )}
+                </View>
+              </>
+            )}
+
+            <Pressable
+              onPress={() => void handleSendTestReminder()}
+              style={({ pressed }) => [
+                styles.secondaryBtn,
+                pressed && { opacity: 0.85 },
+              ]}>
+              <Send size={15} color={Palette.primary} />
+              <Text style={styles.secondaryBtnText}>
+                Send Test Care Notification
+              </Text>
+            </Pressable>
+          </View>
+
+          {user && (
+            /* Sign Out Button */
+            <Pressable
+              onPress={handleSignOut}
+              style={({ pressed }) => [
+                styles.signOutBtn,
+                pressed && { opacity: 0.8 },
+              ]}>
+              <LogOut size={16} color={Palette.criticalText} />
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </Pressable>
           )}
         </View>
       </ScrollView>
@@ -615,6 +896,107 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: Palette.primary,
+    fontWeight: '700',
+  },
+  notificationHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+    backgroundColor: Palette.bgPrimary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Palette.borderSubtle,
+  },
+  toggleTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Palette.textPrimary,
+  },
+  toggleSublabel: {
+    fontSize: 12,
+    color: Palette.textSecondary,
+  },
+  timeLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  customTimePickerTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Palette.bgPrimary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    borderColor: Palette.borderSubtle,
+  },
+  customTimeDisplayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  customTimeIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
+    backgroundColor: Palette.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customTimeValueText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Palette.textPrimary,
+    letterSpacing: -0.2,
+  },
+  customTimeSubText: {
+    fontSize: 11,
+    color: Palette.textSecondary,
+    marginTop: 1,
+  },
+  customTimeChangePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    backgroundColor: Palette.primarySoft,
+    borderWidth: 1,
+    borderColor: Palette.primary,
+  },
+  customTimeChangePillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.primary,
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Palette.primarySoft,
+    borderWidth: 1,
+    borderColor: Palette.primary,
+    borderRadius: Radius.md,
+    paddingVertical: 11,
+    marginTop: 2,
+  },
+  secondaryBtnText: {
+    color: Palette.primary,
+    fontSize: 13,
     fontWeight: '700',
   },
   signOutBtn: {

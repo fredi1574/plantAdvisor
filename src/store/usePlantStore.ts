@@ -9,6 +9,14 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { SEED_NOTEBOOK_ENTRIES, SEED_PLANTS } from '@/constants/seedData';
 import {
+  cancelPlantReminder,
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  scheduleDailyGardenDigest,
+  schedulePlantWateringReminder,
+  syncAllPlantNotifications,
+  type NotificationPreferences,
+} from '@/services/notificationService';
+import {
   deleteCareEntryFromSupabase,
   deletePlantFromSupabase,
   pullOrSeedGardenWithSupabase,
@@ -75,6 +83,9 @@ interface PlantStoreState {
   plants: UserPlant[];
   entries: NotebookEntry[];
   isSyncing: boolean;
+  notificationPrefs: NotificationPreferences;
+  setNotificationPrefs: (prefs: Partial<NotificationPreferences>) => Promise<void>;
+  rescheduleAllNotifications: () => Promise<void>;
   syncWithSupabase: () => Promise<void>;
   addPlant: (payload: AddPlantPayload) => UserPlant;
   updatePlant: (plantId: string, payload: UpdatePlantPayload) => void;
@@ -115,6 +126,20 @@ export const usePlantStore = create<PlantStoreState>()(
       plants: SEED_PLANTS,
       entries: SEED_NOTEBOOK_ENTRIES,
       isSyncing: false,
+      notificationPrefs: DEFAULT_NOTIFICATION_PREFERENCES,
+
+      setNotificationPrefs: async (prefs) => {
+        const nextPrefs: NotificationPreferences = {
+          ...get().notificationPrefs,
+          ...prefs,
+        };
+        set({ notificationPrefs: nextPrefs });
+        await syncAllPlantNotifications(get().plants, nextPrefs);
+      },
+
+      rescheduleAllNotifications: async () => {
+        await syncAllPlantNotifications(get().plants, get().notificationPrefs);
+      },
 
       syncWithSupabase: async () => {
         if (get().isSyncing) return;
@@ -129,6 +154,10 @@ export const usePlantStore = create<PlantStoreState>()(
               plants: remote.plants,
               entries: remote.entries,
             });
+            await syncAllPlantNotifications(
+              remote.plants,
+              get().notificationPrefs
+            );
           }
         } finally {
           set({ isSyncing: false });
@@ -216,6 +245,14 @@ export const usePlantStore = create<PlantStoreState>()(
         }));
 
         void (async () => {
+          await schedulePlantWateringReminder(
+            newPlant,
+            get().notificationPrefs
+          );
+          await scheduleDailyGardenDigest(
+            get().plants,
+            get().notificationPrefs
+          );
           const uploadedUrl = await syncPlantToSupabase(newPlant);
           if (uploadedUrl) {
             set((state) => ({
@@ -289,6 +326,14 @@ export const usePlantStore = create<PlantStoreState>()(
         if (updatedPlantRef) {
           const targetPlant = updatedPlantRef as UserPlant;
           void (async () => {
+            await schedulePlantWateringReminder(
+              targetPlant,
+              get().notificationPrefs
+            );
+            await scheduleDailyGardenDigest(
+              get().plants,
+              get().notificationPrefs
+            );
             const uploadedUrl = await syncPlantToSupabase(targetPlant);
             if (uploadedUrl) {
               set((state) => ({
@@ -307,7 +352,14 @@ export const usePlantStore = create<PlantStoreState>()(
           entries: state.entries.filter((e) => e.plantId !== plantId),
         }));
 
-        void deletePlantFromSupabase(plantId);
+        void (async () => {
+          await cancelPlantReminder(plantId);
+          await scheduleDailyGardenDigest(
+            get().plants,
+            get().notificationPrefs
+          );
+          await deletePlantFromSupabase(plantId);
+        })();
       },
 
       logCareEvent: (payload) => {
@@ -340,7 +392,16 @@ export const usePlantStore = create<PlantStoreState>()(
 
         void (async () => {
           if (updatedPlantRef) {
-            await syncPlantToSupabase(updatedPlantRef as UserPlant);
+            const targetPlant = updatedPlantRef as UserPlant;
+            await schedulePlantWateringReminder(
+              targetPlant,
+              get().notificationPrefs
+            );
+            await scheduleDailyGardenDigest(
+              get().plants,
+              get().notificationPrefs
+            );
+            await syncPlantToSupabase(targetPlant);
           }
           await syncCareEntryToSupabase(newEntry);
         })();
@@ -459,6 +520,10 @@ export const usePlantStore = create<PlantStoreState>()(
         }));
 
         void (async () => {
+          await syncAllPlantNotifications(
+            get().plants,
+            get().notificationPrefs
+          );
           await syncPlantsBatchToSupabase(updatedPlants);
           await syncCareEntriesBatchToSupabase(batchEntries);
         })();
@@ -510,6 +575,10 @@ export const usePlantStore = create<PlantStoreState>()(
         }));
 
         void (async () => {
+          await syncAllPlantNotifications(
+            updatedPlants,
+            get().notificationPrefs
+          );
           await syncPlantsBatchToSupabase(updatedPlants);
           await syncCareEntriesBatchToSupabase(batchEntries);
         })();
@@ -575,6 +644,14 @@ export const usePlantStore = create<PlantStoreState>()(
         void (async () => {
           if (updatedPlantRef) {
             const targetPlant = updatedPlantRef as UserPlant;
+            await schedulePlantWateringReminder(
+              targetPlant,
+              get().notificationPrefs
+            );
+            await scheduleDailyGardenDigest(
+              get().plants,
+              get().notificationPrefs
+            );
             const uploadedUrl = await syncPlantToSupabase(targetPlant);
             if (uploadedUrl) {
               set((state) => ({
@@ -624,6 +701,10 @@ export const usePlantStore = create<PlantStoreState>()(
         });
 
         void (async () => {
+          await syncAllPlantNotifications(
+            SEED_PLANTS,
+            get().notificationPrefs
+          );
           await syncPlantsBatchToSupabase(SEED_PLANTS);
           await syncCareEntriesBatchToSupabase(SEED_NOTEBOOK_ENTRIES);
         })();
@@ -635,9 +716,11 @@ export const usePlantStore = create<PlantStoreState>()(
       partialize: (state) => ({
         plants: state.plants,
         entries: state.entries,
+        notificationPrefs: state.notificationPrefs,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          void state.rescheduleAllNotifications();
           void state.syncWithSupabase();
         }
       },

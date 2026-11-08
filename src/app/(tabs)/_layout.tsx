@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Camera, Sprout, User } from 'lucide-react-native';
+import { CalendarDays, Camera, Sprout, User } from 'lucide-react-native';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -47,6 +47,15 @@ export default function TabsLayout() {
         options={{
           title: 'My Garden',
           tabBarIcon: ({ color, size }) => <Sprout color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: 'Schedule',
+          tabBarIcon: ({ color, size }) => (
+            <CalendarDays color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen

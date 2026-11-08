@@ -287,16 +287,6 @@ export default function ScanScreen() {
                     isLiveAi ? styles.engineDotLive : styles.engineDotMock,
                   ]}
                 />
-                <Text
-                  style={[
-                    styles.engineBadgeText,
-                    isLiveAi
-                      ? styles.engineBadgeTextLive
-                      : styles.engineBadgeTextMock,
-                  ]}
-                >
-                  {isLiveAi ? "Live Gemini AI" : "Offline Mock"}
-                </Text>
               </View>
             </View>
             <Text style={styles.headerTitle}>Add or Scan Plant</Text>
@@ -507,16 +497,16 @@ export default function ScanScreen() {
                   {/* Succulent Guardrail Callout */}
                   {idResult.baselineCare.succulentGuardrails
                     .isSucculentOrCactus && (
-                    <View style={styles.guardrailBox}>
-                      <ShieldAlert size={16} color={Palette.attentionText} />
-                      <Text style={styles.guardrailText}>
-                        {
-                          idResult.baselineCare.succulentGuardrails
-                            .rotWarningNote
-                        }
-                      </Text>
-                    </View>
-                  )}
+                      <View style={styles.guardrailBox}>
+                        <ShieldAlert size={16} color={Palette.attentionText} />
+                        <Text style={styles.guardrailText}>
+                          {
+                            idResult.baselineCare.succulentGuardrails
+                              .rotWarningNote
+                          }
+                        </Text>
+                      </View>
+                    )}
 
                   {/* Customize Specimen Details before Saving */}
                   <View style={styles.formDivider} />
@@ -569,7 +559,7 @@ export default function ScanScreen() {
                             style={[
                               styles.presetChipText,
                               potMaterial === pm.key &&
-                                styles.presetChipTextActive,
+                              styles.presetChipTextActive,
                             ]}
                           >
                             {pm.label}
