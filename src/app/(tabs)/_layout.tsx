@@ -4,9 +4,20 @@ import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Palette } from '@/constants/theme';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const user = useAuthStore((s) => s.user);
+  const profile = useAuthStore((s) => s.profile);
+
+  const userName =
+    profile?.displayName?.trim() ||
+    (user?.user_metadata?.display_name as string)?.trim() ||
+    (user?.user_metadata?.name as string)?.trim() ||
+    (user?.user_metadata?.full_name as string)?.trim() ||
+    user?.email?.split('@')[0]?.trim() ||
+    'Gardener';
 
   // Dynamic bottom padding to account for phone navigation buttons / gesture bars:
   // - 3-button navigation on Android typically adds ~48dp
@@ -45,7 +56,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'My Garden',
+          title: `Your Garden, ${userName}`,
           tabBarIcon: ({ color, size }) => <Sprout color={color} size={size} />,
         }}
       />
