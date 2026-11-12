@@ -7,7 +7,7 @@ import { Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BotanicalSplashScreen } from '@/components/splash-screen';
-import { Palette } from '@/constants/theme';
+import { useIsDark, usePalette } from '@/hooks/use-theme';
 import { initializeNotifications } from '@/services/notificationService';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -16,6 +16,8 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 });
 
 export default function RootLayout() {
+  const palette = usePalette();
+  const isDark = useIsDark();
   const initializeAuth = useAuthStore((s) => s.initializeAuth);
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const session = useAuthStore((s) => s.session);
@@ -51,13 +53,14 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={styles.flex}>
-      <StatusBar style="dark" />
+    <GestureHandlerRootView
+      style={[styles.flex, { backgroundColor: palette.bgPrimary }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       {isInitialized && (
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: Palette.bgPrimary },
+            contentStyle: { backgroundColor: palette.bgPrimary },
           }}>
           <Stack.Protected guard={!isAuthenticated} redirectTo="/(tabs)">
             <Stack.Screen
@@ -102,6 +105,5 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-    backgroundColor: Palette.bgPrimary,
   },
 });

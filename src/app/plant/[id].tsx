@@ -2,7 +2,6 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft,
-  CheckCircle2,
   CheckSquare,
   Droplets,
   FileText,
@@ -33,18 +32,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BotanicalBackground } from '@/components/botanical-background';
 import { EditLogModal } from '@/components/edit-log-modal';
 import { EditPlantModal } from '@/components/edit-plant-modal';
+import { FeedbackBanner } from '@/components/feedback-banner';
 import { SwipeableLogItem } from '@/components/swipeable-log-item';
 import {
   CardShadow,
-  HealthBadgeTheme,
+  getHealthBadgeTheme,
+  getUrgencyBadgeTheme,
   MaxContentWidth,
-  Palette,
   Radius,
   Spacing,
-  UrgencyBadgeTheme,
+  type ThemePalette,
 } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 import { diagnosePlantHealth } from '@/services/aiPlantService';
 import {
   getDaysUntilNextWater,
@@ -52,58 +54,65 @@ import {
 } from '@/store/usePlantStore';
 import type { CareEventType, NotebookEntry } from '@/types/plant';
 
-const QUICK_ACTIONS: {
+const getQuickActions = (
+  palette: ThemePalette
+): {
   type: CareEventType;
   label: string;
   defaultTitle: string;
   defaultNotes: string;
   color: string;
-}[] = [
+}[] => [
     {
       type: 'water',
       label: 'Log Water',
       defaultTitle: 'Thorough Watering',
       defaultNotes: 'Watered after checking substrate dryness.',
-      color: Palette.waterBlue,
+      color: palette.waterBlue,
     },
     {
       type: 'propagation',
       label: 'Prop Milestone',
       defaultTitle: 'Propagation Growth Check',
       defaultNotes: 'Logged new root/shoot elongation milestone.',
-      color: Palette.accentTerracotta,
+      color: palette.accentTerracotta,
     },
     {
       type: 'fertilize',
       label: 'Fertilize',
       defaultTitle: 'Diluted Nutrient Feed',
       defaultNotes: 'Applied balanced liquid fertilizer at 1/2 strength.',
-      color: Palette.primary,
+      color: palette.primary,
     },
     {
       type: 'prune',
       label: 'Prune',
       defaultTitle: 'Canopy & Leaf Pruning',
       defaultNotes: 'Removed spent lower foliage and pinched apical tip.',
-      color: Palette.primaryMuted,
+      color: palette.primaryMuted,
     },
     {
       type: 'repot',
       label: 'Repot',
       defaultTitle: 'Substrate & Pot Refresh',
       defaultNotes: 'Checked root health and refreshed gritty aerated substrate.',
-      color: Palette.accentTerracotta,
+      color: palette.accentTerracotta,
     },
     {
       type: 'note',
       label: 'Add Note',
       defaultTitle: 'Botanical Observation Note',
       defaultNotes: 'Leaves looking turgid and well-oriented toward window light.',
-      color: Palette.textSecondary,
+      color: palette.textSecondary,
     },
   ];
 
 export default function PlantDetailNotebookScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+  const healthBadgeTheme = useMemo(() => getHealthBadgeTheme(palette), [palette]);
+  const urgencyBadgeTheme = useMemo(() => getUrgencyBadgeTheme(palette), [palette]);
+  const quickActions = useMemo(() => getQuickActions(palette), [palette]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
@@ -164,7 +173,7 @@ export default function PlantDetailNotebookScreen() {
   const needsWater = daysUntilWater <= 0;
   const assessment = plant.latestHealthAssessment;
   const healthStatus = assessment?.healthStatus ?? 'thriving';
-  const healthTheme = HealthBadgeTheme[healthStatus];
+  const healthTheme = healthBadgeTheme[healthStatus];
 
   const handleDeleteCurrentPlant = () => {
     const performDelete = () => {
@@ -218,7 +227,7 @@ export default function PlantDetailNotebookScreen() {
     }
 
     const template =
-      QUICK_ACTIONS.find((a) => a.type === actionType) ?? QUICK_ACTIONS[0];
+      quickActions.find((a) => a.type === actionType) ?? quickActions[0];
 
     logCareEvent({
       plantId: plant.id,
@@ -245,7 +254,10 @@ export default function PlantDetailNotebookScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}
+      edges={['top', 'bottom']}>
+      <BotanicalBackground variant="detail" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -265,7 +277,7 @@ export default function PlantDetailNotebookScreen() {
                 styles.navBackBtn,
                 pressed && { opacity: 0.75 },
               ]}>
-              <ArrowLeft size={18} color={Palette.textPrimary} />
+              <ArrowLeft size={18} color={palette.textPrimary} />
               <Text style={styles.navBackText}>My Garden</Text>
             </Pressable>
 
@@ -280,18 +292,13 @@ export default function PlantDetailNotebookScreen() {
                 styles.scanShortcutBtn,
                 pressed && { opacity: 0.85 },
               ]}>
-              <Stethoscope size={15} color={Palette.textInverse} />
+              <Stethoscope size={15} color={palette.textInverse} />
               <Text style={styles.scanShortcutText}>Photo Health Scan</Text>
             </Pressable>
           </View>
 
           {/* User Feedback Toast */}
-          {feedbackMessage && (
-            <View style={styles.feedbackBanner}>
-              <CheckCircle2 size={16} color="#15803D" />
-              <Text style={styles.feedbackBannerText}>{feedbackMessage}</Text>
-            </View>
-          )}
+          <FeedbackBanner message={feedbackMessage} />
 
           {/* 1. SPECIMEN HEADER CARD */}
           <View style={styles.heroCard}>
@@ -343,7 +350,7 @@ export default function PlantDetailNotebookScreen() {
                 </Text>
 
                 <View style={styles.locationRow}>
-                  <MapPin size={13} color={Palette.textSecondary} />
+                  <MapPin size={13} color={palette.textSecondary} />
                   <Text style={styles.locationLabel}>{plant.location}</Text>
                 </View>
               </View>
@@ -377,13 +384,13 @@ export default function PlantDetailNotebookScreen() {
                   <Droplets
                     size={15}
                     color={
-                      needsWater ? Palette.waterAlertText : Palette.waterBlue
+                      needsWater ? palette.waterAlertText : palette.waterBlue
                     }
                   />
                   <Text
                     style={[
                       styles.specBadgeValue,
-                      needsWater && { color: Palette.waterAlertText },
+                      needsWater && { color: palette.waterAlertText },
                     ]}>
                     {daysUntilWater === 0
                       ? 'Due Today'
@@ -397,7 +404,7 @@ export default function PlantDetailNotebookScreen() {
 
             {/* Baseline Species Light & Soil bar */}
             <View style={styles.baselineStrip}>
-              <Sun size={14} color={Palette.primary} />
+              <Sun size={14} color={palette.primary} />
               <Text style={styles.baselineStripText}>
                 <Text style={{ fontWeight: '700' }}>Ideal Light: </Text>
                 {plant.species.baselineCare.idealLight}
@@ -410,7 +417,7 @@ export default function PlantDetailNotebookScreen() {
             <View style={styles.assessmentCard}>
               <View style={styles.assessmentHeaderRow}>
                 <View style={styles.assessmentTitleGroup}>
-                  <Sparkles size={18} color={Palette.primary} />
+                  <Sparkles size={18} color={palette.primary} />
                   <View>
                     <Text style={styles.assessmentTitle}>
                       AI Health & Condition Assessment
@@ -430,7 +437,7 @@ export default function PlantDetailNotebookScreen() {
                     pressed && { opacity: 0.75 },
                   ]}>
                   {isRescanning ? (
-                    <ActivityIndicator size="small" color={Palette.primary} />
+                    <ActivityIndicator size="small" color={palette.primary} />
                   ) : (
                     <Text style={styles.rescanPillText}>Re-Analyze</Text>
                   )}
@@ -442,7 +449,7 @@ export default function PlantDetailNotebookScreen() {
                 plant.species.baselineCare.succulentGuardrails
                   .isSucculentOrCactus) && (
                   <View style={styles.guardrailCallout}>
-                    <ShieldAlert size={16} color={Palette.attentionText} />
+                    <ShieldAlert size={16} color={palette.attentionText} />
                     <Text style={styles.guardrailCalloutText}>
                       {assessment.succulentGuardrailApplied ??
                         plant.species.baselineCare.succulentGuardrails.rotWarningNote}
@@ -483,7 +490,7 @@ export default function PlantDetailNotebookScreen() {
                 </View>
 
                 {assessment.recommendedActions.map((action) => {
-                  const urg = UrgencyBadgeTheme[action.urgency];
+                  const urg = urgencyBadgeTheme[action.urgency];
                   return (
                     <Pressable
                       key={action.id}
@@ -496,9 +503,9 @@ export default function PlantDetailNotebookScreen() {
                         pressed && { opacity: 0.85 },
                       ]}>
                       {action.completed ? (
-                        <CheckSquare size={20} color={Palette.primary} />
+                        <CheckSquare size={20} color={palette.primary} />
                       ) : (
-                        <Square size={20} color={Palette.textSecondary} />
+                        <Square size={20} color={palette.textSecondary} />
                       )}
 
                       <View style={styles.checkableTextCol}>
@@ -544,7 +551,7 @@ export default function PlantDetailNotebookScreen() {
               {assessment.followUpQuestions.length > 0 && (
                 <View style={styles.followUpBox}>
                   <View style={styles.followUpTitleRow}>
-                    <HelpCircle size={14} color={Palette.primary} />
+                    <HelpCircle size={14} color={palette.primary} />
                     <Text style={styles.followUpTitle}>
                       Botanical Follow-Up Checks
                     </Text>
@@ -569,12 +576,12 @@ export default function PlantDetailNotebookScreen() {
               value={customNote}
               onChangeText={setCustomNote}
               placeholder="Optional note (e.g., 'Root reached 10.5cm' or 'Bottom-soaked for 15m')..."
-              placeholderTextColor={Palette.textMuted}
+              placeholderTextColor={palette.textMuted}
               style={styles.quickNoteInput}
             />
 
             <View style={styles.quickActionsGrid}>
-              {QUICK_ACTIONS.map((qa) => {
+              {quickActions.map((qa) => {
                 const isSelected = selectedQuickType === qa.type;
                 return (
                   <Pressable
@@ -584,7 +591,7 @@ export default function PlantDetailNotebookScreen() {
                       styles.quickActionBtn,
                       isSelected && {
                         borderColor: qa.color,
-                        backgroundColor: Palette.bgPrimary,
+                        backgroundColor: palette.bgPrimary,
                       },
                       pressed && { opacity: 0.75 },
                     ]}>
@@ -643,7 +650,7 @@ export default function PlantDetailNotebookScreen() {
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Edit ${plant.nickname}`}>
-              <Pencil size={16} color={Palette.primary} />
+              <Pencil size={16} color={palette.primary} />
               <Text style={styles.bottomEditBtnText}>Edit Plant Details</Text>
             </Pressable>
 
@@ -655,7 +662,7 @@ export default function PlantDetailNotebookScreen() {
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Delete ${plant.nickname}`}>
-              <Trash2 size={16} color={Palette.criticalText} />
+              <Trash2 size={16} color={palette.criticalText} />
               <Text style={styles.bottomDeleteBtnText}>Delete Plant</Text>
             </Pressable>
           </View>
@@ -685,10 +692,11 @@ export default function PlantDetailNotebookScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
   },
   scrollView: {
     flex: 1,
@@ -713,16 +721,16 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   backBtnPill: {
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: Radius.full,
   },
   backBtnText: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
     fontWeight: '700',
   },
   topNavRow: {
@@ -743,13 +751,13 @@ const styles = StyleSheet.create({
   navBackText: {
     fontSize: 15,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   scanShortcutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
     paddingHorizontal: 13,
     paddingVertical: 8,
     borderRadius: Radius.full,
@@ -757,7 +765,7 @@ const styles = StyleSheet.create({
   scanShortcutText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   feedbackBanner: {
     flexDirection: 'row',
@@ -776,10 +784,10 @@ const styles = StyleSheet.create({
     color: '#15803D',
   },
   heroCard: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     padding: Spacing.lg,
     gap: Spacing.md,
     ...CardShadow,
@@ -792,7 +800,7 @@ const styles = StyleSheet.create({
     width: 92,
     height: 92,
     borderRadius: Radius.md,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
   },
   heroTitleCol: {
     flex: 1,
@@ -825,7 +833,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   familyChip: {
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: Radius.sm,
@@ -833,17 +841,17 @@ const styles = StyleSheet.create({
   familyChipText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   heroNickname: {
     fontSize: 22,
     lineHeight: 28,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   heroSpecies: {
     fontSize: 13,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     fontWeight: '500',
   },
   italicScientific: {
@@ -858,7 +866,7 @@ const styles = StyleSheet.create({
   locationLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   specsGrid: {
     flexDirection: 'row',
@@ -868,31 +876,31 @@ const styles = StyleSheet.create({
   specBadge: {
     flex: 1,
     minWidth: 150,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: Radius.md,
     padding: 10,
     gap: 3,
   },
   specBadgeWarning: {
-    backgroundColor: Palette.attentionBg,
-    borderColor: Palette.attentionBorder,
+    backgroundColor: palette.attentionBg,
+    borderColor: palette.attentionBorder,
   },
   specBadgeWaterDue: {
-    backgroundColor: Palette.waterAlertBg,
-    borderColor: Palette.waterAlertBorder,
+    backgroundColor: palette.waterAlertBg,
+    borderColor: palette.waterAlertBorder,
   },
   specBadgeLabel: {
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
-    color: Palette.textMuted,
+    color: palette.textMuted,
   },
   specBadgeValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
     textTransform: 'capitalize',
   },
   waterCountdownRow: {
@@ -904,7 +912,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: Radius.md,
@@ -912,13 +920,13 @@ const styles = StyleSheet.create({
   baselineStripText: {
     flex: 1,
     fontSize: 12,
-    color: Palette.primary,
+    color: palette.primary,
   },
   assessmentCard: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     padding: Spacing.lg,
     gap: Spacing.md,
     ...CardShadow,
@@ -938,14 +946,14 @@ const styles = StyleSheet.create({
   assessmentTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   assessmentMeta: {
     fontSize: 12,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   rescanPillBtn: {
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderWidth: 1,
     borderColor: '#C5DEC9',
     paddingHorizontal: 11,
@@ -955,14 +963,14 @@ const styles = StyleSheet.create({
   rescanPillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   guardrailCallout: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: Palette.attentionBg,
-    borderColor: Palette.attentionBorder,
+    backgroundColor: palette.attentionBg,
+    borderColor: palette.attentionBorder,
     borderWidth: 1,
     padding: 11,
     borderRadius: Radius.md,
@@ -972,31 +980,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '600',
-    color: Palette.attentionText,
+    color: palette.attentionText,
   },
   diagnosisBody: {
     fontSize: 14,
     lineHeight: 21,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   symptomsBlock: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderRadius: Radius.md,
     padding: 12,
     gap: 4,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   subBlockLabel: {
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.6,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   symptomBullet: {
     fontSize: 13,
     lineHeight: 19,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   actionsSection: {
     gap: 8,
@@ -1009,20 +1017,20 @@ const styles = StyleSheet.create({
   actionsCounter: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   checkableActionCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: Radius.md,
     padding: 12,
   },
   checkableActionDone: {
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderColor: '#C5DEC9',
   },
   checkableTextCol: {
@@ -1048,18 +1056,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '600',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   actionInstructionDone: {
     textDecorationLine: 'line-through',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   actionRationale: {
     fontSize: 12,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   followUpBox: {
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     borderRadius: Radius.md,
     padding: 12,
     gap: 4,
@@ -1073,18 +1081,18 @@ const styles = StyleSheet.create({
   followUpTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   followUpQuestion: {
     fontSize: 12,
     lineHeight: 18,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   timelineSectionCard: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     padding: Spacing.lg,
     gap: Spacing.md,
     ...CardShadow,
@@ -1092,17 +1100,17 @@ const styles = StyleSheet.create({
   sectionHeaderTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   quickNoteInput: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: Radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   quickActionsGrid: {
     flexDirection: 'row',
@@ -1113,9 +1121,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: Radius.full,
@@ -1123,11 +1131,11 @@ const styles = StyleSheet.create({
   quickActionLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   timelineDivider: {
     height: 1,
-    backgroundColor: Palette.borderSubtle,
+    backgroundColor: palette.borderSubtle,
     marginVertical: 4,
   },
   timelineHeaderBlock: {
@@ -1141,7 +1149,7 @@ const styles = StyleSheet.create({
   swipeHintText: {
     fontSize: 12,
     fontWeight: '500',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   timelineList: {
     gap: 0,
@@ -1158,9 +1166,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     paddingVertical: 13,
     paddingHorizontal: 16,
     borderRadius: Radius.lg,
@@ -1169,7 +1177,7 @@ const styles = StyleSheet.create({
   bottomEditBtnText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   bottomDeleteBtn: {
     flex: 1,
@@ -1177,9 +1185,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Palette.criticalBg,
+    backgroundColor: palette.criticalBg,
     borderWidth: 1,
-    borderColor: Palette.criticalBorder,
+    borderColor: palette.criticalBorder,
     paddingVertical: 13,
     paddingHorizontal: 16,
     borderRadius: Radius.lg,
@@ -1188,6 +1196,6 @@ const styles = StyleSheet.create({
   bottomDeleteBtnText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Palette.criticalText,
+    color: palette.criticalText,
   },
 });

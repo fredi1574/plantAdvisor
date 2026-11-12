@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { Leaf } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Animated,
   Easing,
@@ -10,7 +10,15 @@ import {
   View,
 } from 'react-native';
 
-import { Palette, Radius } from '@/constants/theme';
+import { BotanicalBackground } from '@/components/botanical-background';
+import {
+  BorderWidth,
+  Fonts,
+  Radius,
+  Spacing,
+  type ThemePalette,
+} from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 
 const LOGO_SOURCE = require('../../logo_transparent.png');
 
@@ -23,6 +31,8 @@ export function BotanicalSplashScreen({
   onFinish,
   readyToDismiss,
 }: BotanicalSplashScreenProps) {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const logoScale = useAnimatedValue(0.84);
   const logoOpacity = useAnimatedValue(0);
   const textTranslateY = useAnimatedValue(12);
@@ -123,6 +133,7 @@ export function BotanicalSplashScreen({
 
   return (
     <Animated.View style={[styles.container, { opacity: containerOpacity }]}>
+      <BotanicalBackground variant="garden" />
       {/* Ambient Decorative Circles */}
       <View style={styles.ambientTopRight} />
       <View style={styles.ambientBottomLeft} />
@@ -160,7 +171,7 @@ export function BotanicalSplashScreen({
             },
           ]}>
           <View style={styles.eyebrowPill}>
-            <Leaf size={11} color={Palette.primary} />
+            <Leaf size={11} color={palette.primary} />
             <Text style={styles.eyebrowText}>BOTANICAL COMPANION</Text>
           </View>
           <Text style={styles.brandTitle}>FloraLog</Text>
@@ -180,107 +191,109 @@ export function BotanicalSplashScreen({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: Palette.bgPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 999,
-    overflow: 'hidden',
-  },
-  ambientTopRight: {
-    position: 'absolute',
-    top: -110,
-    right: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: '#E3EFE6',
-    opacity: 0.7,
-  },
-  ambientBottomLeft: {
-    position: 'absolute',
-    bottom: -120,
-    left: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: '#EAE4D7',
-    opacity: 0.65,
-  },
-  centerContent: {
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
-  },
-  emblemWrapper: {
-    width: 200,
-    height: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  outerHalo: {
-    position: 'absolute',
-    width: 156,
-    height: 156,
-    borderRadius: 78,
-    backgroundColor: Palette.primarySoft,
-    borderWidth: 1,
-    borderColor: '#C5DEC9',
-    opacity: 0.75,
-  },
-  logoImage: {
-    width: 190,
-    height: 220,
-  },
-  textBlock: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  eyebrowPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    backgroundColor: Palette.primarySoft,
-    marginBottom: 2,
-  },
-  eyebrowText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.3,
-    color: Palette.primary,
-  },
-  brandTitle: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: Palette.textPrimary,
-    letterSpacing: -0.8,
-  },
-  brandTagline: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Palette.textSecondary,
-    letterSpacing: 0.1,
-  },
-  progressTrack: {
-    width: 120,
-    height: 4,
-    borderRadius: Radius.full,
-    backgroundColor: '#DFE7E1',
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: Radius.full,
-    backgroundColor: Palette.primary,
-  },
-});
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
+    container: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      backgroundColor: palette.bgPrimary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 999,
+      overflow: 'hidden',
+    },
+    ambientTopRight: {
+      position: 'absolute',
+      top: -110,
+      right: -90,
+      width: 280,
+      height: 280,
+      borderRadius: Radius.full,
+      backgroundColor: palette.primarySoft,
+      opacity: 0.7,
+    },
+    ambientBottomLeft: {
+      position: 'absolute',
+      bottom: -120,
+      left: -100,
+      width: 300,
+      height: 300,
+      borderRadius: Radius.full,
+      backgroundColor: palette.bgSubtle,
+      opacity: 0.65,
+    },
+    centerContent: {
+      alignItems: 'center',
+      paddingHorizontal: Spacing.xxl,
+      gap: Spacing.lg,
+    },
+    emblemWrapper: {
+      width: 200,
+      height: 220,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    outerHalo: {
+      position: 'absolute',
+      width: 156,
+      height: 156,
+      borderRadius: Radius.full,
+      backgroundColor: palette.primarySoft,
+      borderWidth: BorderWidth.hairline,
+      borderColor: palette.primaryBorder,
+      opacity: 0.75,
+    },
+    logoImage: {
+      width: 190,
+      height: 220,
+    },
+    textBlock: {
+      alignItems: 'center',
+      gap: Spacing.xs + Spacing.half,
+    },
+    eyebrowPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.xs,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs,
+      borderRadius: Radius.full,
+      backgroundColor: palette.primarySoft,
+      marginBottom: Spacing.half,
+    },
+    eyebrowText: {
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1.3,
+      color: palette.primary,
+    },
+    brandTitle: {
+      fontSize: 34,
+      fontWeight: '800',
+      fontFamily: Fonts?.serif,
+      color: palette.textPrimary,
+      letterSpacing: -0.8,
+    },
+    brandTagline: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: palette.textSecondary,
+      letterSpacing: 0.1,
+    },
+    progressTrack: {
+      width: 120,
+      height: Spacing.xs,
+      borderRadius: Radius.full,
+      backgroundColor: palette.bgSubtle,
+      overflow: 'hidden',
+      marginTop: Spacing.sm,
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: Radius.full,
+      backgroundColor: palette.primary,
+    },
+  });

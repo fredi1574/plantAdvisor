@@ -28,11 +28,13 @@ import Animated, {
 
 import {
   CardShadow,
-  HealthBadgeTheme,
+  Fonts,
+  getHealthBadgeTheme,
   Palette,
   Radius,
   Spacing,
 } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 import { getDaysUntilNextWater } from '@/store/usePlantStore';
 import type { UserPlant } from '@/types/plant';
 
@@ -84,6 +86,7 @@ export function SwipeablePlantCard({
   onEdit,
   onDelete,
 }: SwipeablePlantCardProps) {
+  const palette = usePalette();
   const translateX = useSharedValue(0);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -269,7 +272,7 @@ export function SwipeablePlantCard({
 
   const healthStatus =
     plant.latestHealthAssessment?.healthStatus ?? 'thriving';
-  const badge = HealthBadgeTheme[healthStatus];
+  const badge = getHealthBadgeTheme(palette)[healthStatus];
   const daysUntilWater = getDaysUntilNextWater(plant);
   const needsWater = daysUntilWater <= 0;
 
@@ -333,19 +336,28 @@ export function SwipeablePlantCard({
             onPress={handleCardPress}
             style={({ pressed }) => [
               styles.plantCard,
-              pressed && !isOpen && styles.plantCardPressed,
+              {
+                backgroundColor: palette.bgSurface,
+                borderColor: palette.borderSubtle,
+              },
+              pressed && !isOpen && { backgroundColor: palette.bgSubtle },
             ]}>
           {/* Top Row: Thumbnail + Title + Health Status Badge */}
           <View style={styles.cardTopRow}>
             <Image
               source={{ uri: plant.photoUri }}
-              style={styles.thumbnail}
+              style={[styles.thumbnail, { backgroundColor: palette.bgSubtle }]}
               contentFit="cover"
             />
 
             <View style={styles.cardHeaderMeta}>
               <View style={styles.titleBadgeRow}>
-                <Text style={styles.plantNickname} numberOfLines={1}>
+                <Text
+                  style={[
+                    styles.plantNickname,
+                    { color: palette.textPrimary, fontFamily: Fonts?.serif },
+                  ]}
+                  numberOfLines={1}>
                   {plant.nickname}
                 </Text>
 
@@ -373,7 +385,9 @@ export function SwipeablePlantCard({
                 </View>
               </View>
 
-              <Text style={styles.speciesLine} numberOfLines={1}>
+              <Text
+                style={[styles.speciesLine, { color: palette.textSecondary }]}
+                numberOfLines={1}>
                 {plant.species.commonName} •{' '}
                 <Text style={styles.scientificItalic}>
                   {plant.species.scientificName}
@@ -381,15 +395,25 @@ export function SwipeablePlantCard({
               </Text>
 
               <View style={styles.metaChipsRow}>
-                <View style={styles.typeChip}>
-                  <Text style={styles.typeChipText}>
+                <View
+                  style={[
+                    styles.typeChip,
+                    { backgroundColor: palette.bgSubtle },
+                  ]}>
+                  <Text
+                    style={[styles.typeChipText, { color: palette.primary }]}>
                     {PLANT_TYPE_LABELS[plant.species.plantType]}
                   </Text>
                 </View>
 
                 <View style={styles.locationChip}>
-                  <MapPin size={12} color={Palette.textSecondary} />
-                  <Text style={styles.locationText} numberOfLines={1}>
+                  <MapPin size={12} color={palette.textSecondary} />
+                  <Text
+                    style={[
+                      styles.locationText,
+                      { color: palette.textSecondary },
+                    ]}
+                    numberOfLines={1}>
                     {plant.location}
                   </Text>
                 </View>
@@ -399,20 +423,53 @@ export function SwipeablePlantCard({
 
           {/* Latest AI Health Summary Snippet */}
           {plant.latestHealthAssessment && (
-            <View style={styles.diagnosisSnippetBox}>
-              <Text style={styles.diagnosisSnippetText} numberOfLines={2}>
-                <Text style={styles.diagnosisSnippetPrefix}>AI Note: </Text>
+            <View
+              style={[
+                styles.diagnosisSnippetBox,
+                {
+                  backgroundColor: palette.bgPrimary,
+                  borderColor: palette.borderSubtle,
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.diagnosisSnippetText,
+                  { color: palette.textSecondary },
+                ]}
+                numberOfLines={2}>
+                <Text
+                  style={[
+                    styles.diagnosisSnippetPrefix,
+                    { color: palette.primary },
+                  ]}>
+                  AI Note:{' '}
+                </Text>
                 {plant.latestHealthAssessment.diagnosisSummary}
               </Text>
             </View>
           )}
 
           {/* Footer Strip: Watering Indicator + Quick Water Action */}
-          <View style={styles.cardFooter}>
+          <View
+            style={[
+              styles.cardFooter,
+              { borderTopColor: palette.bgSubtle },
+            ]}>
             {needsWater ? (
-              <View style={styles.needsWaterBadge}>
-                <Droplets size={14} color={Palette.waterAlertText} />
-                <Text style={styles.needsWaterBadgeText}>
+              <View
+                style={[
+                  styles.needsWaterBadge,
+                  {
+                    backgroundColor: palette.waterAlertBg,
+                    borderColor: palette.waterAlertBorder,
+                  },
+                ]}>
+                <Droplets size={14} color={palette.waterAlertText} />
+                <Text
+                  style={[
+                    styles.needsWaterBadgeText,
+                    { color: palette.waterAlertText },
+                  ]}>
                   {daysUntilWater === 0
                     ? 'Needs Watering Today'
                     : `Needs Watering (${Math.abs(daysUntilWater)}d overdue)`}
@@ -420,8 +477,12 @@ export function SwipeablePlantCard({
               </View>
             ) : (
               <View style={styles.waterScheduleInfo}>
-                <CheckCircle2 size={14} color={Palette.primaryMuted} />
-                <Text style={styles.waterScheduleText}>
+                <CheckCircle2 size={14} color={palette.primaryMuted} />
+                <Text
+                  style={[
+                    styles.waterScheduleText,
+                    { color: palette.textSecondary },
+                  ]}>
                   Next water in {daysUntilWater}d (every{' '}
                   {plant.customWateringIntervalDays}d)
                 </Text>
@@ -437,10 +498,15 @@ export function SwipeablePlantCard({
                   }}
                   style={({ pressed }) => [
                     styles.quickWaterBtn,
+                    { backgroundColor: palette.waterBlue },
                     pressed && { opacity: 0.8 },
                   ]}>
-                  <Droplets size={13} color={Palette.textInverse} />
-                  <Text style={styles.quickWaterBtnText}>
+                  <Droplets size={13} color={palette.textInverse} />
+                  <Text
+                    style={[
+                      styles.quickWaterBtnText,
+                      { color: palette.textInverse },
+                    ]}>
                     {plant.species.plantType === 'propagation'
                       ? 'Refresh Water'
                       : 'Log Water'}

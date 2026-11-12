@@ -5,18 +5,20 @@ import { router } from 'expo-router';
 import {
   Bell,
   BellOff,
-  CheckCircle2,
   Clock,
   CloudOff,
   LogIn,
   LogOut,
+  Monitor,
+  Moon,
   RefreshCw,
   Save,
   Send,
   Sprout,
+  Sun,
   User as UserIcon
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -32,12 +34,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
+  BorderWidth,
+  BottomTabInset,
   CardShadow,
   MaxContentWidth,
-  Palette,
   Radius,
   Spacing,
+  Typography,
+  type ThemePalette,
 } from '@/constants/theme';
+import { BotanicalBackground } from '@/components/botanical-background';
+import { FeedbackBanner } from '@/components/feedback-banner';
+import { ScreenHeader } from '@/components/screen-header';
+import { usePalette } from '@/hooks/use-theme';
+import { useThemeStore, type ThemePreference } from '@/store/useThemeStore';
 import {
   getNotificationPermissionStatus,
   getScheduledReminderCount,
@@ -63,6 +73,10 @@ const LEVEL_LABELS: Record<ExperienceLevel, string> = {
 };
 
 export default function ProfileScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+  const themePreference = useThemeStore((s) => s.preference);
+  const setThemePreference = useThemeStore((s) => s.setPreference);
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -248,33 +262,32 @@ export default function ProfileScreen() {
     .toUpperCase();
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}
+      edges={['top']}>
+      <BotanicalBackground variant="account" />
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: BottomTabInset + Spacing.xl },
+        ]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.maxContainer}>
-          {/* Header */}
-          <View style={styles.headerBlock}>
-            <View style={styles.brandBadgeRow}>
-              <Sprout size={18} color={Palette.primary} />
-              <Text style={styles.brandEyebrow}>GARDENER ACCOUNT & CLOUD</Text>
-            </View>
-            <Text style={styles.headerTitle}>Profile & Sync</Text>
-          </View>
+          <ScreenHeader
+            eyebrow="GARDENER ACCOUNT & CLOUD"
+            title="Profile & Sync"
+            icon={<Sprout size={16} color={palette.primary} />}
+          />
 
-          {toast && (
-            <View style={styles.toastBanner}>
-              <CheckCircle2 size={16} color={Palette.thrivingText} />
-              <Text style={styles.toastText}>{toast}</Text>
-            </View>
-          )}
+          <FeedbackBanner message={toast} />
 
           {/* Signed-Out Guest State */}
           {!user ? (
             <View style={styles.card}>
               <View style={styles.statusPillOffline}>
-                <CloudOff size={14} color={Palette.attentionText} />
+                <CloudOff size={14} color={palette.attentionText} />
                 <Text style={styles.statusPillOfflineText}>
                   Offline Guest Mode
                 </Text>
@@ -297,7 +310,7 @@ export default function ProfileScreen() {
                   styles.primaryBtn,
                   pressed && { opacity: 0.9 },
                 ]}>
-                <LogIn size={18} color={Palette.textInverse} />
+                <LogIn size={18} color={palette.textInverse} />
                 <Text style={styles.primaryBtnText}>
                   Sign In or Create Account
                 </Text>
@@ -338,9 +351,9 @@ export default function ProfileScreen() {
                       pressed && { opacity: 0.8 },
                     ]}>
                     {isSyncing ? (
-                      <ActivityIndicator size="small" color={Palette.primary} />
+                      <ActivityIndicator size="small" color={palette.primary} />
                     ) : (
-                      <RefreshCw size={15} color={Palette.primary} />
+                      <RefreshCw size={15} color={palette.primary} />
                     )}
                     <Text style={styles.syncNowText}>
                       {isSyncing ? 'Syncing...' : 'Sync Now'}
@@ -352,7 +365,7 @@ export default function ProfileScreen() {
               {/* Edit Profile Card */}
               <View style={styles.card}>
                 <View style={styles.sectionTitleRow}>
-                  <UserIcon size={17} color={Palette.primary} />
+                  <UserIcon size={17} color={palette.primary} />
                   <Text style={styles.sectionTitle}>Gardener Profile</Text>
                 </View>
 
@@ -362,7 +375,7 @@ export default function ProfileScreen() {
                     value={displayName}
                     onChangeText={setDraftName}
                     placeholder="Your name or handle"
-                    placeholderTextColor={Palette.textMuted}
+                    placeholderTextColor={palette.textMuted}
                     style={styles.input}
                   />
                 </View>
@@ -375,7 +388,7 @@ export default function ProfileScreen() {
                     value={bio}
                     onChangeText={setDraftBio}
                     placeholder="e.g. South-facing apartment balcony, Zone 9b succulents"
-                    placeholderTextColor={Palette.textMuted}
+                    placeholderTextColor={palette.textMuted}
                     style={[styles.input, styles.textArea]}
                     multiline
                     numberOfLines={3}
@@ -393,11 +406,11 @@ export default function ProfileScreen() {
                   {isLoading ? (
                     <ActivityIndicator
                       size="small"
-                      color={Palette.textInverse}
+                      color={palette.textInverse}
                     />
                   ) : (
                     <>
-                      <Save size={16} color={Palette.textInverse} />
+                      <Save size={16} color={palette.textInverse} />
                       <Text style={styles.primaryBtnText}>Save Profile</Text>
                     </>
                   )}
@@ -406,14 +419,96 @@ export default function ProfileScreen() {
             </>
           )}
 
+          {/* Appearance / Theme Mode Card */}
+          <View
+            style={[
+              styles.appearanceCard,
+              {
+                backgroundColor: palette.bgSurface,
+                borderColor: palette.borderSubtle,
+              },
+            ]}>
+            <View style={styles.sectionTitleRow}>
+              <Sun size={17} color={palette.primary} />
+              <Text
+                style={[styles.sectionTitle, { color: palette.textPrimary }]}>
+                Appearance
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.cardDescription,
+                { color: palette.textSecondary },
+              ]}>
+              Choose Light, Dark (Night Conservatory), or follow your device
+              system setting.
+            </Text>
+
+            <View style={styles.appearanceRow}>
+              {(
+                [
+                  { key: 'system', label: 'System', Icon: Monitor },
+                  { key: 'light', label: 'Light', Icon: Sun },
+                  { key: 'dark', label: 'Dark', Icon: Moon },
+                ] as const satisfies readonly {
+                  key: ThemePreference;
+                  label: string;
+                  Icon: typeof Sun;
+                }[]
+              ).map(({ key, label, Icon }) => {
+                const isSelected = themePreference === key;
+                return (
+                  <Pressable
+                    key={key}
+                    onPress={() => {
+                      setThemePreference(key);
+                      showToast(`Theme set to ${label}.`);
+                    }}
+                    style={({ pressed }) => [
+                      styles.appearancePill,
+                      {
+                        backgroundColor: isSelected
+                          ? palette.primary
+                          : palette.bgSubtle,
+                        borderColor: isSelected
+                          ? palette.primary
+                          : palette.borderSubtle,
+                      },
+                      pressed && { opacity: 0.85 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}>
+                    <Icon
+                      size={14}
+                      color={
+                        isSelected ? palette.textInverse : palette.textSecondary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.appearancePillText,
+                        {
+                          color: isSelected
+                            ? palette.textInverse
+                            : palette.textPrimary,
+                        },
+                      ]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
           {/* Local Care Notifications Preferences Card */}
           <View style={styles.card}>
             <View style={styles.notificationHeaderRow}>
               <View style={styles.sectionTitleRow}>
                 {notificationPrefs.enabled ? (
-                  <Bell size={17} color={Palette.primary} />
+                  <Bell size={17} color={palette.primary} />
                 ) : (
-                  <BellOff size={17} color={Palette.textMuted} />
+                  <BellOff size={17} color={palette.textMuted} />
                 )}
                 <Text style={styles.sectionTitle}>Local Care Notifications</Text>
               </View>
@@ -457,10 +552,10 @@ export default function ProfileScreen() {
                 value={notificationPrefs.enabled}
                 onValueChange={(val) => void handleToggleNotifications(val)}
                 trackColor={{
-                  false: Palette.borderSubtle,
-                  true: Palette.primary,
+                  false: palette.borderSubtle,
+                  true: palette.primary,
                 }}
-                thumbColor={Palette.textInverse}
+                thumbColor={palette.textInverse}
               />
             </View>
 
@@ -479,16 +574,16 @@ export default function ProfileScreen() {
                     value={notificationPrefs.dailyDigestEnabled}
                     onValueChange={(val) => void handleToggleDailyDigest(val)}
                     trackColor={{
-                      false: Palette.borderSubtle,
-                      true: Palette.primary,
+                      false: palette.borderSubtle,
+                      true: palette.primary,
                     }}
-                    thumbColor={Palette.textInverse}
+                    thumbColor={palette.textInverse}
                   />
                 </View>
 
                 <View style={styles.fieldGroup}>
                   <View style={styles.timeLabelRow}>
-                    <Clock size={14} color={Palette.textSecondary} />
+                    <Clock size={14} color={palette.textSecondary} />
                     <Text style={styles.label}>Preferred Reminder Time</Text>
                   </View>
 
@@ -505,7 +600,7 @@ export default function ProfileScreen() {
                     )}. Tap to change.`}>
                     <View style={styles.customTimeDisplayRow}>
                       <View style={styles.customTimeIconBadge}>
-                        <Clock size={16} color={Palette.primary} />
+                        <Clock size={16} color={palette.primary} />
                       </View>
                       <View>
                         <Text style={styles.customTimeValueText}>
@@ -556,7 +651,7 @@ export default function ProfileScreen() {
                 styles.secondaryBtn,
                 pressed && { opacity: 0.85 },
               ]}>
-              <Send size={15} color={Palette.primary} />
+              <Send size={15} color={palette.primary} />
               <Text style={styles.secondaryBtnText}>
                 Send Test Care Notification
               </Text>
@@ -571,7 +666,7 @@ export default function ProfileScreen() {
                 styles.signOutBtn,
                 pressed && { opacity: 0.8 },
               ]}>
-              <LogOut size={16} color={Palette.criticalText} />
+              <LogOut size={16} color={palette.criticalText} />
               <Text style={styles.signOutText}>Sign Out</Text>
             </Pressable>
           )}
@@ -581,10 +676,11 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
   },
   scrollView: {
     flex: 1,
@@ -612,12 +708,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.1,
-    color: Palette.primary,
+    color: palette.primary,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
     letterSpacing: -0.5,
   },
   toastBanner: {
@@ -627,21 +723,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
     borderRadius: Radius.md,
-    backgroundColor: Palette.thrivingBg,
+    backgroundColor: palette.thrivingBg,
     borderWidth: 1,
-    borderColor: Palette.thrivingBorder,
+    borderColor: palette.thrivingBorder,
   },
   toastText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Palette.thrivingText,
+    color: palette.thrivingText,
   },
   card: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     gap: Spacing.md,
     ...CardShadow,
   },
@@ -653,14 +749,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: Radius.full,
-    backgroundColor: Palette.attentionBg,
+    backgroundColor: palette.attentionBg,
     borderWidth: 1,
-    borderColor: Palette.attentionBorder,
+    borderColor: palette.attentionBorder,
   },
   statusPillOfflineText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.attentionText,
+    color: palette.attentionText,
   },
   statusPillOnline: {
     flexDirection: 'row',
@@ -669,37 +765,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: Radius.full,
-    backgroundColor: Palette.thrivingBg,
+    backgroundColor: palette.thrivingBg,
     borderWidth: 1,
-    borderColor: Palette.thrivingBorder,
+    borderColor: palette.thrivingBorder,
   },
   statusPillOnlineText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Palette.thrivingText,
+    color: palette.thrivingText,
   },
   cardTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   cardDescription: {
     fontSize: 14,
     lineHeight: 20,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
     borderRadius: Radius.md,
     paddingVertical: 13,
     marginTop: 4,
   },
   primaryBtnText: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -712,16 +808,16 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderWidth: 2,
-    borderColor: Palette.primary,
+    borderColor: palette.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontSize: 20,
     fontWeight: '800',
-    color: Palette.primary,
+    color: palette.primary,
   },
   profileInfo: {
     flex: 1,
@@ -730,11 +826,11 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 20,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   profileEmail: {
     fontSize: 13,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -750,23 +846,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: Radius.full,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
   },
   levelBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   statsBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderRadius: Radius.md,
     paddingVertical: 10,
     paddingHorizontal: Spacing.md,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   statItem: {
     alignItems: 'center',
@@ -775,17 +871,17 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 18,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   statLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   statDivider: {
     width: 1,
     height: 26,
-    backgroundColor: Palette.borderSubtle,
+    backgroundColor: palette.borderSubtle,
   },
   syncNowBtn: {
     flexDirection: 'row',
@@ -794,12 +890,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: Radius.full,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
   },
   syncNowText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -809,7 +905,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   fieldGroup: {
     gap: 6,
@@ -817,17 +913,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   input: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: Radius.md,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 12 : 9,
     fontSize: 15,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   textArea: {
     minHeight: 74,
@@ -842,21 +938,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: Radius.full,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   chipActive: {
-    backgroundColor: Palette.primarySoft,
-    borderColor: Palette.primary,
+    backgroundColor: palette.primarySoft,
+    borderColor: palette.primary,
   },
   chipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   chipTextActive: {
-    color: Palette.primary,
+    color: palette.primary,
     fontWeight: '700',
   },
   notificationHeaderRow: {
@@ -870,12 +966,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.md,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   toggleTextCol: {
     flex: 1,
@@ -884,11 +980,11 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   toggleSublabel: {
     fontSize: 12,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   timeLabelRow: {
     flexDirection: 'row',
@@ -899,12 +995,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     borderRadius: Radius.md,
     borderWidth: 1.5,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   customTimeDisplayRow: {
     flexDirection: 'row',
@@ -915,48 +1011,48 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: Radius.sm,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   customTimeValueText: {
     fontSize: 16,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
     letterSpacing: -0.2,
   },
   customTimeSubText: {
     fontSize: 11,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     marginTop: 1,
   },
   customTimeChangePill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: Radius.full,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderWidth: 1,
-    borderColor: Palette.primary,
+    borderColor: palette.primary,
   },
   customTimeChangePillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   secondaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderWidth: 1,
-    borderColor: Palette.primary,
+    borderColor: palette.primary,
     borderRadius: Radius.md,
     paddingVertical: 11,
     marginTop: 2,
   },
   secondaryBtnText: {
-    color: Palette.primary,
+    color: palette.primary,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -967,13 +1063,38 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 13,
     borderRadius: Radius.md,
-    backgroundColor: Palette.criticalBg,
+    backgroundColor: palette.criticalBg,
     borderWidth: 1,
-    borderColor: Palette.criticalBorder,
+    borderColor: palette.criticalBorder,
   },
   signOutText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Palette.criticalText,
+    color: palette.criticalText,
+  },
+  appearanceCard: {
+    borderRadius: Radius.lg,
+    borderWidth: BorderWidth.hairline,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    ...CardShadow,
+  },
+  appearanceRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  appearancePill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs + Spacing.half,
+    paddingVertical: Spacing.sm + Spacing.half,
+    borderRadius: Radius.md,
+    borderWidth: BorderWidth.hairline,
+  },
+  appearancePillText: {
+    ...Typography.caption,
+    fontWeight: '700',
   },
 });

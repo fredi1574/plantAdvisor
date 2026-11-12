@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "plantadvisor",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png"
     },
@@ -33,7 +33,11 @@
         {
           "backgroundColor": "#F7F5F0",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 180
+          "imageWidth": 180,
+          "dark": {
+            "backgroundColor": "#111713",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ],
       [

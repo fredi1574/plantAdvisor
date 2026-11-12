@@ -25,14 +25,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
+  BottomTabInset,
   CardShadow,
-  HealthBadgeTheme,
+  getHealthBadgeTheme,
+  getUrgencyBadgeTheme,
   MaxContentWidth,
-  Palette,
   Radius,
   Spacing,
-  UrgencyBadgeTheme,
+  type ThemePalette,
 } from "@/constants/theme";
+import { BotanicalBackground } from "@/components/botanical-background";
+import { usePalette } from "@/hooks/use-theme";
 import {
   diagnosePlantHealth,
   identifyPlant,
@@ -68,6 +71,10 @@ const DEMO_PRESETS = [
 ];
 
 export default function ScanScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+  const healthBadgeTheme = useMemo(() => getHealthBadgeTheme(palette), [palette]);
+  const urgencyBadgeTheme = useMemo(() => getUrgencyBadgeTheme(palette), [palette]);
   const params = useLocalSearchParams<{ mode?: string; plantId?: string }>();
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
@@ -264,10 +271,17 @@ export default function ScanScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}
+      edges={["top"]}
+    >
+      <BotanicalBackground variant="scan" />
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: BottomTabInset + Spacing.xl },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.maxContainer}>
@@ -312,8 +326,8 @@ export default function ScanScreen() {
                 size={16}
                 color={
                   mode === "identify"
-                    ? Palette.textInverse
-                    : Palette.textSecondary
+                    ? palette.textInverse
+                    : palette.textSecondary
                 }
               />
               <Text
@@ -340,8 +354,8 @@ export default function ScanScreen() {
                 size={16}
                 color={
                   mode === "diagnose"
-                    ? Palette.textInverse
-                    : Palette.textSecondary
+                    ? palette.textInverse
+                    : palette.textSecondary
                 }
               />
               <Text
@@ -378,7 +392,7 @@ export default function ScanScreen() {
               </View>
             ) : (
               <View style={styles.emptyPreviewBox}>
-                <Camera size={28} color={Palette.primaryMuted} />
+                <Camera size={28} color={palette.primaryMuted} />
                 <Text style={styles.emptyPreviewTitle}>
                   Snap a leaf photo or choose a sample below
                 </Text>
@@ -397,7 +411,7 @@ export default function ScanScreen() {
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <Camera size={16} color={Palette.primary} />
+                <Camera size={16} color={palette.primary} />
                 <Text style={styles.secondaryMediaBtnText}>Camera</Text>
               </Pressable>
 
@@ -408,7 +422,7 @@ export default function ScanScreen() {
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <ImageIcon size={16} color={Palette.primary} />
+                <ImageIcon size={16} color={palette.primary} />
                 <Text style={styles.secondaryMediaBtnText}>Photo Library</Text>
               </Pressable>
             </View>
@@ -416,7 +430,7 @@ export default function ScanScreen() {
 
           {errorMessage && (
             <View style={styles.errorBanner}>
-              <AlertCircle size={16} color={Palette.criticalText} />
+              <AlertCircle size={16} color={palette.criticalText} />
               <Text style={styles.errorBannerText}>{errorMessage}</Text>
             </View>
           )}
@@ -431,7 +445,7 @@ export default function ScanScreen() {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="e.g., Crassula ovata, Jade Plant, Avocado seed, Monstera..."
-                placeholderTextColor={Palette.textMuted}
+                placeholderTextColor={palette.textMuted}
                 style={styles.textInput}
               />
 
@@ -444,9 +458,9 @@ export default function ScanScreen() {
                 ]}
               >
                 {isLoading ? (
-                  <ActivityIndicator color={Palette.textInverse} size="small" />
+                  <ActivityIndicator color={palette.textInverse} size="small" />
                 ) : (
-                  <Sparkles size={17} color={Palette.textInverse} />
+                  <Sparkles size={17} color={palette.textInverse} />
                 )}
                 <Text style={styles.primaryActionBtnText}>
                   {isLoading
@@ -498,7 +512,7 @@ export default function ScanScreen() {
                   {idResult.baselineCare.succulentGuardrails
                     .isSucculentOrCactus && (
                       <View style={styles.guardrailBox}>
-                        <ShieldAlert size={16} color={Palette.attentionText} />
+                        <ShieldAlert size={16} color={palette.attentionText} />
                         <Text style={styles.guardrailText}>
                           {
                             idResult.baselineCare.succulentGuardrails
@@ -582,8 +596,8 @@ export default function ScanScreen() {
                       value={hasDrainageHole}
                       onValueChange={setHasDrainageHole}
                       trackColor={{
-                        false: Palette.borderSubtle,
-                        true: Palette.primary,
+                        false: palette.borderSubtle,
+                        true: palette.primary,
                       }}
                     />
                   </View>
@@ -595,7 +609,7 @@ export default function ScanScreen() {
                       pressed && { opacity: 0.85 },
                     ]}
                   >
-                    <CheckCircle2 size={17} color={Palette.textInverse} />
+                    <CheckCircle2 size={17} color={palette.textInverse} />
                     <Text style={styles.primaryActionBtnText}>
                       Add to My Garden & Open Notebook
                     </Text>
@@ -674,7 +688,7 @@ export default function ScanScreen() {
                     { minHeight: 72, textAlignVertical: "top" },
                   ]}
                   placeholder="Describe any yellowing, wrinkling, stretching, spots, or root growth..."
-                  placeholderTextColor={Palette.textMuted}
+                  placeholderTextColor={palette.textMuted}
                 />
               </View>
 
@@ -687,9 +701,9 @@ export default function ScanScreen() {
                 ]}
               >
                 {isLoading ? (
-                  <ActivityIndicator color={Palette.textInverse} size="small" />
+                  <ActivityIndicator color={palette.textInverse} size="small" />
                 ) : (
-                  <Stethoscope size={17} color={Palette.textInverse} />
+                  <Stethoscope size={17} color={palette.textInverse} />
                 )}
                 <Text style={styles.primaryActionBtnText}>
                   {isLoading
@@ -710,9 +724,9 @@ export default function ScanScreen() {
                         styles.statusPill,
                         {
                           backgroundColor:
-                            HealthBadgeTheme[diagnosisResult.healthStatus].bg,
+                            healthBadgeTheme[diagnosisResult.healthStatus].bg,
                           borderColor:
-                            HealthBadgeTheme[diagnosisResult.healthStatus]
+                            healthBadgeTheme[diagnosisResult.healthStatus]
                               .border,
                         },
                       ]}
@@ -722,12 +736,12 @@ export default function ScanScreen() {
                           styles.statusPillText,
                           {
                             color:
-                              HealthBadgeTheme[diagnosisResult.healthStatus]
+                              healthBadgeTheme[diagnosisResult.healthStatus]
                                 .text,
                           },
                         ]}
                       >
-                        {HealthBadgeTheme[diagnosisResult.healthStatus].label}
+                        {healthBadgeTheme[diagnosisResult.healthStatus].label}
                       </Text>
                     </View>
                   </View>
@@ -738,7 +752,7 @@ export default function ScanScreen() {
 
                   {diagnosisResult.succulentGuardrailApplied && (
                     <View style={styles.guardrailBox}>
-                      <ShieldAlert size={16} color={Palette.attentionText} />
+                      <ShieldAlert size={16} color={palette.attentionText} />
                       <Text style={styles.guardrailText}>
                         {diagnosisResult.succulentGuardrailApplied}
                       </Text>
@@ -747,7 +761,7 @@ export default function ScanScreen() {
 
                   <Text style={styles.subHeader}>Recommended Next Steps:</Text>
                   {diagnosisResult.recommendedActions.map((act, idx) => {
-                    const urg = UrgencyBadgeTheme[act.urgency];
+                    const urg = urgencyBadgeTheme[act.urgency];
                     return (
                       <View key={idx} style={styles.actionRowItem}>
                         <View
@@ -784,7 +798,7 @@ export default function ScanScreen() {
                       pressed && { opacity: 0.85 },
                     ]}
                   >
-                    <CheckCircle2 size={16} color={Palette.textInverse} />
+                    <CheckCircle2 size={16} color={palette.textInverse} />
                     <Text style={styles.primaryActionBtnText}>
                       View in {selectedPlant.nickname} Notebook
                     </Text>
@@ -799,10 +813,11 @@ export default function ScanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
   },
   scrollView: {
     flex: 1,
@@ -836,12 +851,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   engineBadgeLive: {
-    backgroundColor: Palette.thrivingBg,
-    borderColor: Palette.thrivingBorder,
+    backgroundColor: palette.thrivingBg,
+    borderColor: palette.thrivingBorder,
   },
   engineBadgeMock: {
-    backgroundColor: Palette.bgSubtle,
-    borderColor: Palette.borderSubtle,
+    backgroundColor: palette.bgSubtle,
+    borderColor: palette.borderSubtle,
   },
   engineDot: {
     width: 6,
@@ -849,45 +864,45 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   engineDotLive: {
-    backgroundColor: Palette.thrivingText,
+    backgroundColor: palette.thrivingText,
   },
   engineDotMock: {
-    backgroundColor: Palette.textMuted,
+    backgroundColor: palette.textMuted,
   },
   engineBadgeText: {
     fontSize: 11,
     fontWeight: "600",
   },
   engineBadgeTextLive: {
-    color: Palette.thrivingText,
+    color: palette.thrivingText,
   },
   engineBadgeTextMock: {
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   eyebrow: {
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.8,
-    color: Palette.primary,
+    color: palette.primary,
   },
   headerTitle: {
     fontSize: 28,
     lineHeight: 34,
     fontWeight: "700",
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   headerSubtitle: {
     fontSize: 14,
     lineHeight: 20,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   segmentedBar: {
     flexDirection: "row",
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     padding: 4,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     gap: 6,
   },
   segmentBtn: {
@@ -900,21 +915,21 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
   },
   segmentBtnActive: {
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
   },
   segmentBtnText: {
     fontSize: 13,
     fontWeight: "700",
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   segmentBtnTextActive: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   card: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     padding: Spacing.lg,
     gap: Spacing.md,
     ...CardShadow,
@@ -922,14 +937,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   previewWrapper: {
     position: "relative",
     borderRadius: Radius.md,
     overflow: "hidden",
     height: 190,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
   },
   previewImage: {
     width: "100%",
@@ -947,13 +962,13 @@ const styles = StyleSheet.create({
   compressionBadgeText: {
     fontSize: 11,
     fontWeight: "600",
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   emptyPreviewBox: {
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: Palette.borderSubtle,
-    backgroundColor: Palette.bgPrimary,
+    borderColor: palette.borderSubtle,
+    backgroundColor: palette.bgPrimary,
     borderRadius: Radius.md,
     paddingVertical: 24,
     paddingHorizontal: 16,
@@ -963,11 +978,11 @@ const styles = StyleSheet.create({
   emptyPreviewTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   emptyPreviewSub: {
     fontSize: 12,
-    color: Palette.textMuted,
+    color: palette.textMuted,
     textAlign: "center",
   },
   mediaButtonsRow: {
@@ -982,14 +997,14 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: Radius.md,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderWidth: 1,
     borderColor: "#C5DEC9",
   },
   secondaryMediaBtnText: {
     fontSize: 13,
     fontWeight: "700",
-    color: Palette.primary,
+    color: palette.primary,
   },
   presetBlock: {
     gap: 6,
@@ -997,7 +1012,7 @@ const styles = StyleSheet.create({
   presetLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   presetRow: {
     flexDirection: "row",
@@ -1008,28 +1023,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: Radius.full,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   presetChipActive: {
-    backgroundColor: Palette.primary,
-    borderColor: Palette.primary,
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
   },
   presetChipText: {
     fontSize: 12,
     fontWeight: "600",
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   presetChipTextActive: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: Palette.criticalBg,
-    borderColor: Palette.criticalBorder,
+    backgroundColor: palette.criticalBg,
+    borderColor: palette.criticalBorder,
     borderWidth: 1,
     padding: 12,
     borderRadius: Radius.md,
@@ -1038,24 +1053,24 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: Palette.criticalText,
+    color: palette.criticalText,
   },
   textInput: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: Radius.md,
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontSize: 14,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   primaryActionBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
     paddingVertical: 13,
     borderRadius: Radius.md,
   },
@@ -1064,7 +1079,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: Palette.accentTerracotta,
+    backgroundColor: palette.accentTerracotta,
     paddingVertical: 13,
     borderRadius: Radius.md,
     marginTop: 4,
@@ -1072,13 +1087,13 @@ const styles = StyleSheet.create({
   primaryActionBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   resultContainer: {
     marginTop: 8,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: Palette.borderSubtle,
+    borderTopColor: palette.borderSubtle,
     gap: 12,
   },
   resultHeaderRow: {
@@ -1090,16 +1105,16 @@ const styles = StyleSheet.create({
   resultCommonName: {
     fontSize: 18,
     fontWeight: "700",
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   resultScientific: {
     fontSize: 13,
     fontStyle: "italic",
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   confidenceBadge: {
-    backgroundColor: Palette.thrivingBg,
-    borderColor: Palette.thrivingBorder,
+    backgroundColor: palette.thrivingBg,
+    borderColor: palette.thrivingBorder,
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -1108,36 +1123,36 @@ const styles = StyleSheet.create({
   confidenceText: {
     fontSize: 12,
     fontWeight: "700",
-    color: Palette.thrivingText,
+    color: palette.thrivingText,
   },
   resultNotes: {
     fontSize: 14,
     lineHeight: 20,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   careSpecBox: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderRadius: Radius.md,
     padding: 12,
     gap: 6,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   careSpecLine: {
     fontSize: 13,
     lineHeight: 19,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   careSpecLabel: {
     fontWeight: "700",
-    color: Palette.primary,
+    color: palette.primary,
   },
   guardrailBox: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: Palette.attentionBg,
-    borderColor: Palette.attentionBorder,
+    backgroundColor: palette.attentionBg,
+    borderColor: palette.attentionBorder,
     borderWidth: 1,
     padding: 12,
     borderRadius: Radius.md,
@@ -1147,11 +1162,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontWeight: "600",
-    color: Palette.attentionText,
+    color: palette.attentionText,
   },
   formDivider: {
     height: 1,
-    backgroundColor: Palette.borderSubtle,
+    backgroundColor: palette.borderSubtle,
     marginVertical: 4,
   },
   fieldGroup: {
@@ -1160,7 +1175,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   switchRow: {
     flexDirection: "row",
@@ -1171,25 +1186,25 @@ const styles = StyleSheet.create({
   },
   switchSub: {
     fontSize: 12,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   contextSummaryBox: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderRadius: Radius.md,
     padding: 12,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     gap: 4,
   },
   contextSummaryTitle: {
     fontSize: 12,
     fontWeight: "700",
-    color: Palette.primary,
+    color: palette.primary,
     marginBottom: 2,
   },
   contextSummaryItem: {
     fontSize: 12,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   statusPill: {
     paddingHorizontal: 10,
@@ -1205,17 +1220,17 @@ const styles = StyleSheet.create({
   subHeader: {
     fontSize: 14,
     fontWeight: "700",
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   actionRowItem: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     padding: 10,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   urgencyPill: {
     paddingHorizontal: 8,
@@ -1232,6 +1247,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 19,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
 });

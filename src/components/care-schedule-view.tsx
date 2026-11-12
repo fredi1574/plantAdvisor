@@ -22,10 +22,11 @@ import {
 
 import {
   CardShadow,
-  Palette,
   Radius,
   Spacing,
+  type ThemePalette,
 } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 import {
   getCareEventTypeLabel,
   getProjectedCareEvents,
@@ -47,6 +48,8 @@ export function CareScheduleView({
   onWaterPlantNow,
   onWaterAllDueToday,
 }: CareScheduleViewProps) {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const timeline = useMemo(
     () => getProjectedCareEvents(plants, entries, 30),
     [plants, entries]
@@ -104,7 +107,7 @@ export function CareScheduleView({
         <View style={styles.overviewTopRow}>
           <View style={styles.overviewTextCol}>
             <View style={styles.overviewEyebrowRow}>
-              <CalendarIcon size={14} color={Palette.primary} />
+              <CalendarIcon size={14} color={palette.primary} />
               <Text style={styles.overviewEyebrow}>30-DAY CARE HORIZON</Text>
             </View>
             <Text style={styles.overviewTitle}>
@@ -132,9 +135,9 @@ export function CareScheduleView({
             accessibilityRole="button"
             accessibilityLabel="Toggle 30-day monthly heatmap">
             {showMonthlyHeatmap ? (
-              <ListChecks size={15} color={Palette.textInverse} />
+              <ListChecks size={15} color={palette.textInverse} />
             ) : (
-              <Grid size={15} color={Palette.primary} />
+              <Grid size={15} color={palette.primary} />
             )}
             <Text
               style={[
@@ -248,7 +251,7 @@ export function CareScheduleView({
                     styles.waterAllInlineBtn,
                     pressed && { opacity: 0.85 },
                   ]}>
-                  <Droplets size={14} color={Palette.textInverse} />
+                  <Droplets size={14} color={palette.textInverse} />
                   <Text style={styles.waterAllInlineBtnText}>Water All</Text>
                 </Pressable>
               )}
@@ -257,7 +260,7 @@ export function CareScheduleView({
           {selectedDaySchedule.projectedTasks.length === 0 &&
             selectedDaySchedule.completedEntries.length === 0 ? (
             <View style={styles.restDayBox}>
-              <CheckCircle2 size={24} color={Palette.primary} />
+              <CheckCircle2 size={24} color={palette.primary} />
               <Text style={styles.restDayTitle}>Rest Day for Your Garden</Text>
               <Text style={styles.restDayText}>
                 All plants are on track for {selectedDaySchedule.fullLabel}.
@@ -279,7 +282,7 @@ export function CareScheduleView({
                 const plant = plantLookup[entry.plantId];
                 return (
                   <View key={entry.id} style={styles.completedLogRow}>
-                    <CheckCircle2 size={16} color={Palette.thrivingText} />
+                    <CheckCircle2 size={16} color={palette.thrivingText} />
                     <View style={styles.completedLogTextCol}>
                       <Text style={styles.completedLogTitle}>
                         {plant ? `${plant.nickname} · ` : ''}
@@ -299,7 +302,7 @@ export function CareScheduleView({
 
       {/* Upcoming 14-Day Chronological Agenda Feed */}
       <View style={styles.upcomingHeaderRow}>
-        <Sparkles size={15} color={Palette.primary} />
+        <Sparkles size={15} color={palette.primary} />
         <Text style={styles.upcomingSectionTitle}>
           Upcoming 2-Week Care Timeline
         </Text>
@@ -322,7 +325,7 @@ export function CareScheduleView({
                   </View>
                 )}
               </View>
-              <ChevronRight size={16} color={Palette.textMuted} />
+              <ChevronRight size={16} color={palette.textMuted} />
             </Pressable>
 
             <View style={styles.taskListCol}>
@@ -350,6 +353,8 @@ function AgendaTaskItem({
   task: ProjectedPlantCareTask;
   onWaterNow: () => void;
 }) {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const { plant, isOverdue, isDueToday, actionLabel } = task;
   const isPropagation = plant.species.plantType === 'propagation';
   const isSucculent = plant.species.plantType === 'succulent';
@@ -378,7 +383,7 @@ function AgendaTaskItem({
             {isPropagation ? (
               <FlaskConical size={13} color="#0F766E" />
             ) : (
-              <Sprout size={13} color={Palette.primary} />
+              <Sprout size={13} color={palette.primary} />
             )}
           </View>
 
@@ -399,10 +404,10 @@ function AgendaTaskItem({
               size={11}
               color={
                 isOverdue
-                  ? Palette.criticalText
+                  ? palette.criticalText
                   : isDueToday
-                    ? Palette.waterAlertText
-                    : Palette.primary
+                    ? palette.waterAlertText
+                    : palette.primary
               }
             />
             <Text
@@ -429,7 +434,7 @@ function AgendaTaskItem({
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Mark ${plant.nickname} as watered`}>
-        <Droplets size={14} color={Palette.textInverse} />
+        <Droplets size={14} color={palette.textInverse} />
         <Text style={styles.markWateredBtnText}>
           {isDueToday || isOverdue ? 'Mark Watered' : 'Water Early'}
         </Text>
@@ -438,16 +443,17 @@ function AgendaTaskItem({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   container: {
     gap: Spacing.md,
   },
   overviewCard: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     gap: Spacing.md,
     ...CardShadow,
   },
@@ -470,16 +476,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.9,
-    color: Palette.primary,
+    color: palette.primary,
   },
   overviewTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   overviewSubtitle: {
     fontSize: 13,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   heatmapToggleBtn: {
     flexDirection: 'row',
@@ -488,20 +494,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: Radius.full,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderWidth: 1,
-    borderColor: Palette.primary,
+    borderColor: palette.primary,
   },
   heatmapToggleBtnActive: {
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
   },
   heatmapToggleText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   heatmapToggleTextActive: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   legendRow: {
     flexDirection: 'row',
@@ -510,7 +516,7 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: Palette.borderSubtle,
+    borderTopColor: palette.borderSubtle,
   },
   legendItem: {
     flexDirection: 'row',
@@ -520,7 +526,7 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 11,
     fontWeight: '600',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   dot: {
     width: 7,
@@ -556,38 +562,38 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 6,
     borderRadius: Radius.lg,
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderWidth: 1.5,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     alignItems: 'center',
     gap: 4,
     ...CardShadow,
   },
   dayChipToday: {
-    borderColor: Palette.primary,
-    backgroundColor: Palette.primarySoft,
+    borderColor: palette.primary,
+    backgroundColor: palette.primarySoft,
   },
   dayChipSelected: {
-    backgroundColor: Palette.primary,
-    borderColor: Palette.primary,
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
   },
   dayChipWeekday: {
     fontSize: 10,
     fontWeight: '700',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     textTransform: 'uppercase',
   },
   dayChipWeekdayToday: {
-    color: Palette.primary,
+    color: palette.primary,
     fontWeight: '800',
   },
   dayChipNumber: {
     fontSize: 18,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   dayChipTextSelected: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   dayDotsRow: {
     flexDirection: 'row',
@@ -600,7 +606,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: Radius.full,
-    backgroundColor: Palette.waterAlertBg,
+    backgroundColor: palette.waterAlertBg,
   },
   taskCountBadgeSelected: {
     backgroundColor: 'rgba(255,255,255,0.22)',
@@ -608,17 +614,17 @@ const styles = StyleSheet.create({
   taskCountBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: Palette.waterAlertText,
+    color: palette.waterAlertText,
   },
   taskCountBadgeTextSelected: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   heatmapCard: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     gap: Spacing.md,
     ...CardShadow,
   },
@@ -628,11 +634,11 @@ const styles = StyleSheet.create({
   heatmapTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   heatmapSubtitle: {
     fontSize: 12,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   heatmapGrid: {
     flexDirection: 'row',
@@ -648,8 +654,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   heatCellEmpty: {
-    backgroundColor: Palette.bgPrimary,
-    borderColor: Palette.borderSubtle,
+    backgroundColor: palette.bgPrimary,
+    borderColor: palette.borderSubtle,
   },
   heatCellLow: {
     backgroundColor: '#E0F2FE',
@@ -665,27 +671,27 @@ const styles = StyleSheet.create({
   },
   heatCellSelected: {
     borderWidth: 2.5,
-    borderColor: Palette.primary,
+    borderColor: palette.primary,
   },
   heatCellDateText: {
     fontSize: 12,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   heatCellCountText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Palette.waterAlertText,
+    color: palette.waterAlertText,
   },
   heatCellDateTextInverse: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   dayAgendaCard: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     gap: Spacing.md,
     ...CardShadow,
   },
@@ -698,11 +704,11 @@ const styles = StyleSheet.create({
   dayAgendaTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   dayAgendaSub: {
     fontSize: 12,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     marginTop: 2,
   },
   waterAllInlineBtn: {
@@ -717,25 +723,25 @@ const styles = StyleSheet.create({
   waterAllInlineBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   restDayBox: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.md,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderRadius: Radius.lg,
     gap: 6,
   },
   restDayTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   restDayText: {
     fontSize: 13,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     textAlign: 'center',
   },
   taskListCol: {
@@ -748,9 +754,9 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 10,
     borderRadius: Radius.lg,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   taskMainPressable: {
     flex: 1,
@@ -762,7 +768,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: Radius.md,
-    backgroundColor: Palette.bgElevated,
+    backgroundColor: palette.bgElevated,
   },
   taskInfoCol: {
     flex: 1,
@@ -776,12 +782,12 @@ const styles = StyleSheet.create({
   taskNickname: {
     fontSize: 15,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
     flexShrink: 1,
   },
   taskSpecies: {
     fontSize: 12,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   actionPill: {
     flexDirection: 'row',
@@ -795,15 +801,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   actionPillOverdue: {
-    backgroundColor: Palette.criticalBg,
-    borderColor: Palette.criticalBorder,
+    backgroundColor: palette.criticalBg,
+    borderColor: palette.criticalBorder,
   },
   actionPillToday: {
-    backgroundColor: Palette.waterAlertBg,
-    borderColor: Palette.waterAlertBorder,
+    backgroundColor: palette.waterAlertBg,
+    borderColor: palette.waterAlertBorder,
   },
   actionPillUpcoming: {
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderColor: '#B8D8C0',
   },
   actionPillText: {
@@ -811,13 +817,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   actionPillTextOverdue: {
-    color: Palette.criticalText,
+    color: palette.criticalText,
   },
   actionPillTextToday: {
-    color: Palette.waterAlertText,
+    color: palette.waterAlertText,
   },
   actionPillTextUpcoming: {
-    color: Palette.primary,
+    color: palette.primary,
   },
   markWateredBtn: {
     flexDirection: 'row',
@@ -829,12 +835,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   markWateredBtnSucculent: {
-    backgroundColor: Palette.accentTerracotta,
+    backgroundColor: palette.accentTerracotta,
   },
   markWateredBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   completedLogRow: {
     flexDirection: 'row',
@@ -843,9 +849,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: Radius.md,
-    backgroundColor: Palette.thrivingBg,
+    backgroundColor: palette.thrivingBg,
     borderWidth: 1,
-    borderColor: Palette.thrivingBorder,
+    borderColor: palette.thrivingBorder,
   },
   completedLogTextCol: {
     flex: 1,
@@ -853,11 +859,11 @@ const styles = StyleSheet.create({
   completedLogTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.thrivingText,
+    color: palette.thrivingText,
   },
   completedLogSub: {
     fontSize: 11,
-    color: Palette.thrivingText,
+    color: palette.thrivingText,
     opacity: 0.85,
   },
   upcomingHeaderRow: {
@@ -869,14 +875,14 @@ const styles = StyleSheet.create({
   upcomingSectionTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   timelineDayCard: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.xl,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     gap: 10,
     ...CardShadow,
   },
@@ -893,18 +899,18 @@ const styles = StyleSheet.create({
   timelineDayTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   timelineCountPill: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: Radius.full,
-    backgroundColor: Palette.waterAlertBg,
+    backgroundColor: palette.waterAlertBg,
   },
   timelineCountPillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Palette.waterAlertText,
+    color: palette.waterAlertText,
   },
 });
 
