@@ -1,16 +1,5 @@
 import { router } from 'expo-router';
-import {
-  CheckCircle2,
-  Droplet,
-  Droplets,
-  FlaskConical,
-  Flower2,
-  Leaf,
-  ShieldAlert,
-  ShieldCheck,
-  Sprout,
-  Sun,
-} from 'lucide-react-native';
+import { CheckCircle2, Droplets, Sprout } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -24,7 +13,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EditPlantModal } from '@/components/edit-plant-modal';
-import { SwipeablePlantCard } from '@/components/swipeable-plant-card';
+import {
+  type FilterMode,
+  GardenKpiRow,
+  type GardenStats,
+} from '@/components/garden-kpi-row';
+import { GardenPlantsGrid } from '@/components/garden-plants-grid';
+import { GardenPlantsList } from '@/components/garden-plants-list';
+import {
+  GardenViewToggle,
+  type ViewMode,
+} from '@/components/garden-view-toggle';
 import {
   CardShadow,
   MaxContentWidth,
@@ -32,20 +31,8 @@ import {
   Radius,
   Spacing,
 } from '@/constants/theme';
-import {
-  doesPlantNeedWatering,
-  usePlantStore,
-} from '@/store/usePlantStore';
+import { doesPlantNeedWatering, usePlantStore } from '@/store/usePlantStore';
 import type { UserPlant } from '@/types/plant';
-
-type FilterMode =
-  | 'all'
-  | 'needs_water'
-  | 'needs_attention'
-  | 'succulent'
-  | 'propagation'
-  | 'foliage'
-  | 'flowering';
 
 export default function MyGardenScreen() {
   const plants = usePlantStore((s) => s.plants);
@@ -54,6 +41,7 @@ export default function MyGardenScreen() {
   const deletePlant = usePlantStore((s) => s.deletePlant);
 
   const [filter, setFilter] = useState<FilterMode>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [editingPlant, setEditingPlant] = useState<UserPlant | null>(null);
 
@@ -64,7 +52,7 @@ export default function MyGardenScreen() {
     }, 3500);
   };
 
-  const stats = useMemo(() => {
+  const stats: GardenStats = useMemo(() => {
     const needsWaterCount = plants.filter(doesPlantNeedWatering).length;
     const needsAttentionCount = plants.filter(
       (p) =>
@@ -107,8 +95,9 @@ export default function MyGardenScreen() {
       }
     };
 
-    const confirmText = `Mark all ${stats.needsWaterCount} ${stats.needsWaterCount === 1 ? 'plant' : 'plants'
-      } needing water as watered?`;
+    const confirmText = `Mark all ${stats.needsWaterCount} ${
+      stats.needsWaterCount === 1 ? 'plant' : 'plants'
+    } needing water as watered?`;
 
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(confirmText)) {
@@ -140,6 +129,13 @@ export default function MyGardenScreen() {
         { text: 'Delete', style: 'destructive', onPress: performDelete },
       ]);
     }
+  };
+
+  const handleOpenPlant = (plantId: string) => {
+    router.push({
+      pathname: '/plant/[id]',
+      params: { id: plantId },
+    });
   };
 
   const filteredPlants = useMemo(() => {
@@ -176,6 +172,8 @@ export default function MyGardenScreen() {
               </View>
               <Text style={styles.headerTitle}>My Garden</Text>
             </View>
+
+            <GardenViewToggle value={viewMode} onChange={setViewMode} />
           </View>
 
           {/* User Feedback Toast */}
@@ -187,245 +185,11 @@ export default function MyGardenScreen() {
           )}
 
           {/* Swipeable KPI & Category Filter Cards Row */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.kpiRow}>
-            {/* Card 1: Active Specimens / All Plants (Leaf Silhouette) */}
-            <Pressable
-              onPress={() => setFilter('all')}
-              style={({ pressed }) => [
-                styles.kpiCardBase,
-                styles.kpiCardLeaf,
-                filter === 'all' && styles.kpiCardActiveRing,
-                pressed && styles.kpiCardPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Active specimens: ${stats.total}. Tap to show all plants.`}>
-              <View style={styles.kpiHeaderRow}>
-                <View style={[styles.kpiIconPill, styles.kpiIconPillLeaf]}>
-                  <Leaf size={14} color={Palette.primary} />
-                </View>
-                <Text style={[styles.kpiTag, styles.kpiTagLeaf]}>Garden</Text>
-              </View>
-              <Text style={[styles.kpiValue, styles.kpiValueLeaf]}>
-                {stats.total}
-              </Text>
-              <Text style={styles.kpiLabel}>All{'\n'}Plants</Text>
-            </Pressable>
-
-            {/* Card 2: Needs Watering (Water Drop Silhouette) */}
-            <Pressable
-              onPress={() =>
-                setFilter(filter === 'needs_water' ? 'all' : 'needs_water')
-              }
-              style={({ pressed }) => [
-                styles.kpiCardBase,
-                styles.kpiCardDrop,
-                stats.needsWaterCount > 0
-                  ? styles.kpiDropAlert
-                  : styles.kpiDropCalm,
-                filter === 'needs_water' && styles.kpiCardActiveRing,
-                pressed && styles.kpiCardPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Needs watering: ${stats.needsWaterCount}. Tap to filter.`}>
-              <View style={styles.kpiHeaderRow}>
-                <View
-                  style={[
-                    styles.kpiIconPill,
-                    stats.needsWaterCount > 0
-                      ? styles.kpiIconPillDropAlert
-                      : styles.kpiIconPillDropCalm,
-                  ]}>
-                  <Droplet
-                    size={14}
-                    color={stats.needsWaterCount > 0 ? '#0284C7' : '#0EA5E9'}
-                    fill={stats.needsWaterCount > 0 ? '#38BDF8' : '#BAE6FD'}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.kpiTag,
-                    stats.needsWaterCount > 0
-                      ? styles.kpiTagDropAlert
-                      : styles.kpiTagDropCalm,
-                  ]}>
-                  {stats.needsWaterCount > 0 ? 'Thirsty' : 'Good'}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.kpiValue,
-                  stats.needsWaterCount > 0
-                    ? styles.kpiValueDropAlert
-                    : styles.kpiValueDropCalm,
-                ]}>
-                {stats.needsWaterCount}
-              </Text>
-              <Text style={styles.kpiLabel}>Needs{'\n'}Watering</Text>
-            </Pressable>
-
-            {/* Card 3: Health Alerts (Vitality Shield Silhouette) */}
-            <Pressable
-              onPress={() =>
-                setFilter(
-                  filter === 'needs_attention' ? 'all' : 'needs_attention'
-                )
-              }
-              style={({ pressed }) => [
-                styles.kpiCardBase,
-                styles.kpiCardShield,
-                stats.needsAttentionCount > 0
-                  ? styles.kpiShieldAlert
-                  : styles.kpiShieldCalm,
-                filter === 'needs_attention' && styles.kpiCardActiveRing,
-                pressed && styles.kpiCardPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Health alerts: ${stats.needsAttentionCount}. Tap to filter.`}>
-              <View style={styles.kpiHeaderRow}>
-                <View
-                  style={[
-                    styles.kpiIconPill,
-                    stats.needsAttentionCount > 0
-                      ? styles.kpiIconPillShieldAlert
-                      : styles.kpiIconPillShieldCalm,
-                  ]}>
-                  {stats.needsAttentionCount > 0 ? (
-                    <ShieldAlert size={14} color="#B45309" fill="#FDE68A" />
-                  ) : (
-                    <ShieldCheck size={14} color="#16A34A" fill="#BBF7D0" />
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.kpiTag,
-                    stats.needsAttentionCount > 0
-                      ? styles.kpiTagShieldAlert
-                      : styles.kpiTagShieldCalm,
-                  ]}>
-                  {stats.needsAttentionCount > 0 ? 'Alerts' : 'Thriving'}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.kpiValue,
-                  stats.needsAttentionCount > 0
-                    ? styles.kpiValueShieldAlert
-                    : styles.kpiValueShieldCalm,
-                ]}>
-                {stats.needsAttentionCount}
-              </Text>
-              <Text style={styles.kpiLabel}>Health{'\n'}Alerts</Text>
-            </Pressable>
-
-            {/* Card 4: Succulents (Terracotta Desert Silhouette) */}
-            <Pressable
-              onPress={() =>
-                setFilter(filter === 'succulent' ? 'all' : 'succulent')
-              }
-              style={({ pressed }) => [
-                styles.kpiCardBase,
-                styles.kpiCardSucculent,
-                filter === 'succulent' && styles.kpiCardActiveRing,
-                pressed && styles.kpiCardPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Succulents: ${stats.succulentCount}. Tap to filter.`}>
-              <View style={styles.kpiHeaderRow}>
-                <View style={[styles.kpiIconPill, styles.kpiIconPillSucculent]}>
-                  <Sun size={14} color="#C86D51" />
-                </View>
-                <Text style={[styles.kpiTag, styles.kpiTagSucculent]}>
-                  Desert
-                </Text>
-              </View>
-              <Text style={[styles.kpiValue, styles.kpiValueSucculent]}>
-                {stats.succulentCount}
-              </Text>
-              <Text style={styles.kpiLabel}>Succulent{'\n'}Plants</Text>
-            </Pressable>
-
-            {/* Card 5: Propagations (Botanical Vessel Silhouette) */}
-            <Pressable
-              onPress={() =>
-                setFilter(filter === 'propagation' ? 'all' : 'propagation')
-              }
-              style={({ pressed }) => [
-                styles.kpiCardBase,
-                styles.kpiCardProp,
-                filter === 'propagation' && styles.kpiCardActiveRing,
-                pressed && styles.kpiCardPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Propagations: ${stats.propagationCount}. Tap to filter.`}>
-              <View style={styles.kpiHeaderRow}>
-                <View style={[styles.kpiIconPill, styles.kpiIconPillProp]}>
-                  <FlaskConical size={14} color="#0F766E" />
-                </View>
-                <Text style={[styles.kpiTag, styles.kpiTagProp]}>Rooting</Text>
-              </View>
-              <Text style={[styles.kpiValue, styles.kpiValueProp]}>
-                {stats.propagationCount}
-              </Text>
-              <Text style={styles.kpiLabel}>Active{'\n'}Propagations</Text>
-            </Pressable>
-
-            {/* Card 6: Foliage (Canopy Silhouette) */}
-            <Pressable
-              onPress={() =>
-                setFilter(filter === 'foliage' ? 'all' : 'foliage')
-              }
-              style={({ pressed }) => [
-                styles.kpiCardBase,
-                styles.kpiCardFoliage,
-                filter === 'foliage' && styles.kpiCardActiveRing,
-                pressed && styles.kpiCardPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Foliage plants: ${stats.foliageCount}. Tap to filter.`}>
-              <View style={styles.kpiHeaderRow}>
-                <View style={[styles.kpiIconPill, styles.kpiIconPillFoliage]}>
-                  <Sprout size={14} color="#15803D" />
-                </View>
-                <Text style={[styles.kpiTag, styles.kpiTagFoliage]}>
-                  Canopy
-                </Text>
-              </View>
-              <Text style={[styles.kpiValue, styles.kpiValueFoliage]}>
-                {stats.foliageCount}
-              </Text>
-              <Text style={styles.kpiLabel}>Foliage{'\n'}Specimens</Text>
-            </Pressable>
-
-            {/* Card 7: Flowering (Bloom Silhouette) */}
-            <Pressable
-              onPress={() =>
-                setFilter(filter === 'flowering' ? 'all' : 'flowering')
-              }
-              style={({ pressed }) => [
-                styles.kpiCardBase,
-                styles.kpiCardFlowering,
-                filter === 'flowering' && styles.kpiCardActiveRing,
-                pressed && styles.kpiCardPressed,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Flowering plants: ${stats.floweringCount}. Tap to filter.`}>
-              <View style={styles.kpiHeaderRow}>
-                <View style={[styles.kpiIconPill, styles.kpiIconPillFlowering]}>
-                  <Flower2 size={14} color="#BE185D" />
-                </View>
-                <Text style={[styles.kpiTag, styles.kpiTagFlowering]}>
-                  Bloom
-                </Text>
-              </View>
-              <Text style={[styles.kpiValue, styles.kpiValueFlowering]}>
-                {stats.floweringCount}
-              </Text>
-              <Text style={styles.kpiLabel}>Flowering{'\n'}Specimens</Text>
-            </Pressable>
-          </ScrollView>
+          <GardenKpiRow
+            stats={stats}
+            filter={filter}
+            onSelectFilter={setFilter}
+          />
 
           {/* Dedicated Batch Watering Action Banner */}
           {stats.needsWaterCount > 0 && (
@@ -458,51 +222,48 @@ export default function MyGardenScreen() {
             </View>
           )}
 
-          {/* Plant Cards List */}
-          <View style={styles.cardsColumn}>
-            {filteredPlants.length === 0 ? (
-              <View style={styles.emptyFilterCard}>
-                <View style={styles.emptyFilterIconWrap}>
-                  <CheckCircle2 size={30} color="#15803D" />
-                </View>
-                <Text style={styles.emptyFilterTitle}>
-                  {filter === 'needs_water'
-                    ? 'All Plants Are Watered!'
-                    : 'No Plants Found'}
-                </Text>
-                <Text style={styles.emptyFilterSubtitle}>
-                  {filter === 'needs_water'
-                    ? 'Every specimen in your garden is hydrated and healthy.'
-                    : 'There are no specimens in this filter category.'}
-                </Text>
-                {filter !== 'all' && (
-                  <Pressable
-                    onPress={() => setFilter('all')}
-                    style={styles.emptyFilterBtn}>
-                    <Text style={styles.emptyFilterBtnText}>
-                      View All Plants
-                    </Text>
-                  </Pressable>
-                )}
+          {/* Plant Collection View */}
+          {filteredPlants.length === 0 ? (
+            <View style={styles.emptyFilterCard}>
+              <View style={styles.emptyFilterIconWrap}>
+                <CheckCircle2 size={30} color="#15803D" />
               </View>
-            ) : (
-              filteredPlants.map((plant) => (
-                <SwipeablePlantCard
-                  key={plant.id}
-                  plant={plant}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/plant/[id]',
-                      params: { id: plant.id },
-                    })
-                  }
-                  onWaterNow={() => waterPlantNow(plant.id)}
-                  onEdit={(target) => setEditingPlant(target)}
-                  onDelete={handleDeletePlant}
-                />
-              ))
-            )}
-          </View>
+              <Text style={styles.emptyFilterTitle}>
+                {filter === 'needs_water'
+                  ? 'All Plants Are Watered!'
+                  : 'No Plants Found'}
+              </Text>
+              <Text style={styles.emptyFilterSubtitle}>
+                {filter === 'needs_water'
+                  ? 'Every specimen in your garden is hydrated and healthy.'
+                  : 'There are no specimens in this filter category.'}
+              </Text>
+              {filter !== 'all' && (
+                <Pressable
+                  onPress={() => setFilter('all')}
+                  style={styles.emptyFilterBtn}>
+                  <Text style={styles.emptyFilterBtnText}>
+                    View All Plants
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          ) : viewMode === 'list' ? (
+            <GardenPlantsList
+              plants={filteredPlants}
+              onPressPlant={handleOpenPlant}
+              onWaterNow={waterPlantNow}
+              onEdit={setEditingPlant}
+              onDelete={handleDeletePlant}
+            />
+          ) : (
+            <GardenPlantsGrid
+              plants={filteredPlants}
+              onPressPlant={handleOpenPlant}
+              onWaterNow={waterPlantNow}
+              onEdit={setEditingPlant}
+            />
+          )}
         </View>
       </ScrollView>
 
@@ -544,32 +305,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  accountPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    maxWidth: 160,
-  },
-  accountPillGuest: {
-    backgroundColor: Palette.bgSurface,
-    borderColor: Palette.borderSubtle,
-  },
-  accountPillSignedIn: {
-    backgroundColor: Palette.primarySoft,
-    borderColor: Palette.primary,
-  },
-  accountPillText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Palette.textPrimary,
-  },
-  accountPillTextSignedIn: {
-    color: Palette.primary,
-  },
   brandBlock: {
     gap: 2,
   },
@@ -589,241 +324,6 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     fontWeight: '700',
     color: Palette.textPrimary,
-  },
-  aiBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Palette.primarySoft,
-    borderColor: '#C5DEC9',
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: Radius.md,
-  },
-  aiBannerText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '600',
-    color: Palette.primary,
-  },
-  kpiRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingVertical: 4,
-    paddingRight: Spacing.sm,
-  },
-  kpiCardBase: {
-    width: 112,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderWidth: 1.5,
-    minHeight: 114,
-    justifyContent: 'space-between',
-    ...CardShadow,
-  },
-  kpiCardPressed: {
-    transform: [{ scale: 0.96 }],
-    opacity: 0.9,
-  },
-  kpiCardActiveRing: {
-    borderWidth: 2.5,
-    borderColor: Palette.primary,
-  },
-  kpiCardLeaf: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 28,
-    borderBottomLeftRadius: 8,
-    backgroundColor: '#EDF5EF',
-    borderColor: '#C3DEC8',
-  },
-  kpiCardDrop: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 6,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-  },
-  kpiDropAlert: {
-    backgroundColor: '#E0F2FE',
-    borderColor: '#38BDF8',
-  },
-  kpiDropCalm: {
-    backgroundColor: '#F0F9FF',
-    borderColor: '#BAE6FD',
-  },
-  kpiCardShield: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 8,
-  },
-  kpiShieldAlert: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
-  },
-  kpiShieldCalm: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#86EFAC',
-  },
-  kpiCardSucculent: {
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 10,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 26,
-    backgroundColor: '#F9EBE6',
-    borderColor: '#E8B8A8',
-  },
-  kpiCardProp: {
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 28,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    backgroundColor: '#CCFBF1',
-    borderColor: '#5EEAD4',
-  },
-  kpiCardFoliage: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 10,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 28,
-    backgroundColor: '#DCFCE7',
-    borderColor: '#86EFAC',
-  },
-  kpiCardFlowering: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 24,
-    backgroundColor: '#FCE7F3',
-    borderColor: '#F9A8D4',
-  },
-  kpiHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  kpiIconPill: {
-    width: 26,
-    height: 26,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  kpiIconPillLeaf: {
-    backgroundColor: '#D8EBDE',
-  },
-  kpiIconPillDropAlert: {
-    backgroundColor: '#BAE6FD',
-  },
-  kpiIconPillDropCalm: {
-    backgroundColor: '#E0F2FE',
-  },
-  kpiIconPillShieldAlert: {
-    backgroundColor: '#FDE68A',
-  },
-  kpiIconPillShieldCalm: {
-    backgroundColor: '#DCFCE7',
-  },
-  kpiIconPillSucculent: {
-    backgroundColor: '#F2D5CA',
-  },
-  kpiIconPillProp: {
-    backgroundColor: '#99F6E4',
-  },
-  kpiIconPillFoliage: {
-    backgroundColor: '#BBF7D0',
-  },
-  kpiIconPillFlowering: {
-    backgroundColor: '#FBCFE8',
-  },
-  kpiTag: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  kpiTagLeaf: {
-    color: '#2D5A3C',
-  },
-  kpiTagDropAlert: {
-    color: '#0369A1',
-  },
-  kpiTagDropCalm: {
-    color: '#0284C7',
-  },
-  kpiTagShieldAlert: {
-    color: '#B45309',
-  },
-  kpiTagShieldCalm: {
-    color: '#15803D',
-  },
-  kpiTagSucculent: {
-    color: '#9A3412',
-  },
-  kpiTagProp: {
-    color: '#0F766E',
-  },
-  kpiTagFoliage: {
-    color: '#15803D',
-  },
-  kpiTagFlowering: {
-    color: '#9D174D',
-  },
-  kpiValue: {
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  kpiValueLeaf: {
-    color: '#1E3F2A',
-  },
-  kpiValueDropAlert: {
-    color: '#0369A1',
-  },
-  kpiValueDropCalm: {
-    color: '#0284C7',
-  },
-  kpiValueShieldAlert: {
-    color: '#92400E',
-  },
-  kpiValueShieldCalm: {
-    color: '#15803D',
-  },
-  kpiValueSucculent: {
-    color: '#7C2D12',
-  },
-  kpiValueProp: {
-    color: '#115E59',
-  },
-  kpiValueFoliage: {
-    color: '#14532D',
-  },
-  kpiValueFlowering: {
-    color: '#831843',
-  },
-  kpiLabel: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '600',
-    color: Palette.textSecondary,
-    marginTop: 2,
-  },
-  swipeHintRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 4,
-  },
-  swipeHintText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: Palette.textSecondary,
-  },
-  cardsColumn: {
-    gap: Spacing.md,
   },
   feedbackBanner: {
     flexDirection: 'row',
