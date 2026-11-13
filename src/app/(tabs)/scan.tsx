@@ -24,6 +24,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BotanicalBackground } from "@/components/botanical-background";
 import {
   BottomTabInset,
   CardShadow,
@@ -34,7 +35,6 @@ import {
   Spacing,
   type ThemePalette,
 } from "@/constants/theme";
-import { BotanicalBackground } from "@/components/botanical-background";
 import { usePalette } from "@/hooks/use-theme";
 import {
   diagnosePlantHealth,
@@ -73,8 +73,14 @@ const DEMO_PRESETS = [
 export default function ScanScreen() {
   const palette = usePalette();
   const styles = useMemo(() => createStyles(palette), [palette]);
-  const healthBadgeTheme = useMemo(() => getHealthBadgeTheme(palette), [palette]);
-  const urgencyBadgeTheme = useMemo(() => getUrgencyBadgeTheme(palette), [palette]);
+  const healthBadgeTheme = useMemo(
+    () => getHealthBadgeTheme(palette),
+    [palette],
+  );
+  const urgencyBadgeTheme = useMemo(
+    () => getUrgencyBadgeTheme(palette),
+    [palette],
+  );
   const params = useLocalSearchParams<{ mode?: string; plantId?: string }>();
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
@@ -287,22 +293,6 @@ export default function ScanScreen() {
         <View style={styles.maxContainer}>
           {/* Screen Title */}
           <View style={styles.headerBlock}>
-            <View style={styles.eyebrowRow}>
-              <Text style={styles.eyebrow}>MULTIMODAL BOTANICAL AI</Text>
-              <View
-                style={[
-                  styles.engineBadge,
-                  isLiveAi ? styles.engineBadgeLive : styles.engineBadgeMock,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.engineDot,
-                    isLiveAi ? styles.engineDotLive : styles.engineDotMock,
-                  ]}
-                />
-              </View>
-            </View>
             <Text style={styles.headerTitle}>Add or Scan Plant</Text>
             <Text style={styles.headerSubtitle}>
               Identify a new plant or run a context-aware AI Health Scan
@@ -511,16 +501,16 @@ export default function ScanScreen() {
                   {/* Succulent Guardrail Callout */}
                   {idResult.baselineCare.succulentGuardrails
                     .isSucculentOrCactus && (
-                      <View style={styles.guardrailBox}>
-                        <ShieldAlert size={16} color={palette.attentionText} />
-                        <Text style={styles.guardrailText}>
-                          {
-                            idResult.baselineCare.succulentGuardrails
-                              .rotWarningNote
-                          }
-                        </Text>
-                      </View>
-                    )}
+                    <View style={styles.guardrailBox}>
+                      <ShieldAlert size={16} color={palette.attentionText} />
+                      <Text style={styles.guardrailText}>
+                        {
+                          idResult.baselineCare.succulentGuardrails
+                            .rotWarningNote
+                        }
+                      </Text>
+                    </View>
+                  )}
 
                   {/* Customize Specimen Details before Saving */}
                   <View style={styles.formDivider} />
@@ -573,7 +563,7 @@ export default function ScanScreen() {
                             style={[
                               styles.presetChipText,
                               potMaterial === pm.key &&
-                              styles.presetChipTextActive,
+                                styles.presetChipTextActive,
                             ]}
                           >
                             {pm.label}
@@ -815,438 +805,438 @@ export default function ScanScreen() {
 
 const createStyles = (palette: ThemePalette) =>
   StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: palette.bgPrimary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.xxl * 1.5,
-    alignItems: "center",
-  },
-  maxContainer: {
-    width: "100%",
-    maxWidth: MaxContentWidth,
-    gap: Spacing.md,
-  },
-  headerBlock: {
-    gap: 4,
-  },
-  eyebrowRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  engineBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-  },
-  engineBadgeLive: {
-    backgroundColor: palette.thrivingBg,
-    borderColor: palette.thrivingBorder,
-  },
-  engineBadgeMock: {
-    backgroundColor: palette.bgSubtle,
-    borderColor: palette.borderSubtle,
-  },
-  engineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  engineDotLive: {
-    backgroundColor: palette.thrivingText,
-  },
-  engineDotMock: {
-    backgroundColor: palette.textMuted,
-  },
-  engineBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  engineBadgeTextLive: {
-    color: palette.thrivingText,
-  },
-  engineBadgeTextMock: {
-    color: palette.textSecondary,
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    color: palette.primary,
-  },
-  headerTitle: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: "700",
-    color: palette.textPrimary,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: palette.textSecondary,
-  },
-  segmentedBar: {
-    flexDirection: "row",
-    backgroundColor: palette.bgSubtle,
-    padding: 4,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-    gap: 6,
-  },
-  segmentBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: Radius.sm,
-  },
-  segmentBtnActive: {
-    backgroundColor: palette.primary,
-  },
-  segmentBtnText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: palette.textSecondary,
-  },
-  segmentBtnTextActive: {
-    color: palette.textInverse,
-  },
-  card: {
-    backgroundColor: palette.bgSurface,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-    padding: Spacing.lg,
-    gap: Spacing.md,
-    ...CardShadow,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: palette.textPrimary,
-  },
-  previewWrapper: {
-    position: "relative",
-    borderRadius: Radius.md,
-    overflow: "hidden",
-    height: 190,
-    backgroundColor: palette.bgSubtle,
-  },
-  previewImage: {
-    width: "100%",
-    height: "100%",
-  },
-  compressionBadge: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    backgroundColor: "rgba(28, 40, 32, 0.82)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-  },
-  compressionBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: palette.textInverse,
-  },
-  emptyPreviewBox: {
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: palette.borderSubtle,
-    backgroundColor: palette.bgPrimary,
-    borderRadius: Radius.md,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    gap: 6,
-  },
-  emptyPreviewTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: palette.textPrimary,
-  },
-  emptyPreviewSub: {
-    fontSize: 12,
-    color: palette.textMuted,
-    textAlign: "center",
-  },
-  mediaButtonsRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  secondaryMediaBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: Radius.md,
-    backgroundColor: palette.primarySoft,
-    borderWidth: 1,
-    borderColor: "#C5DEC9",
-  },
-  secondaryMediaBtnText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: palette.primary,
-  },
-  presetBlock: {
-    gap: 6,
-  },
-  presetLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: palette.textSecondary,
-  },
-  presetRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  presetChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: Radius.full,
-    backgroundColor: palette.bgSubtle,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-  },
-  presetChipActive: {
-    backgroundColor: palette.primary,
-    borderColor: palette.primary,
-  },
-  presetChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: palette.textPrimary,
-  },
-  presetChipTextActive: {
-    color: palette.textInverse,
-  },
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: palette.criticalBg,
-    borderColor: palette.criticalBorder,
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: Radius.md,
-  },
-  errorBannerText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "600",
-    color: palette.criticalText,
-  },
-  textInput: {
-    backgroundColor: palette.bgPrimary,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-    borderRadius: Radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    fontSize: 14,
-    color: palette.textPrimary,
-  },
-  primaryActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: palette.primary,
-    paddingVertical: 13,
-    borderRadius: Radius.md,
-  },
-  terracottaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: palette.accentTerracotta,
-    paddingVertical: 13,
-    borderRadius: Radius.md,
-    marginTop: 4,
-  },
-  primaryActionBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: palette.textInverse,
-  },
-  resultContainer: {
-    marginTop: 8,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: palette.borderSubtle,
-    gap: 12,
-  },
-  resultHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-  },
-  resultCommonName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: palette.textPrimary,
-  },
-  resultScientific: {
-    fontSize: 13,
-    fontStyle: "italic",
-    color: palette.textSecondary,
-  },
-  confidenceBadge: {
-    backgroundColor: palette.thrivingBg,
-    borderColor: palette.thrivingBorder,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-  },
-  confidenceText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: palette.thrivingText,
-  },
-  resultNotes: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: palette.textSecondary,
-  },
-  careSpecBox: {
-    backgroundColor: palette.bgPrimary,
-    borderRadius: Radius.md,
-    padding: 12,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-  },
-  careSpecLine: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: palette.textPrimary,
-  },
-  careSpecLabel: {
-    fontWeight: "700",
-    color: palette.primary,
-  },
-  guardrailBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: palette.attentionBg,
-    borderColor: palette.attentionBorder,
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: Radius.md,
-  },
-  guardrailText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "600",
-    color: palette.attentionText,
-  },
-  formDivider: {
-    height: 1,
-    backgroundColor: palette.borderSubtle,
-    marginVertical: 4,
-  },
-  fieldGroup: {
-    gap: 6,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: palette.textPrimary,
-  },
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 4,
-  },
-  switchSub: {
-    fontSize: 12,
-    color: palette.textSecondary,
-  },
-  contextSummaryBox: {
-    backgroundColor: palette.bgPrimary,
-    borderRadius: Radius.md,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-    gap: 4,
-  },
-  contextSummaryTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: palette.primary,
-    marginBottom: 2,
-  },
-  contextSummaryItem: {
-    fontSize: 12,
-    color: palette.textSecondary,
-  },
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  subHeader: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: palette.textPrimary,
-  },
-  actionRowItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: palette.bgPrimary,
-    padding: 10,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-  },
-  urgencyPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-  },
-  urgencyText: {
-    fontSize: 10,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-  actionRowText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 19,
-    color: palette.textPrimary,
-  },
-});
+    safeArea: {
+      flex: 1,
+      backgroundColor: palette.bgPrimary,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: Spacing.lg,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.xxl * 1.5,
+      alignItems: "center",
+    },
+    maxContainer: {
+      width: "100%",
+      maxWidth: MaxContentWidth,
+      gap: Spacing.md,
+    },
+    headerBlock: {
+      gap: 4,
+    },
+    eyebrowRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    engineBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+    },
+    engineBadgeLive: {
+      backgroundColor: palette.thrivingBg,
+      borderColor: palette.thrivingBorder,
+    },
+    engineBadgeMock: {
+      backgroundColor: palette.bgSubtle,
+      borderColor: palette.borderSubtle,
+    },
+    engineDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    engineDotLive: {
+      backgroundColor: palette.thrivingText,
+    },
+    engineDotMock: {
+      backgroundColor: palette.textMuted,
+    },
+    engineBadgeText: {
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    engineBadgeTextLive: {
+      color: palette.thrivingText,
+    },
+    engineBadgeTextMock: {
+      color: palette.textSecondary,
+    },
+    eyebrow: {
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+      color: palette.primary,
+    },
+    headerTitle: {
+      fontSize: 28,
+      lineHeight: 34,
+      fontWeight: "700",
+      color: palette.textPrimary,
+    },
+    headerSubtitle: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: palette.textSecondary,
+    },
+    segmentedBar: {
+      flexDirection: "row",
+      backgroundColor: palette.bgSubtle,
+      padding: 4,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: palette.borderSubtle,
+      gap: 6,
+    },
+    segmentBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: Radius.sm,
+    },
+    segmentBtnActive: {
+      backgroundColor: palette.primary,
+    },
+    segmentBtnText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: palette.textSecondary,
+    },
+    segmentBtnTextActive: {
+      color: palette.textInverse,
+    },
+    card: {
+      backgroundColor: palette.bgSurface,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: palette.borderSubtle,
+      padding: Spacing.lg,
+      gap: Spacing.md,
+      ...CardShadow,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: palette.textPrimary,
+    },
+    previewWrapper: {
+      position: "relative",
+      borderRadius: Radius.md,
+      overflow: "hidden",
+      height: 190,
+      backgroundColor: palette.bgSubtle,
+    },
+    previewImage: {
+      width: "100%",
+      height: "100%",
+    },
+    compressionBadge: {
+      position: "absolute",
+      bottom: 8,
+      right: 8,
+      backgroundColor: "rgba(28, 40, 32, 0.82)",
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: Radius.full,
+    },
+    compressionBadgeText: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: palette.textInverse,
+    },
+    emptyPreviewBox: {
+      borderWidth: 1,
+      borderStyle: "dashed",
+      borderColor: palette.borderSubtle,
+      backgroundColor: palette.bgPrimary,
+      borderRadius: Radius.md,
+      paddingVertical: 24,
+      paddingHorizontal: 16,
+      alignItems: "center",
+      gap: 6,
+    },
+    emptyPreviewTitle: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: palette.textPrimary,
+    },
+    emptyPreviewSub: {
+      fontSize: 12,
+      color: palette.textMuted,
+      textAlign: "center",
+    },
+    mediaButtonsRow: {
+      flexDirection: "row",
+      gap: Spacing.sm,
+    },
+    secondaryMediaBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: Radius.md,
+      backgroundColor: palette.primarySoft,
+      borderWidth: 1,
+      borderColor: "#C5DEC9",
+    },
+    secondaryMediaBtnText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: palette.primary,
+    },
+    presetBlock: {
+      gap: 6,
+    },
+    presetLabel: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: palette.textSecondary,
+    },
+    presetRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    presetChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: Radius.full,
+      backgroundColor: palette.bgSubtle,
+      borderWidth: 1,
+      borderColor: palette.borderSubtle,
+    },
+    presetChipActive: {
+      backgroundColor: palette.primary,
+      borderColor: palette.primary,
+    },
+    presetChipText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: palette.textPrimary,
+    },
+    presetChipTextActive: {
+      color: palette.textInverse,
+    },
+    errorBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: palette.criticalBg,
+      borderColor: palette.criticalBorder,
+      borderWidth: 1,
+      padding: 12,
+      borderRadius: Radius.md,
+    },
+    errorBannerText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "600",
+      color: palette.criticalText,
+    },
+    textInput: {
+      backgroundColor: palette.bgPrimary,
+      borderWidth: 1,
+      borderColor: palette.borderSubtle,
+      borderRadius: Radius.md,
+      paddingHorizontal: 14,
+      paddingVertical: 11,
+      fontSize: 14,
+      color: palette.textPrimary,
+    },
+    primaryActionBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      backgroundColor: palette.primary,
+      paddingVertical: 13,
+      borderRadius: Radius.md,
+    },
+    terracottaBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      backgroundColor: palette.accentTerracotta,
+      paddingVertical: 13,
+      borderRadius: Radius.md,
+      marginTop: 4,
+    },
+    primaryActionBtnText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: palette.textInverse,
+    },
+    resultContainer: {
+      marginTop: 8,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: palette.borderSubtle,
+      gap: 12,
+    },
+    resultHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+    },
+    resultCommonName: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: palette.textPrimary,
+    },
+    resultScientific: {
+      fontSize: 13,
+      fontStyle: "italic",
+      color: palette.textSecondary,
+    },
+    confidenceBadge: {
+      backgroundColor: palette.thrivingBg,
+      borderColor: palette.thrivingBorder,
+      borderWidth: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: Radius.full,
+    },
+    confidenceText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: palette.thrivingText,
+    },
+    resultNotes: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: palette.textSecondary,
+    },
+    careSpecBox: {
+      backgroundColor: palette.bgPrimary,
+      borderRadius: Radius.md,
+      padding: 12,
+      gap: 6,
+      borderWidth: 1,
+      borderColor: palette.borderSubtle,
+    },
+    careSpecLine: {
+      fontSize: 13,
+      lineHeight: 19,
+      color: palette.textPrimary,
+    },
+    careSpecLabel: {
+      fontWeight: "700",
+      color: palette.primary,
+    },
+    guardrailBox: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 8,
+      backgroundColor: palette.attentionBg,
+      borderColor: palette.attentionBorder,
+      borderWidth: 1,
+      padding: 12,
+      borderRadius: Radius.md,
+    },
+    guardrailText: {
+      flex: 1,
+      fontSize: 12,
+      lineHeight: 18,
+      fontWeight: "600",
+      color: palette.attentionText,
+    },
+    formDivider: {
+      height: 1,
+      backgroundColor: palette.borderSubtle,
+      marginVertical: 4,
+    },
+    fieldGroup: {
+      gap: 6,
+    },
+    fieldLabel: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: palette.textPrimary,
+    },
+    switchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      paddingVertical: 4,
+    },
+    switchSub: {
+      fontSize: 12,
+      color: palette.textSecondary,
+    },
+    contextSummaryBox: {
+      backgroundColor: palette.bgPrimary,
+      borderRadius: Radius.md,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: palette.borderSubtle,
+      gap: 4,
+    },
+    contextSummaryTitle: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: palette.primary,
+      marginBottom: 2,
+    },
+    contextSummaryItem: {
+      fontSize: 12,
+      color: palette.textSecondary,
+    },
+    statusPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+    },
+    statusPillText: {
+      fontSize: 11,
+      fontWeight: "700",
+      textTransform: "uppercase",
+    },
+    subHeader: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: palette.textPrimary,
+    },
+    actionRowItem: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 8,
+      backgroundColor: palette.bgPrimary,
+      padding: 10,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: palette.borderSubtle,
+    },
+    urgencyPill: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: Radius.sm,
+      borderWidth: 1,
+    },
+    urgencyText: {
+      fontSize: 10,
+      fontWeight: "700",
+      textTransform: "uppercase",
+    },
+    actionRowText: {
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 19,
+      color: palette.textPrimary,
+    },
+  });
