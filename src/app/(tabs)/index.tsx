@@ -7,7 +7,6 @@ import {
   LayoutGrid,
   LayoutList,
   Leaf,
-  MapPin,
   ShieldAlert,
   Sprout,
   Sun,
@@ -41,6 +40,7 @@ import {
   Typography,
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
+import { useAuthStore } from "@/store/useAuthStore";
 import { doesPlantNeedWatering, usePlantStore } from "@/store/usePlantStore";
 import type { UserPlant } from "@/types/plant";
 
@@ -57,14 +57,23 @@ type ViewMode = "list" | "grid";
 
 export default function MyGardenScreen() {
   const palette = usePalette();
+  const user = useAuthStore((s) => s.user);
+  const profile = useAuthStore((s) => s.profile);
   const plants = usePlantStore((s) => s.plants);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
   const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
   const deletePlant = usePlantStore((s) => s.deletePlant);
 
+  const userName =
+    profile?.displayName?.trim() ||
+    (user?.user_metadata?.display_name as string)?.trim() ||
+    (user?.user_metadata?.name as string)?.trim() ||
+    (user?.user_metadata?.full_name as string)?.trim() ||
+    user?.email?.split("@")[0]?.trim() ||
+    "Gardener";
+
   const [filter, setFilter] = useState<FilterMode>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [groupByLocation, setGroupByLocation] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [editingPlant, setEditingPlant] = useState<UserPlant | null>(null);
 
@@ -249,23 +258,6 @@ export default function MyGardenScreen() {
     });
   }, [plants, filter]);
 
-  const locationGroups = useMemo(() => {
-    if (!groupByLocation) {
-      return [{ location: "", items: filteredPlants }];
-    }
-    const map = new Map<string, UserPlant[]>();
-    for (const plant of filteredPlants) {
-      const key = plant.location?.trim() || "Unassigned Spot";
-      const existing = map.get(key) ?? [];
-      existing.push(plant);
-      map.set(key, existing);
-    }
-    return Array.from(map.entries()).map(([location, items]) => ({
-      location,
-      items,
-    }));
-  }, [filteredPlants, groupByLocation]);
-
   const renderPlantCollection = (items: UserPlant[]) => {
     if (viewMode === "list") {
       return (
@@ -331,38 +323,10 @@ export default function MyGardenScreen() {
           {/* Editorial Header */}
           <ScreenHeader
             eyebrow="FLORALOG BOTANICAL NOTEBOOK"
-            title="My Garden"
+            title={`Welcome, ${userName}`}
             icon={<Sprout size={16} color={palette.primary} />}
             rightSlot={
               <View style={styles.headerControls}>
-                <Pressable
-                  onPress={() => setGroupByLocation((prev) => !prev)}
-                  style={({ pressed }) => [
-                    styles.iconToggleBtn,
-                    {
-                      backgroundColor: groupByLocation
-                        ? palette.primary
-                        : palette.bgSurface,
-                      borderColor: groupByLocation
-                        ? palette.primary
-                        : palette.borderSubtle,
-                    },
-                    pressed && styles.pressedScale,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: groupByLocation }}
-                  accessibilityLabel="Group plants by room or location"
-                >
-                  <MapPin
-                    size={16}
-                    color={
-                      groupByLocation
-                        ? palette.textInverse
-                        : palette.textSecondary
-                    }
-                  />
-                </Pressable>
-
                 <View
                   style={[
                     styles.viewToggleGroup,
@@ -620,34 +584,7 @@ export default function MyGardenScreen() {
               </Pressable>
             </View>
           ) : (
-            <View style={styles.groupsStack}>
-              {locationGroups.map((group) => (
-                <View key={group.location || "all"} style={styles.groupBlock}>
-                  {groupByLocation && group.location ? (
-                    <View style={styles.groupHeader}>
-                      <MapPin size={13} color={palette.primary} />
-                      <Text
-                        style={[
-                          styles.groupTitle,
-                          { color: palette.textPrimary },
-                        ]}
-                      >
-                        {group.location}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.groupCount,
-                          { color: palette.textMuted },
-                        ]}
-                      >
-                        {group.items.length}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {renderPlantCollection(group.items)}
-                </View>
-              ))}
-            </View>
+            renderPlantCollection(filteredPlants)
           )}
         </View>
       </ScrollView>
@@ -684,14 +621,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
-  },
-  iconToggleBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.md,
-    borderWidth: BorderWidth.hairline,
-    alignItems: "center",
-    justifyContent: "center",
   },
   viewToggleGroup: {
     flexDirection: "row",
@@ -787,26 +716,6 @@ const styles = StyleSheet.create({
     borderWidth: BorderWidth.hairline,
   },
   filterChipText: {
-    ...Typography.caption,
-    fontWeight: "700",
-  },
-  groupsStack: {
-    gap: Spacing.lg,
-  },
-  groupBlock: {
-    gap: Spacing.sm,
-  },
-  groupHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs + Spacing.half,
-    paddingHorizontal: Spacing.xs,
-  },
-  groupTitle: {
-    ...Typography.body,
-    fontWeight: "700",
-  },
-  groupCount: {
     ...Typography.caption,
     fontWeight: "700",
   },
