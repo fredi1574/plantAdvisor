@@ -42,13 +42,15 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.xl,
     borderWidth: BorderWidth.hairline,
-    padding: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
     gap: Spacing.md,
     overflow: 'hidden',
   },
   cardSubtle: {
     borderRadius: Radius.lg,
-    padding: Spacing.md,
+    paddingVertical: Spacing.sm + Spacing.half,
+    paddingHorizontal: Spacing.sm,
     gap: Spacing.sm,
   },
 });

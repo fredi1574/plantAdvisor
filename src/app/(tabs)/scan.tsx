@@ -36,12 +36,12 @@ import {
   type ThemePalette,
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
-import { triggerSuccessHaptic } from "@/services/haptics";
 import {
   diagnosePlantHealth,
   identifyPlant,
   isMockAiEnabled,
 } from "@/services/aiPlantService";
+import { triggerSuccessHaptic } from "@/services/haptics";
 import { prepareImageForAI } from "@/services/imageUtils";
 import { usePlantStore } from "@/store/usePlantStore";
 import type {
@@ -460,40 +460,6 @@ export default function ScanScreen() {
                 <Text style={styles.secondaryMediaBtnText}>Photo Library</Text>
               </Pressable>
             </View>
-
-            <View style={styles.presetBlock}>
-              <Text style={styles.presetLabel}>Quick Sample Presets</Text>
-              <View style={styles.presetRow}>
-                {DEMO_PRESETS.map((preset) => {
-                  const active = imageUri === preset.uri;
-                  return (
-                    <Pressable
-                      key={preset.label}
-                      onPress={() => {
-                        setErrorMessage(null);
-                        setImageUri(preset.uri);
-                        setImageDimensions("");
-                        setSearchQuery(preset.query);
-                        setIdResult(null);
-                      }}
-                      style={[
-                        styles.presetChip,
-                        active && styles.presetChipActive,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.presetChipText,
-                          active && styles.presetChipTextActive,
-                        ]}
-                      >
-                        {preset.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
           </View>
 
           {errorMessage && (
@@ -579,16 +545,16 @@ export default function ScanScreen() {
                   {/* Succulent Guardrail Callout */}
                   {idResult.baselineCare.succulentGuardrails
                     .isSucculentOrCactus && (
-                    <View style={styles.guardrailBox}>
-                      <ShieldAlert size={16} color={palette.attentionText} />
-                      <Text style={styles.guardrailText}>
-                        {
-                          idResult.baselineCare.succulentGuardrails
-                            .rotWarningNote
-                        }
-                      </Text>
-                    </View>
-                  )}
+                      <View style={styles.guardrailBox}>
+                        <ShieldAlert size={16} color={palette.attentionText} />
+                        <Text style={styles.guardrailText}>
+                          {
+                            idResult.baselineCare.succulentGuardrails
+                              .rotWarningNote
+                          }
+                        </Text>
+                      </View>
+                    )}
 
                   {/* Customize Specimen Details before Saving */}
                   <View style={styles.formDivider} />
@@ -636,7 +602,7 @@ export default function ScanScreen() {
                             style={[
                               styles.presetChipText,
                               lightExposure === opt.key &&
-                                styles.presetChipTextActive,
+                              styles.presetChipTextActive,
                             ]}
                           >
                             {opt.label}
@@ -686,7 +652,7 @@ export default function ScanScreen() {
                             style={[
                               styles.presetChipText,
                               potMaterial === pm.key &&
-                                styles.presetChipTextActive,
+                              styles.presetChipTextActive,
                             ]}
                           >
                             {pm.label}
@@ -1060,7 +1026,8 @@ const createStyles = (palette: ThemePalette) =>
       borderRadius: Radius.lg,
       borderWidth: 1,
       borderColor: palette.borderSubtle,
-      padding: Spacing.lg,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.sm,
       gap: Spacing.md,
       ...CardShadow,
     },

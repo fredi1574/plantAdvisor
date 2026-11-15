@@ -938,7 +938,8 @@ const createStyles = (palette: ThemePalette) =>
   card: {
     backgroundColor: palette.bgSurface,
     borderRadius: Radius.xl,
-    padding: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
     borderWidth: 1,
     borderColor: palette.borderSubtle,
     gap: Spacing.md,
@@ -1297,7 +1298,8 @@ const createStyles = (palette: ThemePalette) =>
   appearanceCard: {
     borderRadius: Radius.lg,
     borderWidth: BorderWidth.hairline,
-    padding: Spacing.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
     gap: Spacing.md,
     ...CardShadow,
   },

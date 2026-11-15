@@ -460,70 +460,28 @@ export default function MyGardenScreen() {
 
           <FeedbackBanner message={feedbackMessage} />
 
-          {/* Single-Line Filter Chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
+          {/* Unified Garden Controls: Search, Filters, Sort & Room Grouping */}
+          <View
+            style={{
+              backgroundColor: palette.bgSurface,
+              borderColor: palette.borderSubtle,
+              borderWidth: BorderWidth.hairline,
+              borderRadius: Radius.lg,
+              padding: Spacing.sm,
+              gap: Spacing.sm,
+              ...CardShadow,
+            }}
           >
-            {filterChips.map((chip) => {
-              const isSelected = filter === chip.key;
-              const contentColor = isSelected
-                ? palette.textInverse
-                : chip.accentColor;
-
-              return (
-                <Pressable
-                  key={chip.key}
-                  onPress={() => {
-                    triggerLightHaptic();
-                    setFilter(chip.key);
-                  }}
-                  style={({ pressed }) => [
-                    styles.filterChip,
-                    {
-                      backgroundColor: isSelected
-                        ? chip.accentColor
-                        : chip.softBg,
-                      borderColor: isSelected
-                        ? chip.accentColor
-                        : chip.softBorder,
-                    },
-                    pressed && styles.pressedScale,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                >
-                  {chip.renderIcon(contentColor)}
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      {
-                        color: contentColor,
-                      },
-                    ]}
-                  >
-                    {chip.label} ({chip.count})
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* Search, Sort & Room Grouping Controls */}
-          {plants.length > 0 && (
-            <View style={{ gap: Spacing.sm }}>
+            {plants.length > 0 && (
               <View
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
                   gap: Spacing.sm,
-                  backgroundColor: palette.bgSurface,
-                  borderColor: palette.borderSubtle,
-                  borderWidth: BorderWidth.hairline,
+                  backgroundColor: palette.bgSubtle,
                   borderRadius: Radius.md,
                   paddingHorizontal: Spacing.md,
-                  paddingVertical: Platform.OS === "ios" ? 10 : 4,
+                  paddingVertical: Platform.OS === "ios" ? 9 : 4,
                 }}
               >
                 <Search size={15} color={palette.textMuted} />
@@ -545,117 +503,176 @@ export default function MyGardenScreen() {
                   </Pressable>
                 )}
               </View>
+            )}
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterRow}
+            >
+              {filterChips.map((chip) => {
+                const isSelected = filter === chip.key;
+                const contentColor = isSelected
+                  ? palette.textInverse
+                  : chip.accentColor;
+
+                return (
+                  <Pressable
+                    key={chip.key}
+                    onPress={() => {
+                      triggerLightHaptic();
+                      setFilter(chip.key);
+                    }}
+                    style={({ pressed }) => [
+                      styles.filterChip,
+                      {
+                        backgroundColor: isSelected
+                          ? chip.accentColor
+                          : chip.softBg,
+                        borderColor: isSelected
+                          ? chip.accentColor
+                          : chip.softBorder,
+                      },
+                      pressed && styles.pressedScale,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    {chip.renderIcon(contentColor)}
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        {
+                          color: contentColor,
+                        },
+                      ]}
+                    >
+                      {chip.label} ({chip.count})
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {plants.length > 0 && (
+              <View
+                style={{
+                  borderTopWidth: BorderWidth.hairline,
+                  borderTopColor: palette.borderSubtle,
+                  paddingTop: Spacing.xs,
                 }}
               >
-                <View
-                  style={{
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: 4,
-                    marginRight: 2,
+                    gap: 6,
                   }}
                 >
-                  <ArrowUpDown size={13} color={palette.textSecondary} />
-                  <Text
+                  <View
                     style={{
-                      fontSize: 11,
-                      fontWeight: "700",
-                      color: palette.textSecondary,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                      marginRight: 2,
                     }}
                   >
-                    Sort:
-                  </Text>
-                </View>
-
-                {SORT_OPTIONS.map((opt) => {
-                  const active = sortBy === opt.key;
-                  return (
-                    <Pressable
-                      key={opt.key}
-                      onPress={() => {
-                        triggerLightHaptic();
-                        setSortBy(opt.key);
-                      }}
+                    <ArrowUpDown size={13} color={palette.textSecondary} />
+                    <Text
                       style={{
-                        paddingHorizontal: 10,
-                        paddingVertical: 5,
-                        borderRadius: Radius.full,
-                        borderWidth: 1,
-                        backgroundColor: active
-                          ? palette.primarySoft
-                          : palette.bgSurface,
-                        borderColor: active
-                          ? palette.primary
-                          : palette.borderSubtle,
+                        fontSize: 11,
+                        fontWeight: "700",
+                        color: palette.textSecondary,
                       }}
                     >
-                      <Text
+                      Sort:
+                    </Text>
+                  </View>
+
+                  {SORT_OPTIONS.map((opt) => {
+                    const active = sortBy === opt.key;
+                    return (
+                      <Pressable
+                        key={opt.key}
+                        onPress={() => {
+                          triggerLightHaptic();
+                          setSortBy(opt.key);
+                        }}
                         style={{
-                          fontSize: 11,
-                          fontWeight: active ? "700" : "600",
-                          color: active
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: Radius.full,
+                          borderWidth: 1,
+                          backgroundColor: active
+                            ? palette.primarySoft
+                            : palette.bgSubtle,
+                          borderColor: active
                             ? palette.primary
-                            : palette.textSecondary,
+                            : palette.borderSubtle,
                         }}
                       >
-                        {opt.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: active ? "700" : "600",
+                            color: active
+                              ? palette.primary
+                              : palette.textSecondary,
+                          }}
+                        >
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
 
-                <Pressable
-                  onPress={() => {
-                    triggerLightHaptic();
-                    setGroupByLocation((prev) => !prev);
-                  }}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 4,
-                    paddingHorizontal: 10,
-                    paddingVertical: 5,
-                    borderRadius: Radius.full,
-                    borderWidth: 1,
-                    backgroundColor: groupByLocation
-                      ? palette.primary
-                      : palette.bgSurface,
-                    borderColor: groupByLocation
-                      ? palette.primary
-                      : palette.borderSubtle,
-                  }}
-                >
-                  <MapPin
-                    size={12}
-                    color={
-                      groupByLocation
-                        ? palette.textInverse
-                        : palette.textSecondary
-                    }
-                  />
-                  <Text
+                  <Pressable
+                    onPress={() => {
+                      triggerLightHaptic();
+                      setGroupByLocation((prev) => !prev);
+                    }}
                     style={{
-                      fontSize: 11,
-                      fontWeight: "700",
-                      color: groupByLocation
-                        ? palette.textInverse
-                        : palette.textSecondary,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: Radius.full,
+                      borderWidth: 1,
+                      backgroundColor: groupByLocation
+                        ? palette.primary
+                        : palette.bgSubtle,
+                      borderColor: groupByLocation
+                        ? palette.primary
+                        : palette.borderSubtle,
                     }}
                   >
-                    By Room
-                  </Text>
-                </Pressable>
-              </ScrollView>
-            </View>
-          )}
+                    <MapPin
+                      size={12}
+                      color={
+                        groupByLocation
+                          ? palette.textInverse
+                          : palette.textSecondary
+                      }
+                    />
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "700",
+                        color: groupByLocation
+                          ? palette.textInverse
+                          : palette.textSecondary,
+                      }}
+                    >
+                      By Room
+                    </Text>
+                  </Pressable>
+                </ScrollView>
+              </View>
+            )}
+          </View>
 
           {/* Plant Collection */}
           {plants.length === 0 ? (
@@ -949,7 +966,8 @@ const styles = StyleSheet.create({
   emptyFilterCard: {
     borderRadius: Radius.lg,
     borderWidth: BorderWidth.hairline,
-    padding: Spacing.xl,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.sm,
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.sm,
