@@ -1,22 +1,28 @@
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import {
   Bell,
   BellOff,
+  Camera,
+  CheckCircle2,
   Clock,
+  Cloud,
   CloudOff,
   LogIn,
   LogOut,
   Monitor,
   Moon,
   RefreshCw,
+  RotateCcw,
   Save,
   Send,
   Sprout,
   Sun,
-  User as UserIcon
+  User as UserIcon,
 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -56,6 +62,8 @@ import {
 } from '@/services/notificationService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePlantStore } from '@/store/usePlantStore';
+import { triggerLightHaptic, triggerSuccessHaptic } from '@/services/haptics';
+import { uploadPlantPhotoIfNeeded } from '@/services/supabase';
 import type { ExperienceLevel } from '@/types/plant';
 
 function formatReminderTime(hour24: number, minute: number): string {
@@ -86,13 +94,18 @@ export default function ProfileScreen() {
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
   const isSyncing = usePlantStore((s) => s.isSyncing);
+  const pendingSyncCount = usePlantStore((s) => s.pendingSyncCount);
+  const lastSyncedAt = usePlantStore((s) => s.lastSyncedAt);
+  const syncError = usePlantStore((s) => s.syncError);
   const syncWithSupabase = usePlantStore((s) => s.syncWithSupabase);
   const notificationPrefs = usePlantStore((s) => s.notificationPrefs);
   const setNotificationPrefs = usePlantStore((s) => s.setNotificationPrefs);
+  const resetToSeedData = usePlantStore((s) => s.resetToSeedData);
 
   const [draftName, setDraftName] = useState<string | null>(null);
   const [draftLevel, setDraftLevel] = useState<ExperienceLevel | null>(null);
   const [draftBio, setDraftBio] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<
     'granted' | 'denied' | 'undetermined' | 'unsupported'
@@ -253,6 +266,76 @@ export default function ProfileScreen() {
     }
   };
 
+  const handlePickAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setToast('Media library permission is required to choose a photo.');
+      return;
+    }
+
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    if (picked.canceled || !picked.assets[0]?.uri) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const uploadedUrl = await uploadPlantPhotoIfNeeded(
+        picked.assets[0].uri,
+        'avatar'
+      );
+      const res = await updateProfile({
+        avatarUrl: uploadedUrl ?? picked.assets[0].uri,
+      });
+      if (res.ok) {
+        triggerSuccessHaptic();
+        setToast('Profile photo updated.');
+      } else {
+        setToast(res.error ?? 'Could not update profile photo.');
+      }
+    } catch {
+      setToast('Failed to upload profile photo.');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleResetToSampleGarden = () => {
+    const performReset = () => {
+      resetToSeedData();
+      triggerSuccessHaptic();
+      setToast('Restored the sample conservatory.');
+    };
+
+    if (Platform.OS === 'web') {
+      if (
+        typeof window !== 'undefined' &&
+        window.confirm(
+          'Replace your current local garden with the sample conservatory? This cannot be undone.'
+        )
+      ) {
+        performReset();
+      }
+    } else {
+      Alert.alert(
+        'Reset to Sample Garden',
+        'Replace your current local garden with the sample conservatory? This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Reset',
+            style: 'destructive',
+            onPress: performReset,
+          },
+        ]
+      );
+    }
+  };
+
   const initials = (
     profile?.displayName ||
     user?.email ||
@@ -321,9 +404,32 @@ export default function ProfileScreen() {
               {/* Signed-In Overview Card */}
               <View style={styles.card}>
                 <View style={styles.profileHeaderRow}>
-                  <View style={styles.avatarCircle}>
-                    <Text style={styles.avatarText}>{initials}</Text>
-                  </View>
+                  <Pressable
+                    onPress={() => void handlePickAvatar()}
+                    disabled={isUploadingAvatar}
+                    style={({ pressed }) => [
+                      styles.avatarCircle,
+                      pressed && { opacity: 0.8 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Change profile photo">
+                    {profile?.avatarUrl ? (
+                      <Image
+                        source={{ uri: profile.avatarUrl }}
+                        style={styles.avatarImage}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Text style={styles.avatarText}>{initials}</Text>
+                    )}
+                    <View style={styles.avatarCameraBadge}>
+                      {isUploadingAvatar ? (
+                        <ActivityIndicator size="small" color={palette.textInverse} />
+                      ) : (
+                        <Camera size={11} color={palette.textInverse} />
+                      )}
+                    </View>
+                  </Pressable>
                   <View style={styles.profileInfo}>
                     <Text style={styles.profileName}>
                       {profile?.displayName || 'Gardener'}
@@ -334,6 +440,41 @@ export default function ProfileScreen() {
                         <Sprout size={12} color={palette.primary} />
                         <Text style={styles.levelBadgeText}>
                           {LEVEL_LABELS[profile?.experienceLevel ?? 'enthusiast']}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.levelBadge,
+                          (syncError || pendingSyncCount > 0) &&
+                            !isSyncing && {
+                              backgroundColor: palette.attentionBg,
+                              borderColor: palette.attentionBorder,
+                            },
+                        ]}>
+                        {isSyncing ? (
+                          <RefreshCw size={12} color={palette.primary} />
+                        ) : syncError || pendingSyncCount > 0 ? (
+                          <CloudOff size={12} color={palette.attentionText} />
+                        ) : lastSyncedAt ? (
+                          <CheckCircle2 size={12} color={palette.primary} />
+                        ) : (
+                          <Cloud size={12} color={palette.primary} />
+                        )}
+                        <Text
+                          style={[
+                            styles.levelBadgeText,
+                            (syncError || pendingSyncCount > 0) &&
+                              !isSyncing && { color: palette.attentionText },
+                          ]}>
+                          {isSyncing
+                            ? 'Syncing…'
+                            : pendingSyncCount > 0
+                              ? `Offline — ${pendingSyncCount} pending`
+                              : syncError
+                                ? 'Offline — Saved Locally'
+                                : lastSyncedAt
+                                  ? 'Synced'
+                                  : 'Cloud Ready'}
                         </Text>
                       </View>
                     </View>
@@ -696,6 +837,30 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
+          {/* Sample Garden Card */}
+          <View style={styles.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <RotateCcw size={18} color={palette.primary} />
+              <Text style={styles.cardTitle}>Sample Conservatory</Text>
+            </View>
+            <Text style={styles.cardDescription}>
+              Restore the default sample conservatory plants and care logs on
+              this device.
+            </Text>
+
+            <Pressable
+              onPress={handleResetToSampleGarden}
+              style={({ pressed }) => [
+                styles.dangerOutlineBtn,
+                pressed && { opacity: 0.85 },
+              ]}>
+              <RotateCcw size={14} color={palette.criticalText} />
+              <Text style={styles.dangerOutlineBtnText}>
+                Reset to Sample Garden
+              </Text>
+            </Pressable>
+          </View>
+
           {user && (
             /* Sign Out Button */
             <Pressable
@@ -849,6 +1014,25 @@ const createStyles = (palette: ThemePalette) =>
     backgroundColor: palette.primarySoft,
     borderWidth: 2,
     borderColor: palette.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: palette.primary,
+    borderWidth: 2,
+    borderColor: palette.bgSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1134,5 +1318,21 @@ const createStyles = (palette: ThemePalette) =>
   appearancePillText: {
     ...Typography.caption,
     fontWeight: '700',
+  },
+  dangerOutlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 11,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: palette.criticalBorder,
+    backgroundColor: palette.criticalBg,
+  },
+  dangerOutlineBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: palette.criticalText,
   },
 });

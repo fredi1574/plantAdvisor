@@ -1,6 +1,8 @@
-import { Pencil, Trash2 } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { Pencil, Trash2, X } from 'lucide-react-native';
 import { useMemo, useRef, useState } from 'react';
 import {
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -83,6 +85,7 @@ export function SwipeableLogItem({
       velocity: clampedVelocity,
     });
   };
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const closeSwipe = (afterClose?: () => void) => {
     snapTo(0);
@@ -332,6 +335,25 @@ export function SwipeableLogItem({
 
               <Text style={styles.timelineEventNotes}>{entry.notes}</Text>
 
+              {Boolean(entry.photoUri) && (
+                <Pressable
+                  onPress={() => setPreviewOpen(true)}
+                  style={{
+                    marginTop: 4,
+                    alignSelf: 'flex-start',
+                    borderRadius: Radius.md,
+                    overflow: 'hidden',
+                    borderWidth: 1,
+                    borderColor: palette.borderSubtle,
+                  }}>
+                  <Image
+                    source={{ uri: entry.photoUri }}
+                    style={{ width: 92, height: 68 }}
+                    contentFit="cover"
+                  />
+                </Pressable>
+              )}
+
               {/* Optional Propagation / Moisture Metrics Pills */}
               {entry.metrics && (
                 <View style={styles.metricsPillsRow}>
@@ -377,6 +399,45 @@ export function SwipeableLogItem({
           </Animated.View>
         </GestureDetector>
       </View>
+
+      {Boolean(entry.photoUri) && (
+        <Modal
+          visible={previewOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPreviewOpen(false)}>
+          <Pressable
+            onPress={() => setPreviewOpen(false)}
+            style={{
+              flex: 1,
+              backgroundColor: palette.scrimDark,
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+            }}>
+            <Pressable
+              onPress={() => setPreviewOpen(false)}
+              style={{
+                position: 'absolute',
+                top: 48,
+                right: 20,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: palette.bgSurface,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <X size={20} color={palette.textPrimary} />
+            </Pressable>
+            <Image
+              source={{ uri: entry.photoUri }}
+              style={{ width: '100%', height: '72%', borderRadius: Radius.lg }}
+              contentFit="contain"
+            />
+          </Pressable>
+        </Modal>
+      )}
     </View>
   );
 }

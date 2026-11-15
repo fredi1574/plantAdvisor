@@ -24,12 +24,16 @@ import {
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
 import {
+  formatAgendaDayLabel,
   getCareEventTypeLabel,
+  getHistoricalCareEvents,
+  getMonthlyCareSummary,
   getProjectedCareEvents,
   toLocalDateKey,
   type DayCareSchedule,
   type ProjectedPlantCareTask,
 } from "@/services/calendarUtils";
+import { triggerLightHaptic } from "@/services/haptics";
 import type { NotebookEntry, UserPlant } from "@/types/plant";
 
 const WEEKDAY_LABELS = [
@@ -85,6 +89,11 @@ export function CareScheduleView({
     () => timeline[0]?.dateKey ?? "",
   );
 
+  const historicalMap = useMemo(
+    () => getHistoricalCareEvents(entries),
+    [entries],
+  );
+
   const timelineByDate = useMemo(() => {
     const map: Record<string, DayCareSchedule> = {};
     for (const day of timeline) {
@@ -116,6 +125,7 @@ export function CareScheduleView({
           isToday: boolean;
           isPast: boolean;
           schedule?: DayCareSchedule;
+          completedCount: number;
         }
     )[] = [];
 
@@ -126,6 +136,11 @@ export function CareScheduleView({
     for (let d = 1; d <= daysInMonth; d++) {
       const cellDate = new Date(year, month, d);
       const dateKey = toLocalDateKey(cellDate);
+      const schedule = timelineByDate[dateKey];
+      const completedCount =
+        schedule?.completedEntries.length ??
+        historicalMap[dateKey]?.length ??
+        0;
       cells.push({
         kind: "day",
         key: dateKey,
@@ -133,7 +148,8 @@ export function CareScheduleView({
         dateKey,
         isToday: dateKey === todayKey,
         isPast: dateKey < todayKey,
-        schedule: timelineByDate[dateKey],
+        schedule,
+        completedCount,
       });
     }
 
@@ -149,14 +165,56 @@ export function CareScheduleView({
     return {
       monthName: MONTH_NAMES[month],
       year: String(year),
+      yearNum: year,
+      monthNum: month,
       weeks,
     };
-  }, [monthOffset, timelineByDate]);
+  }, [monthOffset, timelineByDate, historicalMap]);
 
-  const selectedDaySchedule = useMemo<DayCareSchedule | undefined>(
-    () => timeline.find((d) => d.dateKey === selectedDateKey) ?? timeline[0],
-    [timeline, selectedDateKey],
+  const monthlySummary = useMemo(
+    () =>
+      getMonthlyCareSummary(
+        entries,
+        calendarMonth.yearNum,
+        calendarMonth.monthNum,
+      ),
+    [entries, calendarMonth.yearNum, calendarMonth.monthNum],
   );
+
+  const selectedDaySchedule = useMemo<DayCareSchedule | undefined>(() => {
+    const found = timeline.find((d) => d.dateKey === selectedDateKey);
+    if (found) return found;
+    if (selectedDateKey) {
+      const [y, m, d] = selectedDateKey.split("-").map(Number);
+      if (y && m && d) {
+        const dateObj = new Date(y, m - 1, d);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const diffDays = Math.round(
+          (dateObj.getTime() - todayStart.getTime()) / (24 * 60 * 60 * 1000),
+        );
+        const completed = historicalMap[selectedDateKey] ?? [];
+        return {
+          dateKey: selectedDateKey,
+          date: dateObj,
+          daysFromToday: diffDays,
+          isToday: diffDays === 0,
+          dayOfWeekShort: "",
+          dayOfMonth: d,
+          monthShort: MONTH_NAMES[m - 1]?.slice(0, 3) ?? "",
+          fullLabel: formatAgendaDayLabel(dateObj, diffDays),
+          projectedTasks: [],
+          completedEntries: completed,
+          hasWaterTask: completed.some((e) => e.eventType === "water"),
+          hasFertilizeHistory: completed.some((e) => e.eventType === "fertilize"),
+          hasPropagationMilestone: completed.some(
+            (e) => e.eventType === "propagation",
+          ),
+        };
+      }
+    }
+    return timeline[0];
+  }, [timeline, selectedDateKey, historicalMap]);
 
   // Days in the next 14 days (excluding selected date) that have projected tasks
   const upcomingTimelineDays = useMemo(
@@ -238,7 +296,7 @@ export function CareScheduleView({
             <View style={styles.taskListCol}>
               {selectedDaySchedule.projectedTasks.map((task) => (
                 <AgendaTaskItem
-                  key={`${task.dateKey}-${task.plant.id}-${task.cycleIndex}`}
+                  key={`${task.dateKey}-${task.plant.id}-${task.taskKind ?? "water"}-${task.cycleIndex}`}
                   task={task}
                   onWaterNow={() =>
                     onWaterPlantNow(task.plant.id, task.plant.nickname)
@@ -405,12 +463,11 @@ export function CareScheduleView({
       <GlassCard>
         <View style={styles.heatmapHeaderTop}>
           <Pressable
-            onPress={() => setMonthOffset((m) => Math.max(0, m - 1))}
-            disabled={monthOffset === 0}
-            style={[
-              styles.monthNavBtn,
-              monthOffset === 0 && styles.monthNavBtnDisabled,
-            ]}
+            onPress={() => {
+              triggerLightHaptic();
+              setMonthOffset((m) => m - 1);
+            }}
+            style={styles.monthNavBtn}
             accessibilityRole="button"
             accessibilityLabel="Previous month"
           >
@@ -423,13 +480,51 @@ export function CareScheduleView({
           </View>
 
           <Pressable
-            onPress={() => setMonthOffset((m) => m + 1)}
+            onPress={() => {
+              triggerLightHaptic();
+              setMonthOffset((m) => m + 1);
+            }}
             style={styles.monthNavBtn}
             accessibilityRole="button"
             accessibilityLabel="Next month"
           >
             <ChevronRight size={18} color={palette.textPrimary} />
           </Pressable>
+        </View>
+
+        {/* Care Streak & Adherence Summary */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            backgroundColor: palette.primarySoft,
+            borderColor: palette.primaryBorder,
+            borderWidth: 1,
+            borderRadius: Radius.md,
+            paddingHorizontal: Spacing.md,
+            paddingVertical: Spacing.sm,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: "700",
+              color: palette.primary,
+            }}
+          >
+            {monthlySummary.totalCompleted} care logs ·{" "}
+            {monthlySummary.activeDays} active days
+          </Text>
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: "800",
+              color: palette.primary,
+            }}
+          >
+            {monthlySummary.consistencyPercent}% streak
+          </Text>
         </View>
 
         {/* Weekday Headers */}
@@ -451,9 +546,9 @@ export function CareScheduleView({
                 }
 
                 const count = cell.schedule?.projectedTasks.length ?? 0;
+                const completedCount = cell.completedCount;
                 const isSelected =
                   cell.dateKey === selectedDaySchedule?.dateKey;
-                const canSelect = Boolean(cell.schedule);
                 const heatStyle =
                   count === 0
                     ? styles.heatCellEmpty
@@ -466,11 +561,9 @@ export function CareScheduleView({
                 return (
                   <Pressable
                     key={cell.key}
-                    disabled={!canSelect}
                     onPress={() => {
-                      if (canSelect) {
-                        setSelectedDateKey(cell.dateKey);
-                      }
+                      triggerLightHaptic();
+                      setSelectedDateKey(cell.dateKey);
                     }}
                     style={[
                       styles.heatCell,
@@ -497,6 +590,15 @@ export function CareScheduleView({
                           ]}
                         >
                           {count}💧
+                        </Text>
+                      ) : completedCount > 0 ? (
+                        <Text
+                          style={[
+                            styles.heatCellCountText,
+                            { color: palette.thrivingText },
+                          ]}
+                        >
+                          {completedCount}✓
                         </Text>
                       ) : cell.schedule?.hasFertilizeHistory ? (
                         <View style={[styles.cellDot, styles.dotFertilize]} />

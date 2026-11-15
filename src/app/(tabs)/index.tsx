@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import {
+  ArrowUpDown,
   CheckCircle2,
   Droplets,
   FlaskConical,
@@ -7,9 +8,12 @@ import {
   LayoutGrid,
   LayoutList,
   Leaf,
+  MapPin,
+  Search,
   ShieldAlert,
   Sprout,
   Sun,
+  X,
 } from "lucide-react-native";
 import { type ReactNode, useMemo, useState } from "react";
 import {
@@ -19,6 +23,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -40,9 +45,14 @@ import {
   Typography,
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
+import { triggerLightHaptic } from "@/services/haptics";
 import { useAuthStore } from "@/store/useAuthStore";
-import { doesPlantNeedWatering, usePlantStore } from "@/store/usePlantStore";
-import type { UserPlant } from "@/types/plant";
+import {
+  doesPlantNeedWatering,
+  getDaysUntilNextWater,
+  usePlantStore,
+} from "@/store/usePlantStore";
+import type { HealthStatus, UserPlant } from "@/types/plant";
 
 type FilterMode =
   | "all"
@@ -54,6 +64,20 @@ type FilterMode =
   | "flowering";
 
 type ViewMode = "list" | "grid";
+type SortMode = "needs_water" | "health" | "alpha" | "recent";
+
+const SORT_OPTIONS: { key: SortMode; label: string }[] = [
+  { key: "needs_water", label: "Needs Water" },
+  { key: "health", label: "Health" },
+  { key: "alpha", label: "A–Z" },
+  { key: "recent", label: "Recent" },
+];
+
+const HEALTH_PRIORITY: Record<HealthStatus, number> = {
+  critical: 0,
+  needs_attention: 1,
+  thriving: 2,
+};
 
 export default function MyGardenScreen() {
   const palette = usePalette();
@@ -64,6 +88,12 @@ export default function MyGardenScreen() {
   const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
   const deletePlant = usePlantStore((s) => s.deletePlant);
 
+  const [filter, setFilter] = useState<FilterMode>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortMode>("needs_water");
+  const [groupByLocation, setGroupByLocation] = useState(false);
+
   const userName =
     profile?.displayName?.trim() ||
     (user?.user_metadata?.display_name as string)?.trim() ||
@@ -72,8 +102,6 @@ export default function MyGardenScreen() {
     user?.email?.split("@")[0]?.trim() ||
     "Gardener";
 
-  const [filter, setFilter] = useState<FilterMode>("all");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [editingPlant, setEditingPlant] = useState<UserPlant | null>(null);
 
@@ -204,9 +232,8 @@ export default function MyGardenScreen() {
       }
     };
 
-    const confirmText = `Mark all ${stats.needsWaterCount} ${
-      stats.needsWaterCount === 1 ? "plant" : "plants"
-    } needing water as watered?`;
+    const confirmText = `Mark all ${stats.needsWaterCount} ${stats.needsWaterCount === 1 ? "plant" : "plants"
+      } needing water as watered?`;
 
     if (Platform.OS === "web") {
       if (typeof window !== "undefined" && window.confirm(confirmText)) {
@@ -241,7 +268,16 @@ export default function MyGardenScreen() {
   };
 
   const filteredPlants = useMemo(() => {
-    return plants.filter((plant) => {
+    const q = searchQuery.trim().toLowerCase();
+    const list = plants.filter((plant) => {
+      if (q) {
+        const matchesQuery =
+          plant.nickname.toLowerCase().includes(q) ||
+          plant.species.commonName.toLowerCase().includes(q) ||
+          plant.species.scientificName.toLowerCase().includes(q) ||
+          plant.location.toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+      }
       if (filter === "needs_water") return doesPlantNeedWatering(plant);
       if (filter === "needs_attention") {
         const status = plant.latestHealthAssessment?.healthStatus;
@@ -256,7 +292,46 @@ export default function MyGardenScreen() {
         return plant.species.plantType === "flowering";
       return true;
     });
-  }, [plants, filter]);
+
+    return [...list].sort((a, b) => {
+      if (sortBy === "needs_water") {
+        return getDaysUntilNextWater(a) - getDaysUntilNextWater(b);
+      }
+      if (sortBy === "health") {
+        const pa = a.latestHealthAssessment
+          ? HEALTH_PRIORITY[a.latestHealthAssessment.healthStatus]
+          : 3;
+        const pb = b.latestHealthAssessment
+          ? HEALTH_PRIORITY[b.latestHealthAssessment.healthStatus]
+          : 3;
+        if (pa !== pb) return pa - pb;
+        return getDaysUntilNextWater(a) - getDaysUntilNextWater(b);
+      }
+      if (sortBy === "alpha") {
+        return a.nickname.localeCompare(b.nickname);
+      }
+      return (
+        new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime()
+      );
+    });
+  }, [plants, filter, searchQuery, sortBy]);
+
+  const plantsByLocation = useMemo(() => {
+    const map = new Map<string, UserPlant[]>();
+    for (const plant of filteredPlants) {
+      const loc = plant.location.trim() || "Unspecified Spot";
+      const existing = map.get(loc);
+      if (existing) {
+        existing.push(plant);
+      } else {
+        map.set(loc, [plant]);
+      }
+    }
+    return Array.from(map.entries()).map(([location, items]) => ({
+      location,
+      items,
+    }));
+  }, [filteredPlants]);
 
   const renderPlantCollection = (items: UserPlant[]) => {
     if (viewMode === "list") {
@@ -385,104 +460,6 @@ export default function MyGardenScreen() {
 
           <FeedbackBanner message={feedbackMessage} />
 
-          {/* Garden Pulse Hero Strip */}
-          <View
-            style={[
-              styles.pulseCard,
-              {
-                backgroundColor:
-                  stats.needsWaterCount > 0
-                    ? palette.waterAlertBg
-                    : palette.primarySoft,
-                borderColor:
-                  stats.needsWaterCount > 0
-                    ? palette.waterAlertBorder
-                    : palette.primaryBorder,
-              },
-            ]}
-          >
-            <View style={styles.pulseTextCol}>
-              <Text
-                style={[
-                  styles.pulseTitle,
-                  {
-                    color:
-                      stats.needsWaterCount > 0
-                        ? palette.waterAlertText
-                        : palette.primary,
-                    fontFamily: Fonts?.serif,
-                  },
-                ]}
-              >
-                {stats.needsWaterCount > 0
-                  ? `${stats.needsWaterCount} ${
-                      stats.needsWaterCount === 1 ? "plant" : "plants"
-                    } thirsty today`
-                  : "All plants hydrated"}
-              </Text>
-              <View style={styles.pulseMetaRow}>
-                <Text
-                  style={[
-                    styles.pulseSubtitle,
-                    { color: palette.textSecondary },
-                  ]}
-                >
-                  {stats.total} {stats.total === 1 ? "specimen" : "specimens"}
-                </Text>
-                {stats.needsAttentionCount > 0 && (
-                  <View style={styles.attentionInline}>
-                    <ShieldAlert size={13} color={palette.attentionText} />
-                    <Text
-                      style={[
-                        styles.attentionInlineText,
-                        { color: palette.attentionText },
-                      ]}
-                    >
-                      {stats.needsAttentionCount} need attention
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {stats.needsWaterCount > 0 ? (
-              <Pressable
-                onPress={handleWaterAll}
-                style={({ pressed }) => [
-                  styles.waterAllBtn,
-                  { backgroundColor: palette.waterBlue },
-                  pressed && styles.pressedScale,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Water all ${stats.needsWaterCount} plants`}
-              >
-                <Droplets size={14} color={palette.textInverse} />
-                <Text
-                  style={[
-                    styles.waterAllBtnText,
-                    { color: palette.textInverse },
-                  ]}
-                >
-                  Water All ({stats.needsWaterCount})
-                </Text>
-              </Pressable>
-            ) : (
-              <View
-                style={[
-                  styles.calmBadge,
-                  { backgroundColor: palette.bgSurface },
-                ]}
-              >
-                <CheckCircle2 size={15} color={palette.primary} />
-                <Text
-                  style={[styles.calmBadgeText, { color: palette.primary }]}
-                >
-                  On Track
-                </Text>
-              </View>
-            )}
-          </View>
-
           {/* Single-Line Filter Chips */}
           <ScrollView
             horizontal
@@ -498,7 +475,10 @@ export default function MyGardenScreen() {
               return (
                 <Pressable
                   key={chip.key}
-                  onPress={() => setFilter(chip.key)}
+                  onPress={() => {
+                    triggerLightHaptic();
+                    setFilter(chip.key);
+                  }}
                   style={({ pressed }) => [
                     styles.filterChip,
                     {
@@ -529,6 +509,153 @@ export default function MyGardenScreen() {
               );
             })}
           </ScrollView>
+
+          {/* Search, Sort & Room Grouping Controls */}
+          {plants.length > 0 && (
+            <View style={{ gap: Spacing.sm }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: Spacing.sm,
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                  borderWidth: BorderWidth.hairline,
+                  borderRadius: Radius.md,
+                  paddingHorizontal: Spacing.md,
+                  paddingVertical: Platform.OS === "ios" ? 10 : 4,
+                }}
+              >
+                <Search size={15} color={palette.textMuted} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search nickname, species, or room..."
+                  placeholderTextColor={palette.textMuted}
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    color: palette.textPrimary,
+                    paddingVertical: 4,
+                  }}
+                />
+                {searchQuery.length > 0 && (
+                  <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
+                    <X size={15} color={palette.textMuted} />
+                  </Pressable>
+                )}
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    marginRight: 2,
+                  }}
+                >
+                  <ArrowUpDown size={13} color={palette.textSecondary} />
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: "700",
+                      color: palette.textSecondary,
+                    }}
+                  >
+                    Sort:
+                  </Text>
+                </View>
+
+                {SORT_OPTIONS.map((opt) => {
+                  const active = sortBy === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      onPress={() => {
+                        triggerLightHaptic();
+                        setSortBy(opt.key);
+                      }}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: Radius.full,
+                        borderWidth: 1,
+                        backgroundColor: active
+                          ? palette.primarySoft
+                          : palette.bgSurface,
+                        borderColor: active
+                          ? palette.primary
+                          : palette.borderSubtle,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: active ? "700" : "600",
+                          color: active
+                            ? palette.primary
+                            : palette.textSecondary,
+                        }}
+                      >
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+
+                <Pressable
+                  onPress={() => {
+                    triggerLightHaptic();
+                    setGroupByLocation((prev) => !prev);
+                  }}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: Radius.full,
+                    borderWidth: 1,
+                    backgroundColor: groupByLocation
+                      ? palette.primary
+                      : palette.bgSurface,
+                    borderColor: groupByLocation
+                      ? palette.primary
+                      : palette.borderSubtle,
+                  }}
+                >
+                  <MapPin
+                    size={12}
+                    color={
+                      groupByLocation
+                        ? palette.textInverse
+                        : palette.textSecondary
+                    }
+                  />
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: "700",
+                      color: groupByLocation
+                        ? palette.textInverse
+                        : palette.textSecondary,
+                    }}
+                  >
+                    By Room
+                  </Text>
+                </Pressable>
+              </ScrollView>
+            </View>
+          )}
 
           {/* Plant Collection */}
           {plants.length === 0 ? (
@@ -634,6 +761,41 @@ export default function MyGardenScreen() {
                   Show All Plants
                 </Text>
               </Pressable>
+            </View>
+          ) : groupByLocation ? (
+            <View style={{ gap: Spacing.lg }}>
+              {plantsByLocation.map((group) => (
+                <View key={group.location} style={{ gap: Spacing.sm }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <MapPin size={14} color={palette.primary} />
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "800",
+                        color: palette.textPrimary,
+                      }}
+                    >
+                      {group.location}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "600",
+                        color: palette.textMuted,
+                      }}
+                    >
+                      ({group.items.length})
+                    </Text>
+                  </View>
+                  {renderPlantCollection(group.items)}
+                </View>
+              ))}
             </View>
           ) : (
             renderPlantCollection(filteredPlants)

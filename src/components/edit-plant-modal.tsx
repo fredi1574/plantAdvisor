@@ -127,6 +127,12 @@ function EditPlantFormSheet({
   const [wateringDays, setWateringDays] = useState(
     String(plant.customWateringIntervalDays)
   );
+  const [fertilizeDays, setFertilizeDays] = useState(
+    plant.fertilizeIntervalDays ? String(plant.fertilizeIntervalDays) : ''
+  );
+  const [rotateDays, setRotateDays] = useState(
+    plant.rotateIntervalDays ? String(plant.rotateIntervalDays) : ''
+  );
   const [lightExposure, setLightExposure] = useState<LightExposure>(
     plant.lightExposure
   );
@@ -183,6 +189,18 @@ function EditPlantFormSheet({
         ? plant.customWateringIntervalDays
         : parsedDays;
 
+    const parsedFertilize = parseInt(fertilizeDays, 10);
+    const fertilizeIntervalDays =
+      !Number.isNaN(parsedFertilize) && parsedFertilize >= 1
+        ? parsedFertilize
+        : undefined;
+
+    const parsedRotate = parseInt(rotateDays, 10);
+    const rotateIntervalDays =
+      !Number.isNaN(parsedRotate) && parsedRotate >= 1
+        ? parsedRotate
+        : undefined;
+
     const finalNickname = nickname.trim() || plant.nickname;
 
     updatePlant(plant.id, {
@@ -192,6 +210,8 @@ function EditPlantFormSheet({
       plantType,
       location: location.trim() || plant.location,
       customWateringIntervalDays: intervalDays,
+      fertilizeIntervalDays,
+      rotateIntervalDays,
       lightExposure,
       potMaterial,
       hasDrainageHole,
@@ -350,6 +370,32 @@ function EditPlantFormSheet({
                   <Plus size={15} color={palette.textPrimary} />
                 </Pressable>
               </View>
+            </View>
+          </View>
+
+          {/* Optional Fertilize & Rotate Intervals */}
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <View style={[styles.fieldGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>Fertilize Every (days)</Text>
+              <TextInput
+                value={fertilizeDays}
+                onChangeText={setFertilizeDays}
+                keyboardType="number-pad"
+                placeholder="e.g. 30"
+                placeholderTextColor={palette.textMuted}
+                style={styles.textInput}
+              />
+            </View>
+            <View style={[styles.fieldGroup, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>Rotate Every (days)</Text>
+              <TextInput
+                value={rotateDays}
+                onChangeText={setRotateDays}
+                keyboardType="number-pad"
+                placeholder="e.g. 14"
+                placeholderTextColor={palette.textMuted}
+                style={styles.textInput}
+              />
             </View>
           </View>
 

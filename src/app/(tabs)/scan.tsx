@@ -36,6 +36,7 @@ import {
   type ThemePalette,
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
+import { triggerSuccessHaptic } from "@/services/haptics";
 import {
   diagnosePlantHealth,
   identifyPlant,
@@ -231,6 +232,7 @@ export default function ScanScreen() {
       const result = await identifyPlant(imageUri || searchQuery, searchQuery);
       setIdResult(result);
       setNickname(result.commonName);
+      triggerSuccessHaptic();
     } catch (err) {
       setErrorMessage(
         err instanceof Error ? err.message : "Failed to identify plant.",
@@ -280,6 +282,7 @@ export default function ScanScreen() {
         diagnosis,
         imageUri || selectedPlant.photoUri,
       );
+      triggerSuccessHaptic();
     } catch (err) {
       setErrorMessage(
         err instanceof Error

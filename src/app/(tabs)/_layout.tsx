@@ -20,6 +20,7 @@ import {
   Typography,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
 
 type BlurTargetNode = ComponentRef<typeof View> | null;
 
@@ -87,6 +88,7 @@ function FloatingTabBar({
 
             const onPress = () => {
               if (!isFocused) {
+                triggerLightHaptic();
                 if (route.name === 'index') {
                   router.navigate('/(tabs)');
                 } else if (route.name === 'calendar') {

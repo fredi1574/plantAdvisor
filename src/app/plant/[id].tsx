@@ -1,14 +1,20 @@
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   AlertCircle,
   ArrowLeft,
   Calendar,
+  Camera,
   CheckSquare,
+  ChevronDown,
+  ChevronUp,
   Droplets,
   FileText,
   FlaskConical,
   HelpCircle,
+  History,
+  Image as ImageIcon,
   Layers,
   MapPin,
   Pencil,
@@ -19,7 +25,8 @@ import {
   Square,
   Stethoscope,
   Sun,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
@@ -52,10 +59,31 @@ import {
 import { usePalette } from '@/hooks/use-theme';
 import { diagnosePlantHealth } from '@/services/aiPlantService';
 import {
+  triggerLightHaptic,
+  triggerSuccessHaptic,
+} from '@/services/haptics';
+import {
   getDaysUntilNextWater,
   usePlantStore,
 } from '@/store/usePlantStore';
 import type { CareEventType, NotebookEntry } from '@/types/plant';
+
+const QUICK_FOLLOW_UP_CHIPS = [
+  'Check underside for webbing or specks',
+  'Soil feels soggy / sour smell',
+  'Placed near drafty AC or heater',
+  'Recently repotted or moved',
+] as const;
+
+const SOIL_MOISTURE_OPTIONS: Array<{
+  value: 'bone_dry' | 'slightly_damp' | 'moist' | 'waterlogged';
+  label: string;
+}> = [
+  { value: 'bone_dry', label: 'Bone Dry' },
+  { value: 'slightly_damp', label: 'Slightly Damp' },
+  { value: 'moist', label: 'Moist' },
+  { value: 'waterlogged', label: 'Waterlogged' },
+];
 
 const getQuickActions = (
   palette: ThemePalette
@@ -119,6 +147,7 @@ export default function PlantDetailNotebookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
+  const healthAssessments = usePlantStore((s) => s.healthAssessments);
   const logCareEvent = usePlantStore((s) => s.logCareEvent);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
   const toggleRecommendedAction = usePlantStore((s) => s.toggleRecommendedAction);
@@ -131,6 +160,18 @@ export default function PlantDetailNotebookScreen() {
     useState<CareEventType>('water');
   const [isRescanning, setIsRescanning] = useState<boolean>(false);
   const [rescanError, setRescanError] = useState<string | null>(null);
+  const [followUpAnswers, setFollowUpAnswers] = useState<Record<number, string>>({});
+  const [isRefiningDiagnosis, setIsRefiningDiagnosis] = useState<boolean>(false);
+  const [showScanHistory, setShowScanHistory] = useState<boolean>(false);
+  const [showDetailedLog, setShowDetailedLog] = useState<boolean>(false);
+  const [logPhotoUri, setLogPhotoUri] = useState<string | undefined>(undefined);
+  const [logSoilMoisture, setLogSoilMoisture] = useState<
+    NonNullable<NotebookEntry['metrics']>['soilMoisture'] | undefined
+  >(undefined);
+  const [logWaterMl, setLogWaterMl] = useState<string>('');
+  const [logRootCm, setLogRootCm] = useState<string>('');
+  const [logStemCm, setLogStemCm] = useState<string>('');
+  const [logLeafCount, setLogLeafCount] = useState<string>('');
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [editingEntry, setEditingEntry] = useState<NotebookEntry | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -156,6 +197,17 @@ export default function PlantDetailNotebookScreen() {
             new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         ),
     [entries, plant]
+  );
+
+  const plantAssessments = useMemo(
+    () =>
+      healthAssessments
+        .filter((a) => a.plantId === plant?.id)
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ),
+    [healthAssessments, plant]
   );
 
   if (!plant) {
@@ -223,9 +275,61 @@ export default function PlantDetailNotebookScreen() {
     }
   };
 
+  const handlePickLogPhoto = async (source: 'camera' | 'library') => {
+    try {
+      if (source === 'camera') {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) {
+          showToast('Camera permission is needed to attach a progress photo.');
+          return;
+        }
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          quality: 0.75,
+        });
+        if (!result.canceled && result.assets[0]?.uri) {
+          setLogPhotoUri(result.assets[0].uri);
+        }
+      } else {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          showToast('Photo library permission is needed to pick a photo.');
+          return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 0.75,
+        });
+        if (!result.canceled && result.assets[0]?.uri) {
+          setLogPhotoUri(result.assets[0].uri);
+        }
+      }
+    } catch {
+      showToast('Unable to select photo right now.');
+    }
+  };
+
   const handleQuickLog = (actionType: CareEventType) => {
     setSelectedQuickType(actionType);
-    if (actionType === 'water' && !customNote.trim()) {
+    triggerLightHaptic();
+
+    const parsedWater = Number(logWaterMl);
+    const parsedRoot = Number(logRootCm);
+    const parsedStem = Number(logStemCm);
+    const parsedLeaves = Number(logLeafCount);
+    const hasMetrics =
+      Boolean(logSoilMoisture) ||
+      (!Number.isNaN(parsedWater) && parsedWater > 0) ||
+      (!Number.isNaN(parsedRoot) && parsedRoot > 0) ||
+      (!Number.isNaN(parsedStem) && parsedStem > 0) ||
+      (!Number.isNaN(parsedLeaves) && parsedLeaves > 0);
+
+    if (
+      actionType === 'water' &&
+      !customNote.trim() &&
+      !logPhotoUri &&
+      !hasMetrics
+    ) {
       waterPlantNow(plant.id);
       return;
     }
@@ -233,13 +337,76 @@ export default function PlantDetailNotebookScreen() {
     const template =
       quickActions.find((a) => a.type === actionType) ?? quickActions[0];
 
+    const metrics: NotebookEntry['metrics'] | undefined = hasMetrics
+      ? {
+          ...(logSoilMoisture ? { soilMoisture: logSoilMoisture } : {}),
+          ...(!Number.isNaN(parsedWater) && parsedWater > 0
+            ? { waterAmountMl: Math.round(parsedWater) }
+            : {}),
+          ...(!Number.isNaN(parsedRoot) && parsedRoot > 0
+            ? { rootLengthCm: parsedRoot }
+            : {}),
+          ...(!Number.isNaN(parsedStem) && parsedStem > 0
+            ? { stemHeightCm: parsedStem }
+            : {}),
+          ...(!Number.isNaN(parsedLeaves) && parsedLeaves > 0
+            ? { leafCount: Math.round(parsedLeaves) }
+            : {}),
+        }
+      : undefined;
+
     logCareEvent({
       plantId: plant.id,
       eventType: actionType,
       title: template.defaultTitle,
       notes: customNote.trim() || template.defaultNotes,
+      photoUri: logPhotoUri,
+      metrics,
     });
     setCustomNote('');
+    setLogPhotoUri(undefined);
+    setLogSoilMoisture(undefined);
+    setLogWaterMl('');
+    setLogRootCm('');
+    setLogStemCm('');
+    setLogLeafCount('');
+    showToast(`Logged ${template.label} for "${plant.nickname}".`);
+  };
+
+  const handleRefineWithFollowUps = async () => {
+    if (!assessment || assessment.followUpQuestions.length === 0) return;
+    const answeredPairs = assessment.followUpQuestions
+      .map((q, idx) => {
+        const ans = followUpAnswers[idx]?.trim();
+        return ans ? `Q: ${q}\nA: ${ans}` : null;
+      })
+      .filter((pair): pair is string => Boolean(pair));
+
+    if (answeredPairs.length === 0) {
+      showToast('Tap or type at least one follow-up answer first.');
+      return;
+    }
+
+    setIsRefiningDiagnosis(true);
+    setRescanError(null);
+    try {
+      const refined = await diagnosePlantHealth(
+        plant.photoUri,
+        plant,
+        plantEntries,
+        `Follow-up answers from gardener:\n${answeredPairs.join('\n')}`
+      );
+      saveHealthAssessment(plant.id, refined, plant.photoUri);
+      setFollowUpAnswers({});
+      triggerSuccessHaptic();
+      showToast('Diagnosis refined with your observations!');
+    } catch (err) {
+      setRescanError(
+        err instanceof Error ? err.message : 'Unable to refine diagnosis.'
+      );
+    } finally {
+      setIsRefiningDiagnosis(false);
+    }
   };
 
   const handleInstantAiRescan = async () => {
@@ -545,9 +712,10 @@ export default function PlantDetailNotebookScreen() {
                   return (
                     <Pressable
                       key={action.id}
-                      onPress={() =>
-                        toggleRecommendedAction(plant.id, action.id)
-                      }
+                      onPress={() => {
+                        triggerLightHaptic();
+                        toggleRecommendedAction(plant.id, action.id);
+                      }}
                       style={({ pressed }) => [
                         styles.checkableActionCard,
                         action.completed && styles.checkableActionDone,
@@ -598,7 +766,7 @@ export default function PlantDetailNotebookScreen() {
                 })}
               </View>
 
-              {/* Diagnostic Follow-Up Questions */}
+              {/* Interactive Diagnostic Follow-Up Questions */}
               {assessment.followUpQuestions.length > 0 && (
                 <View style={styles.followUpBox}>
                   <View style={styles.followUpTitleRow}>
@@ -607,11 +775,192 @@ export default function PlantDetailNotebookScreen() {
                       Botanical Follow-Up Checks
                     </Text>
                   </View>
-                  {assessment.followUpQuestions.map((q, idx) => (
-                    <Text key={idx} style={styles.followUpQuestion}>
-                      • {q}
+                  {assessment.followUpQuestions.map((q, idx) => {
+                    const answer = followUpAnswers[idx] ?? '';
+                    return (
+                      <View key={idx} style={{ gap: 6, marginTop: idx > 0 ? 6 : 0 }}>
+                        <Text style={styles.followUpQuestion}>• {q}</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                          {QUICK_FOLLOW_UP_CHIPS.map((chip) => {
+                            const selected = answer === chip;
+                            return (
+                              <Pressable
+                                key={chip}
+                                onPress={() => {
+                                  triggerLightHaptic();
+                                  setFollowUpAnswers((prev) => ({
+                                    ...prev,
+                                    [idx]: selected ? '' : chip,
+                                  }));
+                                }}
+                                style={{
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 5,
+                                  borderRadius: 999,
+                                  borderWidth: 1,
+                                  backgroundColor: selected
+                                    ? palette.primary
+                                    : palette.bgSurface,
+                                  borderColor: selected
+                                    ? palette.primary
+                                    : palette.borderSubtle,
+                                }}>
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: '700',
+                                    color: selected
+                                      ? palette.textInverse
+                                      : palette.textSecondary,
+                                  }}>
+                                  {chip}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                        <TextInput
+                          value={answer}
+                          onChangeText={(txt) =>
+                            setFollowUpAnswers((prev) => ({ ...prev, [idx]: txt }))
+                          }
+                          placeholder="Or type a short observation..."
+                          placeholderTextColor={palette.textMuted}
+                          style={{
+                            backgroundColor: palette.bgSurface,
+                            borderWidth: 1,
+                            borderColor: palette.borderSubtle,
+                            borderRadius: 10,
+                            paddingHorizontal: 10,
+                            paddingVertical: 7,
+                            fontSize: 12,
+                            color: palette.textPrimary,
+                          }}
+                        />
+                      </View>
+                    );
+                  })}
+
+                  <Pressable
+                    onPress={handleRefineWithFollowUps}
+                    disabled={isRefiningDiagnosis}
+                    style={({ pressed }) => [
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        marginTop: 6,
+                        backgroundColor: palette.primary,
+                        paddingVertical: 10,
+                        borderRadius: 12,
+                      },
+                      pressed && { opacity: 0.85 },
+                      isRefiningDiagnosis && { opacity: 0.65 },
+                    ]}>
+                    {isRefiningDiagnosis ? (
+                      <ActivityIndicator size="small" color={palette.textInverse} />
+                    ) : (
+                      <Sparkles size={14} color={palette.textInverse} />
+                    )}
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: palette.textInverse,
+                      }}>
+                      {isRefiningDiagnosis
+                        ? 'Refining Diagnosis...'
+                        : 'Refine Diagnosis with Answers'}
                     </Text>
-                  ))}
+                  </Pressable>
+                </View>
+              )}
+
+              {/* Scan History Drawer / Accordion */}
+              {plantAssessments.length > 0 && (
+                <View
+                  style={{
+                    borderTopWidth: 1,
+                    borderTopColor: palette.borderSubtle,
+                    paddingTop: 10,
+                    gap: 8,
+                  }}>
+                  <Pressable
+                    onPress={() => {
+                      triggerLightHaptic();
+                      setShowScanHistory((prev) => !prev);
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <History size={14} color={palette.textSecondary} />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '700',
+                          color: palette.textSecondary,
+                        }}>
+                        Scan History ({plantAssessments.length})
+                      </Text>
+                    </View>
+                    {showScanHistory ? (
+                      <ChevronUp size={16} color={palette.textSecondary} />
+                    ) : (
+                      <ChevronDown size={16} color={palette.textSecondary} />
+                    )}
+                  </Pressable>
+
+                  {showScanHistory &&
+                    plantAssessments.map((hist) => {
+                      const histBadge = healthBadgeTheme[hist.healthStatus];
+                      return (
+                        <View
+                          key={hist.id}
+                          style={{
+                            backgroundColor: palette.bgPrimary,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: palette.borderSubtle,
+                            padding: 10,
+                            gap: 4,
+                          }}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                            }}>
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                fontWeight: '800',
+                                color: histBadge.text,
+                              }}>
+                              {histBadge.label} · every {hist.adjustedWateringIntervalDays}d
+                            </Text>
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                color: palette.textMuted,
+                              }}>
+                              {new Date(hist.createdAt).toLocaleDateString()}
+                            </Text>
+                          </View>
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: palette.textSecondary,
+                              lineHeight: 17,
+                            }}>
+                            {hist.diagnosisSummary}
+                          </Text>
+                        </View>
+                      );
+                    })}
                 </View>
               )}
             </View>
@@ -619,9 +968,53 @@ export default function PlantDetailNotebookScreen() {
 
           {/* 3. QUICK-ACTION CARE EVENT LOGGER + CHRONOLOGICAL NOTEBOOK TIMELINE */}
           <View style={styles.timelineSectionCard}>
-            <Text style={styles.sectionHeaderTitle}>
-              Quick-Log Care or Propagation Milestone
-            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+              <Text style={styles.sectionHeaderTitle}>
+                Quick-Log Care or Propagation Milestone
+              </Text>
+              <Pressable
+                onPress={() => {
+                  triggerLightHaptic();
+                  setShowDetailedLog((prev) => !prev);
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  paddingHorizontal: 9,
+                  paddingVertical: 4,
+                  borderRadius: 999,
+                  backgroundColor: showDetailedLog
+                    ? palette.primarySoft
+                    : palette.bgPrimary,
+                  borderWidth: 1,
+                  borderColor: showDetailedLog
+                    ? palette.primary
+                    : palette.borderSubtle,
+                }}>
+                <Camera
+                  size={12}
+                  color={
+                    showDetailedLog ? palette.primary : palette.textSecondary
+                  }
+                />
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '700',
+                    color: showDetailedLog
+                      ? palette.primary
+                      : palette.textSecondary,
+                  }}>
+                  {showDetailedLog ? 'Hide Details' : 'Photo & Metrics'}
+                </Text>
+              </Pressable>
+            </View>
 
             <TextInput
               value={customNote}
@@ -630,6 +1023,216 @@ export default function PlantDetailNotebookScreen() {
               placeholderTextColor={palette.textMuted}
               style={styles.quickNoteInput}
             />
+
+            {showDetailedLog && (
+              <View
+                style={{
+                  backgroundColor: palette.bgPrimary,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: palette.borderSubtle,
+                  padding: 12,
+                  gap: 10,
+                }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Pressable
+                    onPress={() => void handlePickLogPhoto('camera')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      borderRadius: 10,
+                      backgroundColor: palette.bgSurface,
+                      borderWidth: 1,
+                      borderColor: palette.borderSubtle,
+                    }}>
+                    <Camera size={14} color={palette.primary} />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: palette.textPrimary,
+                      }}>
+                      Camera
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void handlePickLogPhoto('library')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      borderRadius: 10,
+                      backgroundColor: palette.bgSurface,
+                      borderWidth: 1,
+                      borderColor: palette.borderSubtle,
+                    }}>
+                    <ImageIcon size={14} color={palette.primary} />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: palette.textPrimary,
+                      }}>
+                      Library
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {Boolean(logPhotoUri) && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Image
+                      source={{ uri: logPhotoUri }}
+                      style={{ width: 56, height: 56, borderRadius: 10 }}
+                      contentFit="cover"
+                    />
+                    <Pressable
+                      onPress={() => setLogPhotoUri(undefined)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        backgroundColor: palette.bgSurface,
+                        borderWidth: 1,
+                        borderColor: palette.borderSubtle,
+                      }}>
+                      <X size={12} color={palette.textSecondary} />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: palette.textSecondary }}>
+                        Remove Photo
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+
+                <View style={{ gap: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: palette.textSecondary }}>
+                    Soil Moisture Prior
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {SOIL_MOISTURE_OPTIONS.map((opt) => {
+                      const active = logSoilMoisture === opt.value;
+                      return (
+                        <Pressable
+                          key={opt.value}
+                          onPress={() =>
+                            setLogSoilMoisture(active ? undefined : opt.value)
+                          }
+                          style={{
+                            paddingHorizontal: 9,
+                            paddingVertical: 5,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            backgroundColor: active
+                              ? palette.primarySoft
+                              : palette.bgSurface,
+                            borderColor: active
+                              ? palette.primary
+                              : palette.borderSubtle,
+                          }}>
+                          <Text
+                            style={{
+                              fontSize: 11,
+                              fontWeight: '700',
+                              color: active
+                                ? palette.primary
+                                : palette.textSecondary,
+                            }}>
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TextInput
+                    value={logWaterMl}
+                    onChangeText={setLogWaterMl}
+                    placeholder="Water (ml)"
+                    placeholderTextColor={palette.textMuted}
+                    keyboardType="numeric"
+                    style={{
+                      flex: 1,
+                      backgroundColor: palette.bgSurface,
+                      borderWidth: 1,
+                      borderColor: palette.borderSubtle,
+                      borderRadius: 10,
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      fontSize: 12,
+                      color: palette.textPrimary,
+                    }}
+                  />
+                  <TextInput
+                    value={logRootCm}
+                    onChangeText={setLogRootCm}
+                    placeholder="Root (cm)"
+                    placeholderTextColor={palette.textMuted}
+                    keyboardType="decimal-pad"
+                    style={{
+                      flex: 1,
+                      backgroundColor: palette.bgSurface,
+                      borderWidth: 1,
+                      borderColor: palette.borderSubtle,
+                      borderRadius: 10,
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      fontSize: 12,
+                      color: palette.textPrimary,
+                    }}
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TextInput
+                    value={logStemCm}
+                    onChangeText={setLogStemCm}
+                    placeholder="Stem (cm)"
+                    placeholderTextColor={palette.textMuted}
+                    keyboardType="decimal-pad"
+                    style={{
+                      flex: 1,
+                      backgroundColor: palette.bgSurface,
+                      borderWidth: 1,
+                      borderColor: palette.borderSubtle,
+                      borderRadius: 10,
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      fontSize: 12,
+                      color: palette.textPrimary,
+                    }}
+                  />
+                  <TextInput
+                    value={logLeafCount}
+                    onChangeText={setLogLeafCount}
+                    placeholder="Leaf count"
+                    placeholderTextColor={palette.textMuted}
+                    keyboardType="numeric"
+                    style={{
+                      flex: 1,
+                      backgroundColor: palette.bgSurface,
+                      borderWidth: 1,
+                      borderColor: palette.borderSubtle,
+                      borderRadius: 10,
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      fontSize: 12,
+                      color: palette.textPrimary,
+                    }}
+                  />
+                </View>
+              </View>
+            )}
 
             <View style={styles.quickActionsGrid}>
               {quickActions.map((qa) => {
