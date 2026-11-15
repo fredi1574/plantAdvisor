@@ -8,7 +8,7 @@ import {
   Lock,
   Mail,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -24,10 +24,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   CardShadow,
-  Palette,
   Radius,
   Spacing,
+  type ThemePalette,
 } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const LOGO_SOURCE = require('../../logo_transparent.png');
@@ -35,6 +36,8 @@ const LOGO_SOURCE = require('../../logo_transparent.png');
 type FocusedField = 'email' | 'password' | null;
 
 export default function SignInScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const signInWithEmail = useAuthStore((s) => s.signInWithEmail);
   const isLoading = useAuthStore((s) => s.isLoading);
   const authError = useAuthStore((s) => s.authError);
@@ -103,7 +106,7 @@ export default function SignInScreen() {
             <View style={styles.card}>
               {activeError && (
                 <View style={styles.errorBanner}>
-                  <AlertCircle size={16} color={Palette.criticalText} />
+                  <AlertCircle size={16} color={palette.criticalText} />
                   <Text style={styles.errorText}>{activeError}</Text>
                 </View>
               )}
@@ -123,8 +126,8 @@ export default function SignInScreen() {
                       size={16}
                       color={
                         focusedField === 'email'
-                          ? Palette.primary
-                          : Palette.textMuted
+                          ? palette.primary
+                          : palette.textMuted
                       }
                     />
                   </View>
@@ -134,7 +137,7 @@ export default function SignInScreen() {
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                     placeholder="Email address"
-                    placeholderTextColor={Palette.textMuted}
+                    placeholderTextColor={palette.textMuted}
                     style={styles.input}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -157,8 +160,8 @@ export default function SignInScreen() {
                       size={16}
                       color={
                         focusedField === 'password'
-                          ? Palette.primary
-                          : Palette.textMuted
+                          ? palette.primary
+                          : palette.textMuted
                       }
                     />
                   </View>
@@ -168,7 +171,7 @@ export default function SignInScreen() {
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     placeholder="Password"
-                    placeholderTextColor={Palette.textMuted}
+                    placeholderTextColor={palette.textMuted}
                     style={styles.input}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
@@ -180,9 +183,9 @@ export default function SignInScreen() {
                     hitSlop={10}
                     style={styles.eyeBtn}>
                     {showPassword ? (
-                      <EyeOff size={16} color={Palette.textMuted} />
+                      <EyeOff size={16} color={palette.textMuted} />
                     ) : (
-                      <Eye size={16} color={Palette.textMuted} />
+                      <Eye size={16} color={palette.textMuted} />
                     )}
                   </Pressable>
                 </View>
@@ -197,11 +200,11 @@ export default function SignInScreen() {
                   isLoading && styles.submitBtnDisabled,
                 ]}>
                 {isLoading ? (
-                  <ActivityIndicator color={Palette.textInverse} size="small" />
+                  <ActivityIndicator color={palette.textInverse} size="small" />
                 ) : (
                   <>
                     <Text style={styles.submitBtnText}>Enter My Garden</Text>
-                    <ArrowRight size={17} color={Palette.textInverse} />
+                    <ArrowRight size={17} color={palette.textInverse} />
                   </>
                 )}
               </Pressable>
@@ -230,10 +233,11 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
   },
   flex: {
     flex: 1,
@@ -245,7 +249,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: '#E3EFE6',
+    backgroundColor: palette.primarySoft,
     opacity: 0.75,
   },
   ambientOrbBottom: {
@@ -255,7 +259,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: '#EAE4D7',
+    backgroundColor: palette.bgSubtle,
     opacity: 0.65,
   },
   scrollContent: {
@@ -286,9 +290,9 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderWidth: 1,
-    borderColor: '#C5DEC9',
+    borderColor: palette.primaryBorder,
     opacity: 0.8,
   },
   logoImage: {
@@ -298,21 +302,21 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
     letterSpacing: -0.6,
   },
   brandSubtitle: {
     fontSize: 13,
     fontWeight: '500',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     textAlign: 'center',
   },
   card: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     gap: 14,
     ...CardShadow,
   },
@@ -323,15 +327,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: Radius.md,
-    backgroundColor: Palette.criticalBg,
+    backgroundColor: palette.criticalBg,
     borderWidth: 1,
-    borderColor: Palette.criticalBorder,
+    borderColor: palette.criticalBorder,
   },
   errorText: {
     flex: 1,
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.criticalText,
+    color: palette.criticalText,
   },
   inputsStack: {
     gap: 10,
@@ -340,32 +344,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1.2,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: Platform.OS === 'ios' ? 10 : 6,
   },
   inputFieldFocused: {
-    borderColor: Palette.primary,
-    backgroundColor: '#FAFDFB',
+    borderColor: palette.primary,
+    backgroundColor: palette.bgSurface,
   },
   inputIconWrap: {
     width: 30,
     height: 30,
     borderRadius: 9,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
   inputIconWrapFocused: {
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
   },
   input: {
     flex: 1,
     fontSize: 14,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
     paddingVertical: 4,
   },
   eyeBtn: {
@@ -376,11 +380,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
     borderRadius: 14,
     paddingVertical: 13,
     marginTop: 2,
-    shadowColor: Palette.primary,
+    shadowColor: palette.primary,
     shadowOpacity: 0.22,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -394,7 +398,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   submitBtnText: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -406,10 +410,10 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   footerLink: {
-    color: Palette.primary,
+    color: palette.primary,
     fontWeight: '700',
   },
 });

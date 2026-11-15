@@ -10,7 +10,7 @@ import {
   Mail,
   User as UserIcon,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -26,10 +26,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   CardShadow,
-  Palette,
   Radius,
   Spacing,
+  type ThemePalette,
 } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { ExperienceLevel } from '@/types/plant';
 
@@ -47,6 +48,8 @@ const EXPERIENCE_PILLS: {
 type FocusedField = 'name' | 'email' | 'password' | null;
 
 export default function SignUpScreen() {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const signUpWithEmail = useAuthStore((s) => s.signUpWithEmail);
   const isLoading = useAuthStore((s) => s.isLoading);
   const authError = useAuthStore((s) => s.authError);
@@ -141,14 +144,14 @@ export default function SignUpScreen() {
             <View style={styles.card}>
               {activeError && (
                 <View style={styles.errorBanner}>
-                  <AlertCircle size={16} color={Palette.criticalText} />
+                  <AlertCircle size={16} color={palette.criticalText} />
                   <Text style={styles.errorText}>{activeError}</Text>
                 </View>
               )}
 
               {confirmationSent && (
                 <View style={styles.successBanner}>
-                  <CheckCircle2 size={16} color={Palette.thrivingText} />
+                  <CheckCircle2 size={16} color={palette.thrivingText} />
                   <Text style={styles.successText}>
                     Verification link sent to {email.trim()}. Confirm your email,
                     then sign in below.
@@ -171,8 +174,8 @@ export default function SignUpScreen() {
                       size={16}
                       color={
                         focusedField === 'name'
-                          ? Palette.primary
-                          : Palette.textMuted
+                          ? palette.primary
+                          : palette.textMuted
                       }
                     />
                   </View>
@@ -182,7 +185,7 @@ export default function SignUpScreen() {
                     onFocus={() => setFocusedField('name')}
                     onBlur={() => setFocusedField(null)}
                     placeholder="Your name"
-                    placeholderTextColor={Palette.textMuted}
+                    placeholderTextColor={palette.textMuted}
                     style={styles.input}
                     autoCapitalize="words"
                     returnKeyType="next"
@@ -203,8 +206,8 @@ export default function SignUpScreen() {
                       size={16}
                       color={
                         focusedField === 'email'
-                          ? Palette.primary
-                          : Palette.textMuted
+                          ? palette.primary
+                          : palette.textMuted
                       }
                     />
                   </View>
@@ -214,7 +217,7 @@ export default function SignUpScreen() {
                     onFocus={() => setFocusedField('email')}
                     onBlur={() => setFocusedField(null)}
                     placeholder="Email address"
-                    placeholderTextColor={Palette.textMuted}
+                    placeholderTextColor={palette.textMuted}
                     style={styles.input}
                     keyboardType="email-address"
                     autoCapitalize="none"
@@ -237,8 +240,8 @@ export default function SignUpScreen() {
                       size={16}
                       color={
                         focusedField === 'password'
-                          ? Palette.primary
-                          : Palette.textMuted
+                          ? palette.primary
+                          : palette.textMuted
                       }
                     />
                   </View>
@@ -248,7 +251,7 @@ export default function SignUpScreen() {
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     placeholder="Password (min. 6 chars)"
-                    placeholderTextColor={Palette.textMuted}
+                    placeholderTextColor={palette.textMuted}
                     style={styles.input}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
@@ -260,11 +263,38 @@ export default function SignUpScreen() {
                     hitSlop={10}
                     style={styles.eyeBtn}>
                     {showPassword ? (
-                      <EyeOff size={16} color={Palette.textMuted} />
+                      <EyeOff size={16} color={palette.textMuted} />
                     ) : (
-                      <Eye size={16} color={Palette.textMuted} />
+                      <Eye size={16} color={palette.textMuted} />
                     )}
                   </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.experienceSection}>
+                <Text style={styles.experienceLabel}>Botanical Experience</Text>
+                <View style={styles.experienceRow}>
+                  {EXPERIENCE_PILLS.map((pill) => {
+                    const isActive = experienceLevel === pill.value;
+                    return (
+                      <Pressable
+                        key={pill.value}
+                        onPress={() => setExperienceLevel(pill.value)}
+                        style={({ pressed }) => [
+                          styles.experienceChip,
+                          isActive && styles.experienceChipActive,
+                          pressed && styles.submitBtnPressed,
+                        ]}>
+                        <Text
+                          style={[
+                            styles.experienceChipText,
+                            isActive && styles.experienceChipTextActive,
+                          ]}>
+                          {pill.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
 
@@ -277,11 +307,11 @@ export default function SignUpScreen() {
                   isLoading && styles.submitBtnDisabled,
                 ]}>
                 {isLoading ? (
-                  <ActivityIndicator color={Palette.textInverse} size="small" />
+                  <ActivityIndicator color={palette.textInverse} size="small" />
                 ) : (
                   <>
                     <Text style={styles.submitBtnText}>Create Account</Text>
-                    <ArrowRight size={17} color={Palette.textInverse} />
+                    <ArrowRight size={17} color={palette.textInverse} />
                   </>
                 )}
               </Pressable>
@@ -306,10 +336,11 @@ export default function SignUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
   },
   flex: {
     flex: 1,
@@ -321,7 +352,7 @@ const styles = StyleSheet.create({
     width: 240,
     height: 240,
     borderRadius: 120,
-    backgroundColor: '#E3EFE6',
+    backgroundColor: palette.primarySoft,
     opacity: 0.75,
   },
   ambientOrbBottom: {
@@ -331,7 +362,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: '#EAE4D7',
+    backgroundColor: palette.bgSubtle,
     opacity: 0.65,
   },
   scrollContent: {
@@ -362,9 +393,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     borderWidth: 1,
-    borderColor: '#C5DEC9',
+    borderColor: palette.primaryBorder,
     opacity: 0.8,
   },
   logoImage: {
@@ -374,21 +405,21 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 26,
     fontWeight: '800',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
     letterSpacing: -0.6,
   },
   brandSubtitle: {
     fontSize: 13,
     fontWeight: '500',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     textAlign: 'center',
   },
   card: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     gap: 14,
     ...CardShadow,
   },
@@ -399,15 +430,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: Radius.md,
-    backgroundColor: Palette.criticalBg,
+    backgroundColor: palette.criticalBg,
     borderWidth: 1,
-    borderColor: Palette.criticalBorder,
+    borderColor: palette.criticalBorder,
   },
   errorText: {
     flex: 1,
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.criticalText,
+    color: palette.criticalText,
   },
   successBanner: {
     flexDirection: 'row',
@@ -416,15 +447,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: Radius.md,
-    backgroundColor: Palette.thrivingBg,
+    backgroundColor: palette.thrivingBg,
     borderWidth: 1,
-    borderColor: Palette.thrivingBorder,
+    borderColor: palette.thrivingBorder,
   },
   successText: {
     flex: 1,
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.thrivingText,
+    color: palette.thrivingText,
     lineHeight: 17,
   },
   inputsStack: {
@@ -434,32 +465,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1.2,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: Platform.OS === 'ios' ? 10 : 6,
   },
   inputFieldFocused: {
-    borderColor: Palette.primary,
-    backgroundColor: '#FAFDFB',
+    borderColor: palette.primary,
+    backgroundColor: palette.bgSurface,
   },
   inputIconWrap: {
     width: 30,
     height: 30,
     borderRadius: 9,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
   inputIconWrapFocused: {
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
   },
   input: {
     flex: 1,
     fontSize: 14,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
     paddingVertical: 4,
   },
   eyeBtn: {
@@ -472,20 +503,47 @@ const styles = StyleSheet.create({
   experienceLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
+  },
+  experienceRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  experienceChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 8,
+    borderRadius: Radius.md,
+    backgroundColor: palette.bgPrimary,
+    borderWidth: 1,
+    borderColor: palette.borderSubtle,
+  },
+  experienceChipActive: {
+    backgroundColor: palette.primarySoft,
+    borderColor: palette.primary,
+  },
+  experienceChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: palette.textSecondary,
+  },
+  experienceChipTextActive: {
+    color: palette.primary,
+    fontWeight: '700',
   },
   submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
     borderRadius: 14,
     paddingVertical: 13,
     marginTop: 2,
-    shadowColor: Palette.primary,
+    shadowColor: palette.primary,
     shadowOpacity: 0.22,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -499,7 +557,7 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   submitBtnText: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
     fontSize: 15,
     fontWeight: '700',
   },
@@ -511,10 +569,10 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 13,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   footerLink: {
-    color: Palette.primary,
+    color: palette.primary,
     fontWeight: '700',
   },
 });

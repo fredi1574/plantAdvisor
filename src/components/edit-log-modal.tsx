@@ -10,7 +10,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -26,10 +26,11 @@ import {
 import {
   CardShadow,
   MaxContentWidth,
-  Palette,
   Radius,
   Spacing,
+  type ThemePalette,
 } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 import { usePlantStore } from '@/store/usePlantStore';
 import type { CareEventType, NotebookEntry } from '@/types/plant';
 
@@ -41,14 +42,16 @@ interface EditLogModalProps {
   onRequestDelete?: (entry: NotebookEntry) => void;
 }
 
-const EVENT_TYPES: { key: CareEventType; label: string; color: string }[] = [
-  { key: 'water', label: 'Water', color: Palette.waterBlue },
-  { key: 'propagation', label: 'Propagation', color: Palette.accentTerracotta },
-  { key: 'fertilize', label: 'Fertilize', color: Palette.primary },
-  { key: 'prune', label: 'Prune', color: Palette.primaryMuted },
-  { key: 'repot', label: 'Repot', color: Palette.accentTerracotta },
-  { key: 'note', label: 'Note', color: Palette.textSecondary },
-  { key: 'ai_scan', label: 'AI Scan', color: Palette.primary },
+const getEventTypes = (
+  palette: ThemePalette
+): { key: CareEventType; label: string; color: string }[] => [
+  { key: 'water', label: 'Water', color: palette.waterBlue },
+  { key: 'propagation', label: 'Propagation', color: palette.accentTerracotta },
+  { key: 'fertilize', label: 'Fertilize', color: palette.primary },
+  { key: 'prune', label: 'Prune', color: palette.primaryMuted },
+  { key: 'repot', label: 'Repot', color: palette.accentTerracotta },
+  { key: 'note', label: 'Note', color: palette.textSecondary },
+  { key: 'ai_scan', label: 'AI Scan', color: palette.primary },
 ];
 
 type SoilMoisture = NonNullable<NotebookEntry['metrics']>['soilMoisture'];
@@ -102,6 +105,9 @@ function EditLogFormSheet({
   onSaved,
   onRequestDelete,
 }: EditLogFormSheetProps) {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
+  const eventTypes = useMemo(() => getEventTypes(palette), [palette]);
   const updateCareEntry = usePlantStore((s) => s.updateCareEntry);
 
   const [eventType, setEventType] = useState<CareEventType>(entry.eventType);
@@ -182,7 +188,7 @@ function EditLogFormSheet({
         <View style={styles.sheetHeader}>
           <View style={styles.headerTitleGroup}>
             <View style={styles.headerIconPill}>
-              <Pencil size={16} color={Palette.primary} />
+              <Pencil size={16} color={palette.primary} />
             </View>
             <View>
               <Text style={styles.sheetEyebrow}>CARE TIMELINE LOG</Text>
@@ -198,7 +204,7 @@ function EditLogFormSheet({
             ]}
             accessibilityRole="button"
             accessibilityLabel="Close edit log modal">
-            <X size={20} color={Palette.textSecondary} />
+            <X size={20} color={palette.textSecondary} />
           </Pressable>
         </View>
 
@@ -211,9 +217,9 @@ function EditLogFormSheet({
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Event Category</Text>
             <View style={styles.chipRow}>
-              {EVENT_TYPES.map((et) => {
+              {eventTypes.map((et) => {
                 const active = eventType === et.key;
-                const iconColor = active ? Palette.textInverse : et.color;
+                const iconColor = active ? palette.textInverse : et.color;
                 return (
                   <Pressable
                     key={et.key}
@@ -257,7 +263,7 @@ function EditLogFormSheet({
               value={title}
               onChangeText={setTitle}
               placeholder="e.g., Deep Soak & Dry Watering"
-              placeholderTextColor={Palette.textMuted}
+              placeholderTextColor={palette.textMuted}
               style={styles.textInput}
             />
           </View>
@@ -271,7 +277,7 @@ function EditLogFormSheet({
               multiline
               numberOfLines={3}
               placeholder="Describe watering details, root growth, or observations..."
-              placeholderTextColor={Palette.textMuted}
+              placeholderTextColor={palette.textMuted}
               style={[styles.textInput, styles.multilineInput]}
             />
           </View>
@@ -289,7 +295,7 @@ function EditLogFormSheet({
                   onChangeText={setRootLengthCm}
                   keyboardType="decimal-pad"
                   placeholder="e.g., 8.5"
-                  placeholderTextColor={Palette.textMuted}
+                  placeholderTextColor={palette.textMuted}
                   style={styles.textInput}
                 />
               </View>
@@ -300,7 +306,7 @@ function EditLogFormSheet({
                   onChangeText={setStemHeightCm}
                   keyboardType="decimal-pad"
                   placeholder="e.g., 14.0"
-                  placeholderTextColor={Palette.textMuted}
+                  placeholderTextColor={palette.textMuted}
                   style={styles.textInput}
                 />
               </View>
@@ -314,7 +320,7 @@ function EditLogFormSheet({
                   onChangeText={setLeafCount}
                   keyboardType="number-pad"
                   placeholder="e.g., 6"
-                  placeholderTextColor={Palette.textMuted}
+                  placeholderTextColor={palette.textMuted}
                   style={styles.textInput}
                 />
               </View>
@@ -325,7 +331,7 @@ function EditLogFormSheet({
                   onChangeText={setWaterAmountMl}
                   keyboardType="number-pad"
                   placeholder="e.g., 250"
-                  placeholderTextColor={Palette.textMuted}
+                  placeholderTextColor={palette.textMuted}
                   style={styles.textInput}
                 />
               </View>
@@ -373,7 +379,7 @@ function EditLogFormSheet({
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Delete log ${entry.title}`}>
-              <Trash2 size={16} color={Palette.criticalText} />
+              <Trash2 size={16} color={palette.criticalText} />
             </Pressable>
           )}
 
@@ -392,7 +398,7 @@ function EditLogFormSheet({
               styles.saveBtn,
               pressed && { opacity: 0.85 },
             ]}>
-            <CheckCircle2 size={16} color={Palette.textInverse} />
+            <CheckCircle2 size={16} color={palette.textInverse} />
             <Text style={styles.saveBtnText}>Save Log</Text>
           </Pressable>
         </View>
@@ -401,10 +407,11 @@ function EditLogFormSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(28, 40, 32, 0.45)',
+    backgroundColor: palette.scrimDark,
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
@@ -415,11 +422,11 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     maxHeight: '90%',
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     overflow: 'hidden',
     ...CardShadow,
   },
@@ -430,8 +437,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Palette.bgSubtle,
-    backgroundColor: Palette.bgPrimary,
+    borderBottomColor: palette.bgSubtle,
+    backgroundColor: palette.bgPrimary,
   },
   headerTitleGroup: {
     flexDirection: 'row',
@@ -442,7 +449,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -450,18 +457,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: Palette.primary,
+    color: palette.primary,
   },
   sheetTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   closeIconBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -478,7 +485,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   subField: {
     gap: 4,
@@ -486,17 +493,17 @@ const styles = StyleSheet.create({
   subFieldLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   textInput: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: Radius.md,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 14,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   multilineInput: {
     minHeight: 78,
@@ -518,21 +525,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: Radius.full,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   chipActive: {
-    backgroundColor: Palette.primary,
-    borderColor: Palette.primary,
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
   },
   chipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   chipTextActive: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   sheetFooter: {
     flexDirection: 'row',
@@ -542,16 +549,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: Palette.bgSubtle,
-    backgroundColor: Palette.bgPrimary,
+    borderTopColor: palette.bgSubtle,
+    backgroundColor: palette.bgPrimary,
   },
   deleteOutlineBtn: {
     width: 40,
     height: 40,
     borderRadius: Radius.md,
-    backgroundColor: Palette.criticalBg,
+    backgroundColor: palette.criticalBg,
     borderWidth: 1,
-    borderColor: Palette.criticalBorder,
+    borderColor: palette.criticalBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 'auto',
@@ -560,14 +567,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: Radius.full,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   saveBtn: {
     flexDirection: 'row',
@@ -576,12 +583,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: Radius.full,
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
   },
   saveBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
 });
 

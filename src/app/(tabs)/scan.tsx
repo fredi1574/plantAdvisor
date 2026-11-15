@@ -70,6 +70,21 @@ const DEMO_PRESETS = [
   },
 ];
 
+const LIGHT_EXPOSURE_OPTIONS: { key: LightExposure; label: string }[] = [
+  { key: "bright_direct", label: "Bright Direct" },
+  { key: "bright_indirect", label: "Bright Indirect" },
+  { key: "medium_filtered", label: "Medium Filtered" },
+  { key: "low_shade", label: "Low Shade" },
+  { key: "grow_light", label: "Grow Light" },
+];
+
+const SYMPTOM_CHIPS = [
+  "Yellowing lower leaves",
+  "Soft or mushy leaves",
+  "Stretched / leggy stems",
+  "Brown crispy leaf tips",
+] as const;
+
 export default function ScanScreen() {
   const palette = usePalette();
   const styles = useMemo(() => createStyles(palette), [palette]);
@@ -106,16 +121,16 @@ export default function ScanScreen() {
   const [location, setLocation] = useState<string>("South Living Room Sill");
   const [hasDrainageHole, setHasDrainageHole] = useState<boolean>(true);
   const [potMaterial, setPotMaterial] = useState<PotMaterial>("terracotta");
-  const [lightExposure] = useState<LightExposure>("bright_direct");
+  const [lightExposure, setLightExposure] =
+    useState<LightExposure>("bright_direct");
+  const [isIndoor, setIsIndoor] = useState<boolean>(true);
   const isLiveAi = useMemo(() => !isMockAiEnabled(), []);
 
   // Workflow 2: Health Diagnosis state
   const [selectedPlantId, setSelectedPlantId] = useState<string>(
     params.plantId || plants[0]?.id || "",
   );
-  const [observationNotes, setObservationNotes] = useState<string>(
-    "Two lower leaves look slightly yellow and plump after recent waterings.",
-  );
+  const [observationNotes, setObservationNotes] = useState<string>("");
   const [diagnosisResult, setDiagnosisResult] =
     useState<PlantDiagnosisResult | null>(null);
 
@@ -230,7 +245,7 @@ export default function ScanScreen() {
     const created = addPlant({
       nickname: nickname || idResult.commonName,
       location,
-      isIndoor: true,
+      isIndoor,
       lightExposure,
       hasDrainageHole,
       potMaterial,
@@ -293,6 +308,32 @@ export default function ScanScreen() {
         <View style={styles.maxContainer}>
           {/* Screen Title */}
           <View style={styles.headerBlock}>
+            <View style={styles.eyebrowRow}>
+              <Text style={styles.eyebrow}>AI BOTANIST & SCANNER</Text>
+              <View
+                style={[
+                  styles.engineBadge,
+                  isLiveAi ? styles.engineBadgeLive : styles.engineBadgeMock,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.engineDot,
+                    isLiveAi ? styles.engineDotLive : styles.engineDotMock,
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.engineBadgeText,
+                    isLiveAi
+                      ? styles.engineBadgeTextLive
+                      : styles.engineBadgeTextMock,
+                  ]}
+                >
+                  {isLiveAi ? "Live Gemini AI" : "Botanical Mock"}
+                </Text>
+              </View>
+            </View>
             <Text style={styles.headerTitle}>Add or Scan Plant</Text>
             <Text style={styles.headerSubtitle}>
               Identify a new plant or run a context-aware AI Health Scan
@@ -416,6 +457,40 @@ export default function ScanScreen() {
                 <Text style={styles.secondaryMediaBtnText}>Photo Library</Text>
               </Pressable>
             </View>
+
+            <View style={styles.presetBlock}>
+              <Text style={styles.presetLabel}>Quick Sample Presets</Text>
+              <View style={styles.presetRow}>
+                {DEMO_PRESETS.map((preset) => {
+                  const active = imageUri === preset.uri;
+                  return (
+                    <Pressable
+                      key={preset.label}
+                      onPress={() => {
+                        setErrorMessage(null);
+                        setImageUri(preset.uri);
+                        setImageDimensions("");
+                        setSearchQuery(preset.query);
+                        setIdResult(null);
+                      }}
+                      style={[
+                        styles.presetChip,
+                        active && styles.presetChipActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.presetChipText,
+                          active && styles.presetChipTextActive,
+                        ]}
+                      >
+                        {preset.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
           </View>
 
           {errorMessage && (
@@ -525,6 +600,7 @@ export default function ScanScreen() {
                       onChangeText={setNickname}
                       style={styles.textInput}
                       placeholder="e.g., Sunny Window Jade"
+                      placeholderTextColor={palette.textMuted}
                     />
                   </View>
 
@@ -537,6 +613,50 @@ export default function ScanScreen() {
                       onChangeText={setLocation}
                       style={styles.textInput}
                       placeholder="e.g., South Living Room Sill"
+                      placeholderTextColor={palette.textMuted}
+                    />
+                  </View>
+
+                  <View style={styles.fieldGroup}>
+                    <Text style={styles.fieldLabel}>Light Exposure</Text>
+                    <View style={styles.presetRow}>
+                      {LIGHT_EXPOSURE_OPTIONS.map((opt) => (
+                        <Pressable
+                          key={opt.key}
+                          onPress={() => setLightExposure(opt.key)}
+                          style={[
+                            styles.presetChip,
+                            lightExposure === opt.key && styles.presetChipActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.presetChipText,
+                              lightExposure === opt.key &&
+                                styles.presetChipTextActive,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.switchRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fieldLabel}>Indoor Specimen</Text>
+                      <Text style={styles.switchSub}>
+                        Toggle off if grown outdoors on a patio or garden bed
+                      </Text>
+                    </View>
+                    <Switch
+                      value={isIndoor}
+                      onValueChange={setIsIndoor}
+                      trackColor={{
+                        false: palette.borderSubtle,
+                        true: palette.primary,
+                      }}
                     />
                   </View>
 
@@ -680,6 +800,23 @@ export default function ScanScreen() {
                   placeholder="Describe any yellowing, wrinkling, stretching, spots, or root growth..."
                   placeholderTextColor={palette.textMuted}
                 />
+                <View style={styles.presetRow}>
+                  {SYMPTOM_CHIPS.map((symptom) => (
+                    <Pressable
+                      key={symptom}
+                      onPress={() =>
+                        setObservationNotes((prev) =>
+                          prev.trim()
+                            ? `${prev.trim().replace(/[.;]+$/, "")}; ${symptom.toLowerCase()}.`
+                            : `${symptom}.`,
+                        )
+                      }
+                      style={styles.presetChip}
+                    >
+                      <Text style={styles.presetChipText}>+ {symptom}</Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
 
               <Pressable
@@ -989,7 +1126,7 @@ const createStyles = (palette: ThemePalette) =>
       borderRadius: Radius.md,
       backgroundColor: palette.primarySoft,
       borderWidth: 1,
-      borderColor: "#C5DEC9",
+      borderColor: palette.primaryBorder,
     },
     secondaryMediaBtnText: {
       fontSize: 13,

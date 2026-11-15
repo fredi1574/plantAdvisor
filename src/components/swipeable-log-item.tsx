@@ -1,5 +1,5 @@
 import { Pencil, Trash2 } from 'lucide-react-native';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -18,7 +18,8 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { Palette, Radius } from '@/constants/theme';
+import { Radius, type ThemePalette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 import type { NotebookEntry } from '@/types/plant';
 
 const RIGHT_OPEN_WIDTH = 86; // Swiping right reveals Edit on left
@@ -60,6 +61,8 @@ export function SwipeableLogItem({
   onEdit,
   onDelete,
 }: SwipeableLogItemProps) {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const translateX = useSharedValue(0);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -245,10 +248,10 @@ export function SwipeableLogItem({
 
   const nodeColor =
     entry.eventType === 'water'
-      ? Palette.waterBlue
+      ? palette.waterBlue
       : entry.eventType === 'propagation' || entry.eventType === 'repot'
-        ? Palette.accentTerracotta
-        : Palette.primary;
+        ? palette.accentTerracotta
+        : palette.primary;
 
   const handleBoxPress = () => {
     if (gestureRef.current.isSwiping) return;
@@ -283,7 +286,7 @@ export function SwipeableLogItem({
               accessibilityRole="button"
               accessibilityLabel={`Edit log ${entry.title}`}>
               <Animated.View style={[styles.actionBtnContent, leftActionContentStyle]}>
-                <Pencil size={15} color={Palette.textInverse} />
+                <Pencil size={15} color={palette.textInverse} />
                 <Text style={styles.actionBtnLabel}>Edit</Text>
               </Animated.View>
             </Pressable>
@@ -302,7 +305,7 @@ export function SwipeableLogItem({
               accessibilityRole="button"
               accessibilityLabel={`Delete log ${entry.title}`}>
               <Animated.View style={[styles.actionBtnContent, rightActionContentStyle]}>
-                <Trash2 size={15} color={Palette.textInverse} />
+                <Trash2 size={15} color={palette.textInverse} />
                 <Text style={styles.actionBtnLabel}>Delete</Text>
               </Animated.View>
             </Pressable>
@@ -378,7 +381,8 @@ export function SwipeableLogItem({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   timelineRow: {
     flexDirection: 'row',
     gap: 12,
@@ -396,7 +400,7 @@ const styles = StyleSheet.create({
   timelineVerticalLine: {
     flex: 1,
     width: 2,
-    backgroundColor: Palette.borderSubtle,
+    backgroundColor: palette.borderSubtle,
     marginVertical: 4,
   },
   swipeWrapper: {
@@ -411,7 +415,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'stretch',
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     borderRadius: Radius.md,
   },
   leftActionSlot: {
@@ -437,10 +441,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   editActionBtn: {
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
   },
   deleteActionBtn: {
-    backgroundColor: '#DC2626',
+    backgroundColor: palette.criticalDot,
   },
   actionBtnPressed: {
     opacity: 0.85,
@@ -448,22 +452,22 @@ const styles = StyleSheet.create({
   actionBtnLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: Palette.textInverse,
+    color: palette.textInverse,
     letterSpacing: 0.3,
   },
   animatedBoxWrap: {
     width: '100%',
   },
   timelineEventBox: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: Radius.md,
     padding: 12,
     gap: 5,
   },
   timelineEventBoxPressed: {
-    backgroundColor: '#FAF8F4',
+    backgroundColor: palette.bgSubtle,
   },
   timelineEventHeader: {
     flexDirection: 'row',
@@ -475,17 +479,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   timelineEventDate: {
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.textMuted,
+    color: palette.textMuted,
   },
   timelineEventNotes: {
     fontSize: 13,
     lineHeight: 19,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   metricsPillsRow: {
     flexDirection: 'row',
@@ -494,9 +498,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   metricPill: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: Radius.sm,
@@ -504,7 +508,7 @@ const styles = StyleSheet.create({
   metricPillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
 });
 

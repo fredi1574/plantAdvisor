@@ -10,7 +10,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -27,10 +27,11 @@ import {
 import {
   CardShadow,
   MaxContentWidth,
-  Palette,
   Radius,
   Spacing,
+  type ThemePalette,
 } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 import { prepareImageForAI } from '@/services/imageUtils';
 import { usePlantStore } from '@/store/usePlantStore';
 import type {
@@ -110,6 +111,8 @@ function EditPlantFormSheet({
   onSaved,
   onRequestDelete,
 }: EditPlantFormSheetProps) {
+  const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const updatePlant = usePlantStore((s) => s.updatePlant);
 
   const [nickname, setNickname] = useState(plant.nickname);
@@ -210,7 +213,7 @@ function EditPlantFormSheet({
         <View style={styles.sheetHeader}>
           <View style={styles.headerTitleGroup}>
             <View style={styles.headerIconPill}>
-              <Pencil size={16} color={Palette.primary} />
+              <Pencil size={16} color={palette.primary} />
             </View>
             <View>
               <Text style={styles.sheetEyebrow}>BOTANICAL SPECIMEN</Text>
@@ -226,7 +229,7 @@ function EditPlantFormSheet({
             ]}
             accessibilityRole="button"
             accessibilityLabel="Close edit plant modal">
-            <X size={20} color={Palette.textSecondary} />
+            <X size={20} color={palette.textSecondary} />
           </Pressable>
         </View>
 
@@ -251,7 +254,7 @@ function EditPlantFormSheet({
                     styles.photoBtn,
                     pressed && { opacity: 0.8 },
                   ]}>
-                  <Camera size={14} color={Palette.primary} />
+                  <Camera size={14} color={palette.primary} />
                   <Text style={styles.photoBtnText}>Camera</Text>
                 </Pressable>
                 <Pressable
@@ -260,7 +263,7 @@ function EditPlantFormSheet({
                     styles.photoBtn,
                     pressed && { opacity: 0.8 },
                   ]}>
-                  <ImageIcon size={14} color={Palette.primary} />
+                  <ImageIcon size={14} color={palette.primary} />
                   <Text style={styles.photoBtnText}>Library</Text>
                 </Pressable>
               </View>
@@ -274,7 +277,7 @@ function EditPlantFormSheet({
               value={nickname}
               onChangeText={setNickname}
               placeholder="e.g., Sunny Window Jade"
-              placeholderTextColor={Palette.textMuted}
+              placeholderTextColor={palette.textMuted}
               style={styles.textInput}
             />
           </View>
@@ -287,7 +290,7 @@ function EditPlantFormSheet({
                 value={commonName}
                 onChangeText={setCommonName}
                 placeholder="e.g., Jade Plant"
-                placeholderTextColor={Palette.textMuted}
+                placeholderTextColor={palette.textMuted}
                 style={styles.textInput}
               />
             </View>
@@ -298,7 +301,7 @@ function EditPlantFormSheet({
                 value={scientificName}
                 onChangeText={setScientificName}
                 placeholder="e.g., Crassula ovata"
-                placeholderTextColor={Palette.textMuted}
+                placeholderTextColor={palette.textMuted}
                 style={[styles.textInput, styles.italicInput]}
               />
             </View>
@@ -312,7 +315,7 @@ function EditPlantFormSheet({
                 value={location}
                 onChangeText={setLocation}
                 placeholder="e.g., South Sill"
-                placeholderTextColor={Palette.textMuted}
+                placeholderTextColor={palette.textMuted}
                 style={styles.textInput}
               />
             </View>
@@ -328,7 +331,7 @@ function EditPlantFormSheet({
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel="Decrease watering interval">
-                  <Minus size={15} color={Palette.textPrimary} />
+                  <Minus size={15} color={palette.textPrimary} />
                 </Pressable>
                 <TextInput
                   value={wateringDays}
@@ -344,7 +347,7 @@ function EditPlantFormSheet({
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel="Increase watering interval">
-                  <Plus size={15} color={Palette.textPrimary} />
+                  <Plus size={15} color={palette.textPrimary} />
                 </Pressable>
               </View>
             </View>
@@ -436,8 +439,8 @@ function EditPlantFormSheet({
               value={hasDrainageHole}
               onValueChange={setHasDrainageHole}
               trackColor={{
-                false: Palette.borderSubtle,
-                true: Palette.primary,
+                false: palette.borderSubtle,
+                true: palette.primary,
               }}
             />
           </View>
@@ -457,7 +460,7 @@ function EditPlantFormSheet({
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Delete ${plant.nickname}`}>
-              <Trash2 size={16} color={Palette.criticalText} />
+              <Trash2 size={16} color={palette.criticalText} />
             </Pressable>
           )}
 
@@ -476,7 +479,7 @@ function EditPlantFormSheet({
               styles.saveBtn,
               pressed && { opacity: 0.85 },
             ]}>
-            <CheckCircle2 size={16} color={Palette.textInverse} />
+            <CheckCircle2 size={16} color={palette.textInverse} />
             <Text style={styles.saveBtnText}>Save Changes</Text>
           </Pressable>
         </View>
@@ -485,10 +488,11 @@ function EditPlantFormSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(28, 40, 32, 0.45)',
+    backgroundColor: palette.scrimDark,
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
@@ -499,11 +503,11 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     maxHeight: '90%',
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     overflow: 'hidden',
     ...CardShadow,
   },
@@ -514,8 +518,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Palette.bgSubtle,
-    backgroundColor: Palette.bgPrimary,
+    borderBottomColor: palette.bgSubtle,
+    backgroundColor: palette.bgPrimary,
   },
   headerTitleGroup: {
     flexDirection: 'row',
@@ -526,7 +530,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: Palette.primarySoft,
+    backgroundColor: palette.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -534,18 +538,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: Palette.primary,
+    color: palette.primary,
   },
   sheetTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   closeIconBtn: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -560,17 +564,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     padding: Spacing.sm,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   photoPreview: {
     width: 64,
     height: 64,
     borderRadius: Radius.sm,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
   },
   photoActionsCol: {
     flex: 1,
@@ -584,9 +588,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: Radius.sm,
@@ -594,7 +598,7 @@ const styles = StyleSheet.create({
   photoBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.primary,
+    color: palette.primary,
   },
   fieldGroup: {
     gap: 6,
@@ -602,17 +606,17 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   textInput: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: Radius.md,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 14,
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   italicInput: {
     fontStyle: 'italic',
@@ -624,16 +628,16 @@ const styles = StyleSheet.create({
   stepperRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     borderRadius: Radius.md,
     overflow: 'hidden',
   },
   stepperBtn: {
     paddingHorizontal: 10,
     paddingVertical: 9,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -642,7 +646,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
     paddingVertical: 6,
   },
   chipRow: {
@@ -654,36 +658,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: Radius.full,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   chipActive: {
-    backgroundColor: Palette.primary,
-    borderColor: Palette.primary,
+    backgroundColor: palette.primary,
+    borderColor: palette.primary,
   },
   chipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   chipTextActive: {
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.md,
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     padding: Spacing.md,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   switchSub: {
     fontSize: 11,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     marginTop: 2,
   },
   sheetFooter: {
@@ -694,16 +698,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: Palette.bgSubtle,
-    backgroundColor: Palette.bgPrimary,
+    borderTopColor: palette.bgSubtle,
+    backgroundColor: palette.bgPrimary,
   },
   deleteOutlineBtn: {
     width: 40,
     height: 40,
     borderRadius: Radius.md,
-    backgroundColor: Palette.criticalBg,
+    backgroundColor: palette.criticalBg,
     borderWidth: 1,
-    borderColor: Palette.criticalBorder,
+    borderColor: palette.criticalBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 'auto',
@@ -712,14 +716,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: Radius.full,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   saveBtn: {
     flexDirection: 'row',
@@ -728,11 +732,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: Radius.full,
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
   },
   saveBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
 });

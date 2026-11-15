@@ -140,7 +140,7 @@ export default function TabsLayout() {
       )}
       screenLayout={({ children, route }) => (
         <BlurTargetView
-          ref={(node) => {
+          ref={(node: BlurTargetNode) => {
             blurTargetsRef.current[route.key] = node;
           }}
           style={styles.screenTarget}>

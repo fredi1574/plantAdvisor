@@ -1,12 +1,15 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
+  AlertCircle,
   ArrowLeft,
+  Calendar,
   CheckSquare,
   Droplets,
   FileText,
   FlaskConical,
   HelpCircle,
+  Layers,
   MapPin,
   Pencil,
   Scissors,
@@ -127,6 +130,7 @@ export default function PlantDetailNotebookScreen() {
   const [selectedQuickType, setSelectedQuickType] =
     useState<CareEventType>('water');
   const [isRescanning, setIsRescanning] = useState<boolean>(false);
+  const [rescanError, setRescanError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [editingEntry, setEditingEntry] = useState<NotebookEntry | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
@@ -239,6 +243,7 @@ export default function PlantDetailNotebookScreen() {
   };
 
   const handleInstantAiRescan = async () => {
+    setRescanError(null);
     setIsRescanning(true);
     try {
       const diagnosis = await diagnosePlantHealth(
@@ -248,6 +253,13 @@ export default function PlantDetailNotebookScreen() {
         customNote.trim() || undefined
       );
       saveHealthAssessment(plant.id, diagnosis, plant.photoUri);
+      showToast('AI Health Assessment refreshed! 🌿');
+    } catch (err) {
+      setRescanError(
+        err instanceof Error
+          ? err.message
+          : 'Could not complete AI health scan right now.'
+      );
     } finally {
       setIsRescanning(false);
     }
@@ -351,7 +363,21 @@ export default function PlantDetailNotebookScreen() {
 
                 <View style={styles.locationRow}>
                   <MapPin size={13} color={palette.textSecondary} />
-                  <Text style={styles.locationLabel}>{plant.location}</Text>
+                  <Text style={styles.locationLabel}>
+                    {plant.location} • {plant.isIndoor ? 'Indoor' : 'Outdoor'}
+                  </Text>
+                </View>
+
+                <View style={styles.locationRow}>
+                  <Calendar size={12} color={palette.textMuted} />
+                  <Text style={styles.acquiredLabel}>
+                    Acquired{' '}
+                    {new Date(plant.acquiredAt).toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -370,6 +396,15 @@ export default function PlantDetailNotebookScreen() {
                 <Text style={styles.specBadgeValue}>
                   {plant.potMaterial.replace('_', ' ')} •{' '}
                   {plant.hasDrainageHole ? 'Drainage Hole ✓' : 'No Drainage Hole'}
+                </Text>
+              </View>
+
+              {/* Current Light Exposure */}
+              <View style={styles.specBadge}>
+                <Text style={styles.specBadgeLabel}>CURRENT EXPOSURE</Text>
+                <Text style={styles.specBadgeValue}>
+                  {plant.lightExposure.replace('_', ' ')} •{' '}
+                  {plant.isIndoor ? 'Indoor' : 'Outdoor'}
                 </Text>
               </View>
 
@@ -402,15 +437,31 @@ export default function PlantDetailNotebookScreen() {
               </View>
             </View>
 
-            {/* Baseline Species Light & Soil bar */}
-            <View style={styles.baselineStrip}>
-              <Sun size={14} color={palette.primary} />
-              <Text style={styles.baselineStripText}>
-                <Text style={{ fontWeight: '700' }}>Ideal Light: </Text>
-                {plant.species.baselineCare.idealLight}
-              </Text>
+            {/* Baseline Species Light & Soil bars */}
+            <View style={styles.baselineStack}>
+              <View style={styles.baselineStrip}>
+                <Sun size={14} color={palette.primary} />
+                <Text style={styles.baselineStripText}>
+                  <Text style={{ fontWeight: '700' }}>Ideal Light: </Text>
+                  {plant.species.baselineCare.idealLight}
+                </Text>
+              </View>
+              <View style={styles.baselineStrip}>
+                <Layers size={14} color={palette.primary} />
+                <Text style={styles.baselineStripText}>
+                  <Text style={{ fontWeight: '700' }}>Recommended Soil: </Text>
+                  {plant.species.baselineCare.soilRecommendation}
+                </Text>
+              </View>
             </View>
           </View>
+
+          {rescanError && (
+            <View style={styles.errorBanner}>
+              <AlertCircle size={16} color={palette.criticalText} />
+              <Text style={styles.errorBannerText}>{rescanError}</Text>
+            </View>
+          )}
 
           {/* 2. LATEST AI HEALTH ASSESSMENT CARD (with Interactive Checkable Next Steps) */}
           {assessment && (
@@ -771,8 +822,8 @@ const createStyles = (palette: ThemePalette) =>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#DCFCE7',
-    borderColor: '#86EFAC',
+    backgroundColor: palette.thrivingBg,
+    borderColor: palette.thrivingBorder,
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -781,7 +832,24 @@ const createStyles = (palette: ThemePalette) =>
   feedbackBannerText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#15803D',
+    color: palette.thrivingText,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: palette.criticalBg,
+    borderColor: palette.criticalBorder,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: Radius.md,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: palette.criticalText,
   },
   heroCard: {
     backgroundColor: palette.bgSurface,
@@ -868,6 +936,11 @@ const createStyles = (palette: ThemePalette) =>
     fontWeight: '600',
     color: palette.textSecondary,
   },
+  acquiredLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: palette.textMuted,
+  },
   specsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -908,9 +981,12 @@ const createStyles = (palette: ThemePalette) =>
     alignItems: 'center',
     gap: 5,
   },
+  baselineStack: {
+    gap: Spacing.xs + 2,
+  },
   baselineStrip: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
     backgroundColor: palette.primarySoft,
     paddingHorizontal: 12,
@@ -955,7 +1031,7 @@ const createStyles = (palette: ThemePalette) =>
   rescanPillBtn: {
     backgroundColor: palette.primarySoft,
     borderWidth: 1,
-    borderColor: '#C5DEC9',
+    borderColor: palette.primaryBorder,
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: Radius.full,
@@ -1031,7 +1107,7 @@ const createStyles = (palette: ThemePalette) =>
   },
   checkableActionDone: {
     backgroundColor: palette.primarySoft,
-    borderColor: '#C5DEC9',
+    borderColor: palette.primaryBorder,
   },
   checkableTextCol: {
     flex: 1,

@@ -329,6 +329,14 @@ export default function ProfileScreen() {
                       {profile?.displayName || 'Gardener'}
                     </Text>
                     <Text style={styles.profileEmail}>{user.email}</Text>
+                    <View style={styles.badgeRow}>
+                      <View style={styles.levelBadge}>
+                        <Sprout size={12} color={palette.primary} />
+                        <Text style={styles.levelBadgeText}>
+                          {LEVEL_LABELS[profile?.experienceLevel ?? 'enthusiast']}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
 
@@ -378,6 +386,36 @@ export default function ProfileScreen() {
                     placeholderTextColor={palette.textMuted}
                     style={styles.input}
                   />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Botanical Experience</Text>
+                  <View style={styles.chipsRow}>
+                    {(Object.keys(LEVEL_LABELS) as ExperienceLevel[]).map(
+                      (lvl) => {
+                        const active = experienceLevel === lvl;
+                        return (
+                          <Pressable
+                            key={lvl}
+                            onPress={() => setDraftLevel(lvl)}
+                            style={[
+                              styles.chip,
+                              active && styles.chipActive,
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: active }}>
+                            <Text
+                              style={[
+                                styles.chipText,
+                                active && styles.chipTextActive,
+                              ]}>
+                              {LEVEL_LABELS[lvl]}
+                            </Text>
+                          </Pressable>
+                        );
+                      }
+                    )}
+                  </View>
                 </View>
 
                 <View style={styles.fieldGroup}>

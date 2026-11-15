@@ -7,7 +7,7 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -30,9 +30,9 @@ import {
   CardShadow,
   Fonts,
   getHealthBadgeTheme,
-  Palette,
   Radius,
   Spacing,
+  type ThemePalette,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { getDaysUntilNextWater } from '@/store/usePlantStore';
@@ -87,6 +87,7 @@ export function SwipeablePlantCard({
   onDelete,
 }: SwipeablePlantCardProps) {
   const palette = usePalette();
+  const styles = useMemo(() => createStyles(palette), [palette]);
   const translateX = useSharedValue(0);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -303,7 +304,7 @@ export function SwipeablePlantCard({
             accessibilityRole="button"
             accessibilityLabel={`Edit ${plant.nickname}`}>
             <Animated.View style={[styles.actionBtnContent, leftActionContentStyle]}>
-              <Pencil size={18} color={Palette.textInverse} />
+              <Pencil size={18} color={palette.textInverse} />
               <Text style={styles.actionBtnLabel}>Edit</Text>
             </Animated.View>
           </Pressable>
@@ -322,7 +323,7 @@ export function SwipeablePlantCard({
             accessibilityRole="button"
             accessibilityLabel={`Delete ${plant.nickname}`}>
             <Animated.View style={[styles.actionBtnContent, rightActionContentStyle]}>
-              <Trash2 size={18} color={Palette.textInverse} />
+              <Trash2 size={18} color={palette.textInverse} />
               <Text style={styles.actionBtnLabel}>Delete</Text>
             </Animated.View>
           </Pressable>
@@ -516,7 +517,7 @@ export function SwipeablePlantCard({
 
               <View style={styles.openNotebookLink}>
                 <Text style={styles.openNotebookText}>Notebook</Text>
-                <ChevronRight size={15} color={Palette.primary} />
+                <ChevronRight size={15} color={palette.primary} />
               </View>
             </View>
           </View>
@@ -527,7 +528,8 @@ export function SwipeablePlantCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (palette: ThemePalette) =>
+  StyleSheet.create({
   swipeContainer: {
     position: 'relative',
     borderRadius: Radius.lg,
@@ -538,7 +540,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'stretch',
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     borderRadius: Radius.lg,
   },
   leftActionSlot: {
@@ -564,10 +566,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   editActionBtn: {
-    backgroundColor: Palette.primary,
+    backgroundColor: palette.primary,
   },
   deleteActionBtn: {
-    backgroundColor: '#DC2626',
+    backgroundColor: palette.criticalDot,
   },
   actionBtnPressed: {
     opacity: 0.85,
@@ -575,23 +577,23 @@ const styles = StyleSheet.create({
   actionBtnLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.textInverse,
+    color: palette.textInverse,
     letterSpacing: 0.3,
   },
   animatedCardWrap: {
     width: '100%',
   },
   plantCard: {
-    backgroundColor: Palette.bgSurface,
+    backgroundColor: palette.bgSurface,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
     padding: Spacing.lg,
     gap: Spacing.md,
     ...CardShadow,
   },
   plantCardPressed: {
-    backgroundColor: '#FAF8F4',
+    backgroundColor: palette.bgSubtle,
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -601,7 +603,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 14,
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
   },
   cardHeaderMeta: {
     flex: 1,
@@ -619,7 +621,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '700',
-    color: Palette.textPrimary,
+    color: palette.textPrimary,
   },
   healthBadge: {
     flexDirection: 'row',
@@ -643,7 +645,7 @@ const styles = StyleSheet.create({
   },
   speciesLine: {
     fontSize: 13,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     fontWeight: '500',
   },
   scientificItalic: {
@@ -657,7 +659,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   typeChip: {
-    backgroundColor: Palette.bgSubtle,
+    backgroundColor: palette.bgSubtle,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: Radius.sm,
@@ -665,7 +667,7 @@ const styles = StyleSheet.create({
   typeChipText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   locationChip: {
     flexDirection: 'row',
@@ -674,25 +676,25 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 12,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
     fontWeight: '500',
   },
   diagnosisSnippetBox: {
-    backgroundColor: Palette.bgPrimary,
+    backgroundColor: palette.bgPrimary,
     borderRadius: Radius.md,
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderWidth: 1,
-    borderColor: Palette.borderSubtle,
+    borderColor: palette.borderSubtle,
   },
   diagnosisSnippetPrefix: {
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
   diagnosisSnippetText: {
     fontSize: 13,
     lineHeight: 19,
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   cardFooter: {
     flexDirection: 'row',
@@ -702,14 +704,14 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: Palette.bgSubtle,
+    borderTopColor: palette.bgSubtle,
   },
   needsWaterBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Palette.waterAlertBg,
-    borderColor: Palette.waterAlertBorder,
+    backgroundColor: palette.waterAlertBg,
+    borderColor: palette.waterAlertBorder,
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -718,7 +720,7 @@ const styles = StyleSheet.create({
   needsWaterBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.waterAlertText,
+    color: palette.waterAlertText,
   },
   waterScheduleInfo: {
     flexDirection: 'row',
@@ -728,7 +730,7 @@ const styles = StyleSheet.create({
   waterScheduleText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Palette.textSecondary,
+    color: palette.textSecondary,
   },
   cardFooterRight: {
     flexDirection: 'row',
@@ -739,7 +741,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Palette.waterBlue,
+    backgroundColor: palette.waterBlue,
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: Radius.full,
@@ -747,7 +749,7 @@ const styles = StyleSheet.create({
   quickWaterBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Palette.textInverse,
+    color: palette.textInverse,
   },
   openNotebookLink: {
     flexDirection: 'row',
@@ -757,6 +759,6 @@ const styles = StyleSheet.create({
   openNotebookText: {
     fontSize: 13,
     fontWeight: '700',
-    color: Palette.primary,
+    color: palette.primary,
   },
 });

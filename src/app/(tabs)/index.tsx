@@ -531,7 +531,59 @@ export default function MyGardenScreen() {
           </ScrollView>
 
           {/* Plant Collection */}
-          {filteredPlants.length === 0 ? (
+          {plants.length === 0 ? (
+            <View
+              style={[
+                styles.emptyFilterCard,
+                {
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.emptyFilterIconWrap,
+                  { backgroundColor: palette.primarySoft },
+                ]}
+              >
+                <Sprout size={24} color={palette.primary} />
+              </View>
+              <Text
+                style={[
+                  styles.emptyFilterTitle,
+                  { color: palette.textPrimary, fontFamily: Fonts?.serif },
+                ]}
+              >
+                Your garden is empty
+              </Text>
+              <Text
+                style={[
+                  styles.emptyFilterSubtitle,
+                  { color: palette.textSecondary },
+                ]}
+              >
+                Identify or snap a photo of your first plant to start tracking
+                watering schedules and AI health scans.
+              </Text>
+              <Pressable
+                onPress={() => router.push("/(tabs)/scan")}
+                style={[
+                  styles.emptyFilterBtn,
+                  { backgroundColor: palette.primary },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.emptyFilterBtnText,
+                    { color: palette.textInverse },
+                  ]}
+                >
+                  Identify Your First Plant
+                </Text>
+              </Pressable>
+            </View>
+          ) : filteredPlants.length === 0 ? (
             <View
               style={[
                 styles.emptyFilterCard,
