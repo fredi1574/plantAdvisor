@@ -7,6 +7,8 @@
 import { getDaysUntilNextWater } from '@/store/usePlantStore';
 import type { CareEventType, NotebookEntry, UserPlant } from '@/types/plant';
 
+export type ProjectedTaskKind = 'water' | 'fertilize' | 'rotate';
+
 export interface ProjectedPlantCareTask {
   plant: UserPlant;
   dateKey: string; // YYYY-MM-DD
@@ -14,7 +16,15 @@ export interface ProjectedPlantCareTask {
   isOverdue: boolean;
   isDueToday: boolean;
   actionLabel: string;
-  cycleIndex: number; // 0 = next immediate watering, 1+ = subsequent cycle projections
+  cycleIndex: number; // 0 = next immediate cycle, 1+ = subsequent cycle projections
+  taskKind?: ProjectedTaskKind;
+}
+
+export interface MonthlyCareSummary {
+  totalCompleted: number;
+  wateringCount: number;
+  activeDays: number;
+  consistencyPercent: number;
 }
 
 export interface DayCareSchedule {
@@ -155,8 +165,16 @@ export function getProjectedCareEvents(
   rangeDays: number = 30
 ): DayCareSchedule[] {
   const now = new Date();
+  const todayStartMs = getLocalDayStart(now, 0).getTime();
   const historicalMap = getHistoricalCareEvents(entries);
   const projectedByDateKey: Record<string, ProjectedPlantCareTask[]> = {};
+
+  const pushTask = (task: ProjectedPlantCareTask) => {
+    if (!projectedByDateKey[task.dateKey]) {
+      projectedByDateKey[task.dateKey] = [];
+    }
+    projectedByDateKey[task.dateKey].push(task);
+  };
 
   for (const plant of plants) {
     const interval = Math.max(1, plant.customWateringIntervalDays || 7);
@@ -174,7 +192,7 @@ export function getProjectedCareEvents(
       const dateKey = toLocalDateKey(targetDate);
       const taskIsOverdue = cycleIndex === 0 && isOverdue;
 
-      const task: ProjectedPlantCareTask = {
+      pushTask({
         plant,
         dateKey,
         daysFromToday: offset,
@@ -182,13 +200,93 @@ export function getProjectedCareEvents(
         isDueToday: offset === 0,
         actionLabel: getCareActionPillLabel(plant, offset, taskIsOverdue),
         cycleIndex,
-      };
-
-      if (!projectedByDateKey[dateKey]) {
-        projectedByDateKey[dateKey] = [];
-      }
-      projectedByDateKey[dateKey].push(task);
+        taskKind: 'water',
+      });
       cycleIndex += 1;
+    }
+
+    // Optional recurring fertilizing schedule
+    if (plant.fertilizeIntervalDays && plant.fertilizeIntervalDays >= 1) {
+      const fertInterval = Math.round(plant.fertilizeIntervalDays);
+      const lastFert = entries.find(
+        (e) => e.plantId === plant.id && e.eventType === 'fertilize'
+      );
+      const anchorMs = new Date(
+        lastFert?.timestamp ?? plant.acquiredAt
+      ).getTime();
+      const daysSince = Math.max(
+        0,
+        Math.floor((todayStartMs - anchorMs) / (24 * 60 * 60 * 1000))
+      );
+      const rawFertUntil = fertInterval - daysSince;
+      const fertOverdue = rawFertUntil < 0;
+      const firstFertOffset = Math.max(0, rawFertUntil);
+
+      let fertCycle = 0;
+      for (
+        let offset = firstFertOffset;
+        offset < rangeDays;
+        offset += fertInterval
+      ) {
+        const targetDate = getLocalDayStart(now, offset);
+        const dateKey = toLocalDateKey(targetDate);
+        const isTaskOverdue = fertCycle === 0 && fertOverdue;
+        pushTask({
+          plant,
+          dateKey,
+          daysFromToday: offset,
+          isOverdue: isTaskOverdue,
+          isDueToday: offset === 0,
+          actionLabel: isTaskOverdue
+            ? 'Overdue · Fertilize'
+            : offset === 0
+              ? 'Due Today for Fertilize'
+              : offset === 1
+                ? 'Fertilize Tomorrow'
+                : `Fertilize in ${offset} days`,
+          cycleIndex: fertCycle,
+          taskKind: 'fertilize',
+        });
+        fertCycle += 1;
+      }
+    }
+
+    // Optional recurring pot rotation schedule
+    if (plant.rotateIntervalDays && plant.rotateIntervalDays >= 1) {
+      const rotInterval = Math.round(plant.rotateIntervalDays);
+      const anchorMs = new Date(plant.acquiredAt).getTime();
+      const daysSince = Math.max(
+        0,
+        Math.floor((todayStartMs - anchorMs) / (24 * 60 * 60 * 1000))
+      );
+      const firstRotOffset =
+        daysSince === 0 ? rotInterval : (rotInterval - (daysSince % rotInterval)) % rotInterval;
+
+      let rotCycle = 0;
+      for (
+        let offset = firstRotOffset;
+        offset < rangeDays;
+        offset += rotInterval
+      ) {
+        const targetDate = getLocalDayStart(now, offset);
+        const dateKey = toLocalDateKey(targetDate);
+        pushTask({
+          plant,
+          dateKey,
+          daysFromToday: offset,
+          isOverdue: false,
+          isDueToday: offset === 0,
+          actionLabel:
+            offset === 0
+              ? 'Rotate Pot Today'
+              : offset === 1
+                ? 'Rotate Pot Tomorrow'
+                : `Rotate Pot in ${offset} days`,
+          cycleIndex: rotCycle,
+          taskKind: 'rotate',
+        });
+        rotCycle += 1;
+      }
     }
   }
 
@@ -251,5 +349,42 @@ export function getCareEventTypeLabel(eventType: CareEventType): string {
     default:
       return 'Garden Note';
   }
+}
+
+export function getMonthlyCareSummary(
+  entries: NotebookEntry[],
+  year: number,
+  month: number
+): MonthlyCareSummary {
+  const activeDayKeys = new Set<string>();
+  let totalCompleted = 0;
+  let wateringCount = 0;
+
+  for (const entry of entries) {
+    const d = new Date(entry.timestamp);
+    if (Number.isNaN(d.getTime())) continue;
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      totalCompleted += 1;
+      if (entry.eventType === 'water') wateringCount += 1;
+      activeDayKeys.add(toLocalDateKey(d));
+    }
+  }
+
+  const now = new Date();
+  const isCurrentMonth = now.getFullYear() === year && now.getMonth() === month;
+  const elapsedDays = isCurrentMonth
+    ? Math.max(1, now.getDate())
+    : new Date(year, month + 1, 0).getDate();
+  const consistencyPercent = Math.min(
+    100,
+    Math.round((activeDayKeys.size / elapsedDays) * 100)
+  );
+
+  return {
+    totalCompleted,
+    wateringCount,
+    activeDays: activeDayKeys.size,
+    consistencyPercent,
+  };
 }
 

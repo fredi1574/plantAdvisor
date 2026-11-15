@@ -11,6 +11,7 @@
  */
 
 import { prepareImageForAI } from "@/services/imageUtils";
+import { isSupabaseConfigured, supabase } from "@/services/supabase";
 import type {
   NotebookEntry,
   PlantDiagnosisResult,
@@ -142,12 +143,17 @@ export function isMockAiEnabled(): boolean {
     return true;
   }
 
-  // If an API key is provided and mock mode is not forced to true, use live Gemini
+  // Prefer server-side Supabase Edge Function proxy when Supabase is configured
+  if (isSupabaseConfigured && supabase) {
+    return false;
+  }
+
+  // Legacy local fallback if an API key is provided in dev
   if (apiKey && apiKey.length > 0) {
     return false;
   }
 
-  // Fallback to mock mode if no API key is provided
+  // Fallback to deterministic mock mode
   return true;
 }
 
@@ -155,6 +161,41 @@ export function isSucculentTaxon(family?: string, plantType?: string): boolean {
   if (plantType === "succulent") return true;
   if (!family) return false;
   return SUCCULENT_FAMILIES.includes(family.toLowerCase().trim());
+}
+
+/**
+ * Post-processes any AI identification to guarantee succulent guardrails are active
+ */
+export function enforceSucculentIdentificationGuardrails(
+  result: PlantIdentificationResult,
+): PlantIdentificationResult {
+  if (!isSucculentTaxon(result.family, result.plantType)) {
+    return result;
+  }
+
+  const guardrails = result.baselineCare.succulentGuardrails;
+  const minimumDryBackDays = Math.max(guardrails?.minimumDryBackDays ?? 0, 12);
+  const baseWateringDays = Math.max(
+    result.baselineCare.baseWateringDays ?? 0,
+    minimumDryBackDays,
+  );
+
+  return {
+    ...result,
+    baselineCare: {
+      ...result.baselineCare,
+      baseWateringDays,
+      succulentGuardrails: {
+        isSucculentOrCactus: true,
+        neverMistFoliage: true,
+        soakAndDryRequired: true,
+        minimumDryBackDays,
+        rotWarningNote:
+          guardrails?.rotWarningNote?.trim() ||
+          "Never mist leaves. Drench deeply only after 100% of gritty substrate has dried out.",
+      },
+    },
+  };
 }
 
 /**
@@ -290,12 +331,9 @@ export async function identifyPlant(
   const combinedInput = `${imageUriOrName} ${hintQuery ?? ""}`.trim();
 
   if (isMockAiEnabled()) {
-    return mockIdentifyPlant(combinedInput);
+    const mockResult = await mockIdentifyPlant(combinedInput);
+    return enforceSucculentIdentificationGuardrails(mockResult);
   }
-
-  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-  const model = resolveGeminiModel();
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const isImageUri =
     imageUriOrName.startsWith("file:") ||
@@ -304,6 +342,40 @@ export async function identifyPlant(
     imageUriOrName.startsWith("data:") ||
     imageUriOrName.startsWith("blob:") ||
     imageUriOrName.startsWith("http");
+
+  const preparedImage = isImageUri
+    ? await prepareImageForAI(imageUriOrName)
+    : null;
+
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.functions.invoke<{
+      result?: PlantIdentificationResult;
+      error?: string;
+    }>("plant-ai", {
+      body: {
+        action: "identify",
+        hintQuery: hintQuery?.trim() || undefined,
+        textInput: isImageUri ? undefined : imageUriOrName,
+        imageBase64: preparedImage?.base64,
+        imageMimeType: preparedImage?.mimeType,
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message || "Edge Function plant-ai identify failed.");
+    }
+    if (data?.error || !data?.result) {
+      throw new Error(
+        data?.error || "Empty identification response from plant-ai Edge Function.",
+      );
+    }
+
+    return enforceSucculentIdentificationGuardrails(data.result);
+  }
+
+  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+  const model = resolveGeminiModel();
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const parts: Record<string, unknown>[] = [
     {
@@ -316,16 +388,13 @@ export async function identifyPlant(
     },
   ];
 
-  if (isImageUri) {
-    const prepared = await prepareImageForAI(imageUriOrName);
-    if (prepared.base64) {
-      parts.push({
-        inlineData: {
-          mimeType: prepared.mimeType,
-          data: prepared.base64,
-        },
-      });
-    }
+  if (preparedImage?.base64) {
+    parts.push({
+      inlineData: {
+        mimeType: preparedImage.mimeType,
+        data: preparedImage.base64,
+      },
+    });
   }
 
   const response = await fetchGeminiWithFallback(endpoint, {
@@ -352,7 +421,9 @@ export async function identifyPlant(
     throw new Error("Empty identification response from Gemini API.");
   }
 
-  return JSON.parse(rawText) as PlantIdentificationResult;
+  return enforceSucculentIdentificationGuardrails(
+    JSON.parse(rawText) as PlantIdentificationResult,
+  );
 }
 
 /**
@@ -374,10 +445,6 @@ export async function diagnosePlantHealth(
     return enforceSucculentDiagnosisGuardrails(mockResult, plantProfile);
   }
 
-  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-  const model = resolveGeminiModel();
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
   const serializedHistory = recentLogs.slice(0, 8).map((entry) => ({
     date: entry.timestamp,
     type: entry.eventType,
@@ -385,6 +452,39 @@ export async function diagnosePlantHealth(
     notes: entry.notes,
     metrics: entry.metrics,
   }));
+
+  const preparedImage = imageUri ? await prepareImageForAI(imageUri) : null;
+
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.functions.invoke<{
+      result?: PlantDiagnosisResult;
+      error?: string;
+    }>("plant-ai", {
+      body: {
+        action: "diagnose",
+        plantProfile,
+        recentLogs: serializedHistory,
+        userObservationNotes,
+        imageBase64: preparedImage?.base64,
+        imageMimeType: preparedImage?.mimeType,
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message || "Edge Function plant-ai diagnose failed.");
+    }
+    if (data?.error || !data?.result) {
+      throw new Error(
+        data?.error || "Empty diagnosis response from plant-ai Edge Function.",
+      );
+    }
+
+    return enforceSucculentDiagnosisGuardrails(data.result, plantProfile);
+  }
+
+  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+  const model = resolveGeminiModel();
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   const promptText = `
 ${SUCCULENT_SYSTEM_GUARDRAIL}
@@ -412,16 +512,13 @@ Return strict JSON conforming to the schema.
 
   const parts: Record<string, unknown>[] = [{ text: promptText }];
 
-  if (imageUri) {
-    const prepared = await prepareImageForAI(imageUri);
-    if (prepared.base64) {
-      parts.push({
-        inlineData: {
-          mimeType: prepared.mimeType,
-          data: prepared.base64,
-        },
-      });
-    }
+  if (preparedImage?.base64) {
+    parts.push({
+      inlineData: {
+        mimeType: preparedImage.mimeType,
+        data: preparedImage.base64,
+      },
+    });
   }
 
   const response = await fetchGeminiWithFallback(endpoint, {

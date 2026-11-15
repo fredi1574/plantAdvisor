@@ -8,7 +8,9 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { SEED_NOTEBOOK_ENTRIES, SEED_PLANTS } from '@/constants/seedData';
+import { triggerSuccessHaptic } from '@/services/haptics';
 import {
+  cancelAllGardenNotifications,
   cancelPlantReminder,
   DEFAULT_NOTIFICATION_PREFERENCES,
   scheduleDailyGardenDigest,
@@ -19,6 +21,8 @@ import {
 import {
   deleteCareEntryFromSupabase,
   deletePlantFromSupabase,
+  getCurrentUserId,
+  isSupabaseConfigured,
   pullOrSeedGardenWithSupabase,
   syncCareEntriesBatchToSupabase,
   syncCareEntryToSupabase,
@@ -56,6 +60,8 @@ export interface UpdatePlantPayload {
   hasDrainageHole?: boolean;
   potMaterial?: PotMaterial;
   customWateringIntervalDays?: number;
+  fertilizeIntervalDays?: number;
+  rotateIntervalDays?: number;
   photoUri?: string;
   commonName?: string;
   scientificName?: string;
@@ -79,14 +85,60 @@ export interface UpdateCareEntryPayload {
   metrics?: NotebookEntry['metrics'];
 }
 
+export type PendingSyncOp =
+  | { kind: 'upsert_plant'; id: string; previousPhotoUri?: string }
+  | { kind: 'delete_plant'; id: string }
+  | { kind: 'upsert_entry'; id: string }
+  | { kind: 'delete_entry'; id: string };
+
+function mergePendingOps(
+  existing: PendingSyncOp[],
+  incoming: PendingSyncOp
+): PendingSyncOp[] {
+  const filtered = existing.filter((op) => {
+    if (incoming.kind === 'delete_plant') {
+      return !(
+        (op.kind === 'upsert_plant' || op.kind === 'delete_plant') &&
+        op.id === incoming.id
+      );
+    }
+    if (incoming.kind === 'delete_entry') {
+      return !(
+        (op.kind === 'upsert_entry' || op.kind === 'delete_entry') &&
+        op.id === incoming.id
+      );
+    }
+    return !(op.kind === incoming.kind && op.id === incoming.id);
+  });
+  return [...filtered, incoming];
+}
+
+function removePendingOp(
+  existing: PendingSyncOp[],
+  target: PendingSyncOp
+): PendingSyncOp[] {
+  return existing.filter(
+    (op) => !(op.kind === target.kind && op.id === target.id)
+  );
+}
+
 interface PlantStoreState {
+  ownerUserId: string | null;
+  hasGuestEdits: boolean;
   plants: UserPlant[];
   entries: NotebookEntry[];
+  healthAssessments: HealthAssessment[];
+  pendingOps: PendingSyncOp[];
+  pendingSyncCount: number;
+  lastSyncedAt: string | null;
+  syncError: string | null;
   isSyncing: boolean;
   notificationPrefs: NotificationPreferences;
   setNotificationPrefs: (prefs: Partial<NotificationPreferences>) => Promise<void>;
   rescheduleAllNotifications: () => Promise<void>;
-  syncWithSupabase: () => Promise<void>;
+  syncWithSupabase: (explicitUserId?: string) => Promise<void>;
+  flushPendingSync: () => Promise<void>;
+  clearUserGarden: () => Promise<void>;
   addPlant: (payload: AddPlantPayload) => UserPlant;
   updatePlant: (plantId: string, payload: UpdatePlantPayload) => void;
   deletePlant: (plantId: string) => void;
@@ -123,8 +175,15 @@ export function doesPlantNeedWatering(plant: UserPlant): boolean {
 export const usePlantStore = create<PlantStoreState>()(
   persist(
     (set, get) => ({
+      ownerUserId: null,
+      hasGuestEdits: false,
       plants: SEED_PLANTS,
       entries: SEED_NOTEBOOK_ENTRIES,
+      healthAssessments: [],
+      pendingOps: [],
+      pendingSyncCount: 0,
+      lastSyncedAt: null,
+      syncError: null,
       isSyncing: false,
       notificationPrefs: DEFAULT_NOTIFICATION_PREFERENCES,
 
@@ -141,23 +200,173 @@ export const usePlantStore = create<PlantStoreState>()(
         await syncAllPlantNotifications(get().plants, get().notificationPrefs);
       },
 
-      syncWithSupabase: async () => {
-        if (get().isSyncing) return;
+      clearUserGarden: async () => {
+        await cancelAllGardenNotifications();
+        set({
+          ownerUserId: null,
+          hasGuestEdits: false,
+          plants: [],
+          entries: [],
+          healthAssessments: [],
+          pendingOps: [],
+          pendingSyncCount: 0,
+          lastSyncedAt: null,
+          syncError: null,
+          isSyncing: false,
+        });
+      },
+
+      flushPendingSync: async () => {
+        if (get().isSyncing || !isSupabaseConfigured) return;
+        const userId = await getCurrentUserId();
+        if (!userId) return;
+
+        if (get().ownerUserId && get().ownerUserId !== userId) {
+          await get().syncWithSupabase(userId);
+          return;
+        }
+
+        const ops = [...get().pendingOps];
+        if (ops.length === 0) return;
+
+        set({ isSyncing: true });
+        let lastErr: string | null = null;
+        let syncedAny = false;
+
+        try {
+          for (const op of ops) {
+            if (op.kind === 'upsert_plant') {
+              const plant = get().plants.find((p) => p.id === op.id);
+              if (!plant) {
+                const nextOps = removePendingOp(get().pendingOps, op);
+                set({ pendingOps: nextOps, pendingSyncCount: nextOps.length });
+                continue;
+              }
+              const res = await syncPlantToSupabase(plant, op.previousPhotoUri);
+              if (res.ok) {
+                syncedAny = true;
+                const nextOps = removePendingOp(get().pendingOps, op);
+                set((s) => ({
+                  pendingOps: nextOps,
+                  pendingSyncCount: nextOps.length,
+                  plants: res.uploadedPhotoUri
+                    ? s.plants.map((p) =>
+                        p.id === plant.id ? { ...p, photoUri: res.uploadedPhotoUri! } : p
+                      )
+                    : s.plants,
+                }));
+              } else {
+                lastErr = res.error ?? 'Failed to sync plant.';
+              }
+            } else if (op.kind === 'delete_plant') {
+              const res = await deletePlantFromSupabase(op.id);
+              if (res.ok) {
+                syncedAny = true;
+                const nextOps = removePendingOp(get().pendingOps, op);
+                set({ pendingOps: nextOps, pendingSyncCount: nextOps.length });
+              } else {
+                lastErr = res.error ?? 'Failed to delete plant.';
+              }
+            } else if (op.kind === 'upsert_entry') {
+              const entry = get().entries.find((e) => e.id === op.id);
+              if (!entry) {
+                const nextOps = removePendingOp(get().pendingOps, op);
+                set({ pendingOps: nextOps, pendingSyncCount: nextOps.length });
+                continue;
+              }
+              const res = await syncCareEntryToSupabase(entry);
+              if (res.ok) {
+                syncedAny = true;
+                const nextOps = removePendingOp(get().pendingOps, op);
+                set((s) => ({
+                  pendingOps: nextOps,
+                  pendingSyncCount: nextOps.length,
+                  entries: res.uploadedPhotoUri
+                    ? s.entries.map((e) =>
+                        e.id === entry.id ? { ...e, photoUri: res.uploadedPhotoUri } : e
+                      )
+                    : s.entries,
+                }));
+              } else {
+                lastErr = res.error ?? 'Failed to sync care entry.';
+              }
+            } else if (op.kind === 'delete_entry') {
+              const res = await deleteCareEntryFromSupabase(op.id);
+              if (res.ok) {
+                syncedAny = true;
+                const nextOps = removePendingOp(get().pendingOps, op);
+                set({ pendingOps: nextOps, pendingSyncCount: nextOps.length });
+              } else {
+                lastErr = res.error ?? 'Failed to delete care entry.';
+              }
+            }
+          }
+
+          if (get().pendingOps.length === 0 && syncedAny) {
+            set({ lastSyncedAt: new Date().toISOString(), syncError: null });
+          } else if (lastErr) {
+            set({ syncError: lastErr });
+          }
+        } finally {
+          set({ isSyncing: false });
+        }
+      },
+
+      syncWithSupabase: async (explicitUserId) => {
+        if (get().isSyncing || !isSupabaseConfigured) return;
+        const userId = explicitUserId ?? (await getCurrentUserId());
+        if (!userId) return;
+
+        // Isolate multi-user local state: never leak or upload a previous user's garden
+        const prevOwner = get().ownerUserId;
+        if (prevOwner !== null && prevOwner !== userId) {
+          await cancelAllGardenNotifications();
+          set({
+            ownerUserId: userId,
+            hasGuestEdits: false,
+            plants: [],
+            entries: [],
+            healthAssessments: [],
+            pendingOps: [],
+            pendingSyncCount: 0,
+            lastSyncedAt: null,
+            syncError: null,
+          });
+        } else if (prevOwner === userId && get().pendingOps.length > 0) {
+          await get().flushPendingSync();
+        }
+
         set({ isSyncing: true });
         try {
+          const canSeedFromGuest =
+            get().ownerUserId === null && get().hasGuestEdits;
           const remote = await pullOrSeedGardenWithSupabase(
-            get().plants,
-            get().entries
+            canSeedFromGuest ? get().plants : [],
+            canSeedFromGuest ? get().entries : [],
+            {
+              allowSeed: canSeedFromGuest,
+              localAssessments: canSeedFromGuest ? get().healthAssessments : [],
+            }
           );
           if (remote) {
             set({
+              ownerUserId: userId,
+              hasGuestEdits: false,
               plants: remote.plants,
               entries: remote.entries,
+              healthAssessments: remote.healthAssessments,
+              lastSyncedAt: new Date().toISOString(),
+              syncError: null,
             });
             await syncAllPlantNotifications(
               remote.plants,
               get().notificationPrefs
             );
+          } else {
+            set({
+              ownerUserId: userId,
+              syncError: 'Offline — changes saved locally',
+            });
           }
         } finally {
           set({ isSyncing: false });
@@ -239,10 +448,27 @@ export const usePlantStore = create<PlantStoreState>()(
           photoUri: payload.photoUri,
         };
 
-        set((state) => ({
-          plants: [newPlant, ...state.plants],
-          entries: [initialEntry, ...state.entries],
-        }));
+        const initialAssessment = newPlant.latestHealthAssessment!;
+
+        set((state) => {
+          let nextOps = mergePendingOps(state.pendingOps, {
+            kind: 'upsert_plant',
+            id: newPlant.id,
+          });
+          nextOps = mergePendingOps(nextOps, {
+            kind: 'upsert_entry',
+            id: initialEntry.id,
+          });
+          return {
+            plants: [newPlant, ...state.plants],
+            entries: [initialEntry, ...state.entries],
+            healthAssessments: [initialAssessment, ...state.healthAssessments],
+            hasGuestEdits:
+              state.ownerUserId === null ? true : state.hasGuestEdits,
+            pendingOps: nextOps,
+            pendingSyncCount: nextOps.length,
+          };
+        });
 
         void (async () => {
           await schedulePlantWateringReminder(
@@ -253,18 +479,7 @@ export const usePlantStore = create<PlantStoreState>()(
             get().plants,
             get().notificationPrefs
           );
-          const uploadedUrl = await syncPlantToSupabase(newPlant);
-          if (uploadedUrl) {
-            set((state) => ({
-              plants: state.plants.map((p) =>
-                p.id === newPlant.id ? { ...p, photoUri: uploadedUrl } : p
-              ),
-            }));
-          }
-          await syncCareEntryToSupabase({
-            ...initialEntry,
-            photoUri: uploadedUrl ?? initialEntry.photoUri,
-          });
+          await get().flushPendingSync();
         })();
 
         return newPlant;
@@ -272,9 +487,12 @@ export const usePlantStore = create<PlantStoreState>()(
 
       updatePlant: (plantId, payload) => {
         let updatedPlantRef: UserPlant | null = null;
+        const previousPhotoUri = get().plants.find(
+          (p) => p.id === plantId
+        )?.photoUri;
 
-        set((state) => ({
-          plants: state.plants.map((plant) => {
+        set((state) => {
+          const nextPlants = state.plants.map((plant) => {
             if (plant.id !== plantId) return plant;
 
             const nextInterval =
@@ -299,6 +517,14 @@ export const usePlantStore = create<PlantStoreState>()(
               hasDrainageHole: payload.hasDrainageHole ?? plant.hasDrainageHole,
               potMaterial: payload.potMaterial ?? plant.potMaterial,
               customWateringIntervalDays: nextInterval,
+              fertilizeIntervalDays:
+                payload.fertilizeIntervalDays !== undefined
+                  ? payload.fertilizeIntervalDays
+                  : plant.fertilizeIntervalDays,
+              rotateIntervalDays:
+                payload.rotateIntervalDays !== undefined
+                  ? payload.rotateIntervalDays
+                  : plant.rotateIntervalDays,
               photoUri: payload.photoUri || plant.photoUri,
               species: {
                 ...plant.species,
@@ -320,8 +546,27 @@ export const usePlantStore = create<PlantStoreState>()(
 
             updatedPlantRef = updated;
             return updated;
-          }),
-        }));
+          });
+
+          const nextOps = updatedPlantRef
+            ? mergePendingOps(state.pendingOps, {
+                kind: 'upsert_plant',
+                id: plantId,
+                previousPhotoUri:
+                  payload.photoUri && payload.photoUri !== previousPhotoUri
+                    ? previousPhotoUri
+                    : undefined,
+              })
+            : state.pendingOps;
+
+          return {
+            plants: nextPlants,
+            hasGuestEdits:
+              state.ownerUserId === null ? true : state.hasGuestEdits,
+            pendingOps: nextOps,
+            pendingSyncCount: nextOps.length,
+          };
+        });
 
         if (updatedPlantRef) {
           const targetPlant = updatedPlantRef as UserPlant;
@@ -334,23 +579,29 @@ export const usePlantStore = create<PlantStoreState>()(
               get().plants,
               get().notificationPrefs
             );
-            const uploadedUrl = await syncPlantToSupabase(targetPlant);
-            if (uploadedUrl) {
-              set((state) => ({
-                plants: state.plants.map((p) =>
-                  p.id === targetPlant.id ? { ...p, photoUri: uploadedUrl } : p
-                ),
-              }));
-            }
+            await get().flushPendingSync();
           })();
         }
       },
 
       deletePlant: (plantId) => {
-        set((state) => ({
-          plants: state.plants.filter((p) => p.id !== plantId),
-          entries: state.entries.filter((e) => e.plantId !== plantId),
-        }));
+        set((state) => {
+          const nextOps = mergePendingOps(state.pendingOps, {
+            kind: 'delete_plant',
+            id: plantId,
+          });
+          return {
+            plants: state.plants.filter((p) => p.id !== plantId),
+            entries: state.entries.filter((e) => e.plantId !== plantId),
+            healthAssessments: state.healthAssessments.filter(
+              (a) => a.plantId !== plantId
+            ),
+            hasGuestEdits:
+              state.ownerUserId === null ? true : state.hasGuestEdits,
+            pendingOps: nextOps,
+            pendingSyncCount: nextOps.length,
+          };
+        });
 
         void (async () => {
           await cancelPlantReminder(plantId);
@@ -358,7 +609,7 @@ export const usePlantStore = create<PlantStoreState>()(
             get().plants,
             get().notificationPrefs
           );
-          await deletePlantFromSupabase(plantId);
+          await get().flushPendingSync();
         })();
       },
 
@@ -377,9 +628,12 @@ export const usePlantStore = create<PlantStoreState>()(
 
         let updatedPlantRef: UserPlant | null = null;
 
-        set((state) => ({
-          entries: [newEntry, ...state.entries],
-          plants:
+        set((state) => {
+          let nextOps = mergePendingOps(state.pendingOps, {
+            kind: 'upsert_entry',
+            id: newEntry.id,
+          });
+          const nextPlants =
             payload.eventType === 'water'
               ? state.plants.map((p) => {
                   if (p.id !== payload.plantId) return p;
@@ -387,8 +641,24 @@ export const usePlantStore = create<PlantStoreState>()(
                   updatedPlantRef = updated;
                   return updated;
                 })
-              : state.plants,
-        }));
+              : state.plants;
+
+          if (updatedPlantRef) {
+            nextOps = mergePendingOps(nextOps, {
+              kind: 'upsert_plant',
+              id: payload.plantId,
+            });
+          }
+
+          return {
+            entries: [newEntry, ...state.entries],
+            plants: nextPlants,
+            hasGuestEdits:
+              state.ownerUserId === null ? true : state.hasGuestEdits,
+            pendingOps: nextOps,
+            pendingSyncCount: nextOps.length,
+          };
+        });
 
         void (async () => {
           if (updatedPlantRef) {
@@ -401,9 +671,8 @@ export const usePlantStore = create<PlantStoreState>()(
               get().plants,
               get().notificationPrefs
             );
-            await syncPlantToSupabase(targetPlant);
           }
-          await syncCareEntryToSupabase(newEntry);
+          await get().flushPendingSync();
         })();
 
         return newEntry;
@@ -412,8 +681,8 @@ export const usePlantStore = create<PlantStoreState>()(
       updateCareEntry: (entryId, payload) => {
         let updatedEntryRef: NotebookEntry | null = null;
 
-        set((state) => ({
-          entries: state.entries.map((entry) => {
+        set((state) => {
+          const nextEntries = state.entries.map((entry) => {
             if (entry.id !== entryId) return entry;
             const updated: NotebookEntry = {
               ...entry,
@@ -431,26 +700,50 @@ export const usePlantStore = create<PlantStoreState>()(
             };
             updatedEntryRef = updated;
             return updated;
-          }),
-        }));
+          });
+          const nextOps = updatedEntryRef
+            ? mergePendingOps(state.pendingOps, {
+                kind: 'upsert_entry',
+                id: entryId,
+              })
+            : state.pendingOps;
+          return {
+            entries: nextEntries,
+            hasGuestEdits:
+              state.ownerUserId === null ? true : state.hasGuestEdits,
+            pendingOps: nextOps,
+            pendingSyncCount: nextOps.length,
+          };
+        });
 
         if (updatedEntryRef) {
-          void syncCareEntryToSupabase(updatedEntryRef as NotebookEntry);
+          void get().flushPendingSync();
         }
       },
 
       deleteCareEntry: (entryId) => {
-        set((state) => ({
-          entries: state.entries.filter((e) => e.id !== entryId),
-        }));
+        set((state) => {
+          const nextOps = mergePendingOps(state.pendingOps, {
+            kind: 'delete_entry',
+            id: entryId,
+          });
+          return {
+            entries: state.entries.filter((e) => e.id !== entryId),
+            hasGuestEdits:
+              state.ownerUserId === null ? true : state.hasGuestEdits,
+            pendingOps: nextOps,
+            pendingSyncCount: nextOps.length,
+          };
+        });
 
-        void deleteCareEntryFromSupabase(entryId);
+        void get().flushPendingSync();
       },
 
       waterPlantNow: (plantId, notes) => {
         const target = get().plants.find((p) => p.id === plantId);
         if (!target) return;
 
+        triggerSuccessHaptic();
         const isPropagation = target.species.plantType === 'propagation';
         const isSucculent = target.species.plantType === 'succulent';
 
@@ -517,15 +810,46 @@ export const usePlantStore = create<PlantStoreState>()(
             needingIds.has(p.id) ? { ...p, lastWateredAt: nowIso } : p
           ),
           entries: [...batchEntries, ...s.entries],
+          hasGuestEdits: s.ownerUserId === null ? true : s.hasGuestEdits,
         }));
+
+        triggerSuccessHaptic();
 
         void (async () => {
           await syncAllPlantNotifications(
             get().plants,
             get().notificationPrefs
           );
-          await syncPlantsBatchToSupabase(updatedPlants);
-          await syncCareEntriesBatchToSupabase(batchEntries);
+          const pRes = await syncPlantsBatchToSupabase(updatedPlants);
+          const eRes = await syncCareEntriesBatchToSupabase(batchEntries);
+          if (pRes.ok && eRes.ok) {
+            set({ lastSyncedAt: new Date().toISOString(), syncError: null });
+          } else if (isSupabaseConfigured && (await getCurrentUserId())) {
+            set((s) => {
+              let nextOps = s.pendingOps;
+              if (!pRes.ok) {
+                for (const p of updatedPlants) {
+                  nextOps = mergePendingOps(nextOps, {
+                    kind: 'upsert_plant',
+                    id: p.id,
+                  });
+                }
+              }
+              if (!eRes.ok) {
+                for (const e of batchEntries) {
+                  nextOps = mergePendingOps(nextOps, {
+                    kind: 'upsert_entry',
+                    id: e.id,
+                  });
+                }
+              }
+              return {
+                pendingOps: nextOps,
+                pendingSyncCount: nextOps.length,
+                syncError: pRes.error || eRes.error || 'Sync failed',
+              };
+            });
+          }
         })();
 
         return needing.length;
@@ -572,15 +896,46 @@ export const usePlantStore = create<PlantStoreState>()(
         set((s) => ({
           plants: updatedPlants,
           entries: [...batchEntries, ...s.entries],
+          hasGuestEdits: s.ownerUserId === null ? true : s.hasGuestEdits,
         }));
+
+        triggerSuccessHaptic();
 
         void (async () => {
           await syncAllPlantNotifications(
             updatedPlants,
             get().notificationPrefs
           );
-          await syncPlantsBatchToSupabase(updatedPlants);
-          await syncCareEntriesBatchToSupabase(batchEntries);
+          const pRes = await syncPlantsBatchToSupabase(updatedPlants);
+          const eRes = await syncCareEntriesBatchToSupabase(batchEntries);
+          if (pRes.ok && eRes.ok) {
+            set({ lastSyncedAt: new Date().toISOString(), syncError: null });
+          } else if (isSupabaseConfigured && (await getCurrentUserId())) {
+            set((s) => {
+              let nextOps = s.pendingOps;
+              if (!pRes.ok) {
+                for (const p of updatedPlants) {
+                  nextOps = mergePendingOps(nextOps, {
+                    kind: 'upsert_plant',
+                    id: p.id,
+                  });
+                }
+              }
+              if (!eRes.ok) {
+                for (const e of batchEntries) {
+                  nextOps = mergePendingOps(nextOps, {
+                    kind: 'upsert_entry',
+                    id: e.id,
+                  });
+                }
+              }
+              return {
+                pendingOps: nextOps,
+                pendingSyncCount: nextOps.length,
+                syncError: pRes.error || eRes.error || 'Sync failed',
+              };
+            });
+          }
         })();
 
         return state.plants.length;
@@ -626,8 +981,8 @@ export const usePlantStore = create<PlantStoreState>()(
 
         let updatedPlantRef: UserPlant | null = null;
 
-        set((state) => ({
-          plants: state.plants.map((plant) => {
+        set((state) => {
+          const nextPlants = state.plants.map((plant) => {
             if (plant.id !== plantId) return plant;
             const updated: UserPlant = {
               ...plant,
@@ -637,9 +992,25 @@ export const usePlantStore = create<PlantStoreState>()(
             };
             updatedPlantRef = updated;
             return updated;
-          }),
-          entries: [scanLog, ...state.entries],
-        }));
+          });
+          let nextOps = mergePendingOps(state.pendingOps, {
+            kind: 'upsert_plant',
+            id: plantId,
+          });
+          nextOps = mergePendingOps(nextOps, {
+            kind: 'upsert_entry',
+            id: scanLog.id,
+          });
+          return {
+            plants: nextPlants,
+            entries: [scanLog, ...state.entries],
+            healthAssessments: [assessment, ...state.healthAssessments],
+            hasGuestEdits:
+              state.ownerUserId === null ? true : state.hasGuestEdits,
+            pendingOps: nextOps,
+            pendingSyncCount: nextOps.length,
+          };
+        });
 
         void (async () => {
           if (updatedPlantRef) {
@@ -652,16 +1023,8 @@ export const usePlantStore = create<PlantStoreState>()(
               get().plants,
               get().notificationPrefs
             );
-            const uploadedUrl = await syncPlantToSupabase(targetPlant);
-            if (uploadedUrl) {
-              set((state) => ({
-                plants: state.plants.map((p) =>
-                  p.id === targetPlant.id ? { ...p, photoUri: uploadedUrl } : p
-                ),
-              }));
-            }
           }
-          await syncCareEntryToSupabase(scanLog);
+          await get().flushPendingSync();
         })();
 
         return assessment;
@@ -670,8 +1033,8 @@ export const usePlantStore = create<PlantStoreState>()(
       toggleRecommendedAction: (plantId, actionId) => {
         let updatedPlantRef: UserPlant | null = null;
 
-        set((state) => ({
-          plants: state.plants.map((plant) => {
+        set((state) => {
+          const nextPlants = state.plants.map((plant) => {
             if (plant.id !== plantId || !plant.latestHealthAssessment) {
               return plant;
             }
@@ -686,11 +1049,24 @@ export const usePlantStore = create<PlantStoreState>()(
             };
             updatedPlantRef = updated;
             return updated;
-          }),
-        }));
+          });
+          const nextOps = updatedPlantRef
+            ? mergePendingOps(state.pendingOps, {
+                kind: 'upsert_plant',
+                id: plantId,
+              })
+            : state.pendingOps;
+          return {
+            plants: nextPlants,
+            hasGuestEdits:
+              state.ownerUserId === null ? true : state.hasGuestEdits,
+            pendingOps: nextOps,
+            pendingSyncCount: nextOps.length,
+          };
+        });
 
         if (updatedPlantRef) {
-          void syncPlantToSupabase(updatedPlantRef as UserPlant);
+          void get().flushPendingSync();
         }
       },
 
@@ -698,6 +1074,11 @@ export const usePlantStore = create<PlantStoreState>()(
         set({
           plants: SEED_PLANTS,
           entries: SEED_NOTEBOOK_ENTRIES,
+          healthAssessments: [],
+          hasGuestEdits: false,
+          pendingOps: [],
+          pendingSyncCount: 0,
+          syncError: null,
         });
 
         void (async () => {
@@ -714,8 +1095,14 @@ export const usePlantStore = create<PlantStoreState>()(
       name: 'floralog-garden-storage-v1',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
+        ownerUserId: state.ownerUserId,
+        hasGuestEdits: state.hasGuestEdits,
         plants: state.plants,
         entries: state.entries,
+        healthAssessments: state.healthAssessments,
+        pendingOps: state.pendingOps,
+        pendingSyncCount: state.pendingSyncCount,
+        lastSyncedAt: state.lastSyncedAt,
         notificationPrefs: state.notificationPrefs,
       }),
       onRehydrateStorage: () => (state) => {

@@ -111,6 +111,7 @@ interface AuthStoreState {
     displayName?: string;
     experienceLevel?: ExperienceLevel;
     bio?: string;
+    avatarUrl?: string;
   }) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   clearError: () => void;
@@ -193,7 +194,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
               void (async () => {
                 const profile = await fetchOrCreateUserProfile(nextUser);
                 set({ profile });
-                await usePlantStore.getState().syncWithSupabase();
+                await usePlantStore.getState().syncWithSupabase(nextUser.id);
               })();
             }
           },
@@ -431,6 +432,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
             updates.bio !== undefined
               ? updates.bio.trim()
               : (prevProfile?.bio ?? ""),
+          avatarUrl: updates.avatarUrl ?? prevProfile?.avatarUrl,
           createdAt: prevProfile?.createdAt ?? nowIso,
           updatedAt: nowIso,
         };
@@ -494,6 +496,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       if (supabase) {
         await supabase.auth.signOut();
       }
+      await usePlantStore.getState().clearUserGarden();
     } finally {
       set({
         session: null,

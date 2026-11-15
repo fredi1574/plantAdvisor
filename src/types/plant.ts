@@ -123,6 +123,8 @@ export interface UserPlant {
   potMaterial: PotMaterial;
   lastWateredAt: string; // ISO-8601
   customWateringIntervalDays: number;
+  fertilizeIntervalDays?: number;
+  rotateIntervalDays?: number;
   latestHealthAssessment?: HealthAssessment;
 }
 

@@ -141,6 +141,21 @@ interface DbNotebookEntryRow {
   metrics: NotebookEntry['metrics'] | null;
 }
 
+interface DbHealthAssessmentRow {
+  id: string;
+  user_id: string | null;
+  plant_id: string;
+  created_at: string;
+  image_uri: string | null;
+  health_status: HealthAssessment['healthStatus'];
+  detected_symptoms: string[];
+  diagnosis_summary: string;
+  follow_up_questions: string[];
+  recommended_actions: HealthAssessment['recommendedActions'];
+  adjusted_watering_interval_days: number;
+  succulent_guardrail_applied: string | null;
+}
+
 function mapRowToProfile(row: DbProfileRow): UserProfile {
   return {
     id: row.id,
@@ -228,6 +243,22 @@ function mapEntryToRow(entry: NotebookEntry, userId: string): DbNotebookEntryRow
     notes: entry.notes,
     photo_uri: entry.photoUri ?? null,
     metrics: entry.metrics ?? null,
+  };
+}
+
+function mapRowToHealthAssessment(row: DbHealthAssessmentRow): HealthAssessment {
+  return {
+    id: fromDbId(row.id, row.user_id),
+    plantId: fromDbId(row.plant_id, row.user_id),
+    createdAt: row.created_at,
+    imageUri: row.image_uri ?? undefined,
+    healthStatus: row.health_status,
+    detectedSymptoms: Array.isArray(row.detected_symptoms) ? row.detected_symptoms : [],
+    diagnosisSummary: row.diagnosis_summary,
+    followUpQuestions: Array.isArray(row.follow_up_questions) ? row.follow_up_questions : [],
+    recommendedActions: Array.isArray(row.recommended_actions) ? row.recommended_actions : [],
+    adjustedWateringIntervalDays: row.adjusted_watering_interval_days,
+    succulentGuardrailApplied: row.succulent_guardrail_applied ?? undefined,
   };
 }
 
@@ -321,6 +352,7 @@ export async function updateUserProfileInSupabase(
     displayName?: string;
     experienceLevel?: ExperienceLevel;
     bio?: string;
+    avatarUrl?: string;
   }
 ): Promise<UserProfile | null> {
   if (!supabase) return null;
@@ -336,6 +368,9 @@ export async function updateUserProfileInSupabase(
   }
   if (updates.bio !== undefined) {
     payload.bio = updates.bio.trim();
+  }
+  if (updates.avatarUrl !== undefined) {
+    payload.avatar_url = updates.avatarUrl;
   }
 
   const { data, error } = await supabase
@@ -404,16 +439,60 @@ export async function uploadPlantPhotoIfNeeded(
   }
 }
 
+async function cleanupPlantStorageFolder(userId: string, plantId: string): Promise<void> {
+  if (!supabase) return;
+  try {
+    const folder = `${userId}/${plantId}`;
+    const { data: items, error } = await supabase.storage
+      .from('plant-photos')
+      .list(folder, { limit: 100 });
+    if (error || !items || items.length === 0) return;
+
+    const paths = items
+      .filter((item) => item.name)
+      .map((item) => `${folder}/${item.name}`);
+    if (paths.length > 0) {
+      await supabase.storage.from('plant-photos').remove(paths);
+    }
+  } catch (err) {
+    console.warn('[Supabase] cleanupPlantStorageFolder error:', err);
+  }
+}
+
+async function deletePlantPhotoByUrl(photoUrl?: string): Promise<void> {
+  if (!supabase || !photoUrl) return;
+  try {
+    const marker = '/storage/v1/object/public/plant-photos/';
+    const idx = photoUrl.indexOf(marker);
+    if (idx === -1) return;
+    const objectPath = decodeURIComponent(photoUrl.slice(idx + marker.length).split('?')[0]);
+    if (objectPath) {
+      await supabase.storage.from('plant-photos').remove([objectPath]);
+    }
+  } catch (err) {
+    console.warn('[Supabase] deletePlantPhotoByUrl error:', err);
+  }
+}
+
+export interface SyncOperationResult {
+  ok: boolean;
+  uploadedPhotoUri?: string;
+  error?: string;
+}
+
 // ============================================================================
 // CRUD Synchronization Operations (Scoped to Authenticated User)
 // ============================================================================
 
-export async function syncPlantToSupabase(plant: UserPlant): Promise<string | undefined> {
-  if (!supabase) return undefined;
+export async function syncPlantToSupabase(
+  plant: UserPlant,
+  previousPhotoUri?: string
+): Promise<SyncOperationResult> {
+  if (!supabase) return { ok: false, error: 'Supabase not configured' };
 
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return undefined;
+    if (!userId) return { ok: false, error: 'Not authenticated' };
 
     const remotePhotoUri =
       (await uploadPlantPhotoIfNeeded(plant.photoUri, plant.id)) ?? plant.photoUri;
@@ -424,7 +503,7 @@ export async function syncPlantToSupabase(plant: UserPlant): Promise<string | un
     };
 
     // 1. Upsert species catalog entry first (foreign key target)
-    await supabase.from('species_catalog').upsert(
+    const { error: speciesError } = await supabase.from('species_catalog').upsert(
       {
         id: toDbId(updatedPlant.species.id, userId),
         user_id: userId,
@@ -437,6 +516,11 @@ export async function syncPlantToSupabase(plant: UserPlant): Promise<string | un
       },
       { onConflict: 'id' }
     );
+
+    if (speciesError) {
+      console.warn('[Supabase] Failed to upsert species_catalog:', speciesError.message);
+      return { ok: false, error: speciesError.message };
+    }
 
     // 2. Upsert the plant record
     const { error: plantError } = await supabase
@@ -451,7 +535,7 @@ export async function syncPlantToSupabase(plant: UserPlant): Promise<string | un
 
     if (plantError) {
       console.warn('[Supabase] Failed to upsert user_plants:', plantError.message);
-      return undefined;
+      return { ok: false, error: plantError.message };
     }
 
     // 3. Upsert latest health assessment if present
@@ -459,24 +543,42 @@ export async function syncPlantToSupabase(plant: UserPlant): Promise<string | un
       await syncHealthAssessmentToSupabase(updatedPlant.latestHealthAssessment);
     }
 
-    return remotePhotoUri !== plant.photoUri ? remotePhotoUri : undefined;
+    // 4. Clean up superseded plant photo in storage if replaced
+    if (previousPhotoUri && previousPhotoUri !== remotePhotoUri) {
+      await deletePlantPhotoByUrl(previousPhotoUri);
+    }
+
+    return {
+      ok: true,
+      uploadedPhotoUri: remotePhotoUri !== plant.photoUri ? remotePhotoUri : undefined,
+    };
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Sync failed';
     console.warn('[Supabase] syncPlantToSupabase error:', err);
-    return undefined;
+    return { ok: false, error: message };
   }
 }
 
-export async function syncPlantsBatchToSupabase(plants: UserPlant[]): Promise<void> {
-  if (!supabase || plants.length === 0) return;
+export async function syncPlantsBatchToSupabase(
+  plants: UserPlant[]
+): Promise<{ ok: boolean; plants: UserPlant[]; error?: string }> {
+  if (!supabase || plants.length === 0) return { ok: true, plants };
 
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return;
+    if (!userId) return { ok: false, plants, error: 'Not authenticated' };
+
+    const uploadedPlants: UserPlant[] = await Promise.all(
+      plants.map(async (p) => {
+        const remoteUri = (await uploadPlantPhotoIfNeeded(p.photoUri, p.id)) ?? p.photoUri;
+        return { ...p, photoUri: remoteUri };
+      })
+    );
 
     const nowIso = new Date().toISOString();
 
     const speciesMap = new Map<string, Record<string, unknown>>();
-    for (const p of plants) {
+    for (const p of uploadedPlants) {
       const dbSpeciesId = toDbId(p.species.id, userId);
       speciesMap.set(dbSpeciesId, {
         id: dbSpeciesId,
@@ -490,11 +592,16 @@ export async function syncPlantsBatchToSupabase(plants: UserPlant[]): Promise<vo
       });
     }
 
-    await supabase
+    const { error: speciesError } = await supabase
       .from('species_catalog')
       .upsert(Array.from(speciesMap.values()), { onConflict: 'id' });
 
-    const plantRows = plants.map((p) => ({
+    if (speciesError) {
+      console.warn('[Supabase] Failed batch upsert species_catalog:', speciesError.message);
+      return { ok: false, plants: uploadedPlants, error: speciesError.message };
+    }
+
+    const plantRows = uploadedPlants.map((p) => ({
       ...mapPlantToRow(p, userId),
       updated_at: nowIso,
     }));
@@ -505,18 +612,23 @@ export async function syncPlantsBatchToSupabase(plants: UserPlant[]): Promise<vo
 
     if (error) {
       console.warn('[Supabase] Failed batch upsert user_plants:', error.message);
+      return { ok: false, plants: uploadedPlants, error: error.message };
     }
+
+    return { ok: true, plants: uploadedPlants };
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Batch plant sync failed';
     console.warn('[Supabase] syncPlantsBatchToSupabase error:', err);
+    return { ok: false, plants, error: message };
   }
 }
 
-export async function deletePlantFromSupabase(plantId: string): Promise<void> {
-  if (!supabase) return;
+export async function deletePlantFromSupabase(plantId: string): Promise<SyncOperationResult> {
+  if (!supabase) return { ok: false, error: 'Supabase not configured' };
 
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return;
+    if (!userId) return { ok: false, error: 'Not authenticated' };
 
     const { error } = await supabase
       .from('user_plants')
@@ -524,18 +636,26 @@ export async function deletePlantFromSupabase(plantId: string): Promise<void> {
       .in('id', [toDbId(plantId, userId), plantId]);
     if (error) {
       console.warn('[Supabase] Failed to delete plant:', error.message);
+      return { ok: false, error: error.message };
     }
+
+    await cleanupPlantStorageFolder(userId, plantId);
+    return { ok: true };
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Delete plant failed';
     console.warn('[Supabase] deletePlantFromSupabase error:', err);
+    return { ok: false, error: message };
   }
 }
 
-export async function syncCareEntryToSupabase(entry: NotebookEntry): Promise<void> {
-  if (!supabase) return;
+export async function syncCareEntryToSupabase(
+  entry: NotebookEntry
+): Promise<SyncOperationResult> {
+  if (!supabase) return { ok: false, error: 'Supabase not configured' };
 
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return;
+    if (!userId) return { ok: false, error: 'Not authenticated' };
 
     const remotePhotoUri = await uploadPlantPhotoIfNeeded(entry.photoUri, entry.plantId);
 
@@ -549,23 +669,38 @@ export async function syncCareEntryToSupabase(entry: NotebookEntry): Promise<voi
 
     if (error) {
       console.warn('[Supabase] Failed to upsert notebook_entries:', error.message);
+      return { ok: false, error: error.message };
     }
+
+    return {
+      ok: true,
+      uploadedPhotoUri: remotePhotoUri !== entry.photoUri ? remotePhotoUri : undefined,
+    };
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Care entry sync failed';
     console.warn('[Supabase] syncCareEntryToSupabase error:', err);
+    return { ok: false, error: message };
   }
 }
 
 export async function syncCareEntriesBatchToSupabase(
   entries: NotebookEntry[]
-): Promise<void> {
-  if (!supabase || entries.length === 0) return;
+): Promise<{ ok: boolean; entries: NotebookEntry[]; error?: string }> {
+  if (!supabase || entries.length === 0) return { ok: true, entries };
 
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return;
+    if (!userId) return { ok: false, entries, error: 'Not authenticated' };
+
+    const uploadedEntries: NotebookEntry[] = await Promise.all(
+      entries.map(async (e) => {
+        const remoteUri = await uploadPlantPhotoIfNeeded(e.photoUri, e.plantId);
+        return { ...e, photoUri: remoteUri };
+      })
+    );
 
     const nowIso = new Date().toISOString();
-    const rows = entries.map((e) => ({
+    const rows = uploadedEntries.map((e) => ({
       ...mapEntryToRow(e, userId),
       updated_at: nowIso,
     }));
@@ -576,18 +711,25 @@ export async function syncCareEntriesBatchToSupabase(
 
     if (error) {
       console.warn('[Supabase] Failed batch upsert notebook_entries:', error.message);
+      return { ok: false, entries: uploadedEntries, error: error.message };
     }
+
+    return { ok: true, entries: uploadedEntries };
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Batch entry sync failed';
     console.warn('[Supabase] syncCareEntriesBatchToSupabase error:', err);
+    return { ok: false, entries, error: message };
   }
 }
 
-export async function deleteCareEntryFromSupabase(entryId: string): Promise<void> {
-  if (!supabase) return;
+export async function deleteCareEntryFromSupabase(
+  entryId: string
+): Promise<SyncOperationResult> {
+  if (!supabase) return { ok: false, error: 'Supabase not configured' };
 
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return;
+    if (!userId) return { ok: false, error: 'Not authenticated' };
 
     const { error } = await supabase
       .from('notebook_entries')
@@ -595,9 +737,13 @@ export async function deleteCareEntryFromSupabase(entryId: string): Promise<void
       .in('id', [toDbId(entryId, userId), entryId]);
     if (error) {
       console.warn('[Supabase] Failed to delete notebook entry:', error.message);
+      return { ok: false, error: error.message };
     }
+    return { ok: true };
   } catch (err) {
+    const message = err instanceof Error ? err.message : 'Delete entry failed';
     console.warn('[Supabase] deleteCareEntryFromSupabase error:', err);
+    return { ok: false, error: message };
   }
 }
 
@@ -642,20 +788,28 @@ export async function syncHealthAssessmentToSupabase(
 }
 
 /**
- * Pulls the authenticated user's garden from Supabase.
- * If the user's cloud garden is empty on first sign-in, seeds it with their local garden.
+ * Pulls the authenticated user's garden (`user_plants`, `notebook_entries`, `health_assessments`)
+ * from Supabase. Only seeds an empty cloud garden when `options.allowSeed` is true.
  */
 export async function pullOrSeedGardenWithSupabase(
   localPlants: UserPlant[],
-  localEntries: NotebookEntry[]
-): Promise<{ plants: UserPlant[]; entries: NotebookEntry[] } | null> {
+  localEntries: NotebookEntry[],
+  options?: {
+    allowSeed?: boolean;
+    localAssessments?: HealthAssessment[];
+  }
+): Promise<{
+  plants: UserPlant[];
+  entries: NotebookEntry[];
+  healthAssessments: HealthAssessment[];
+} | null> {
   if (!supabase) return null;
 
   try {
     const userId = await getCurrentUserId();
     if (!userId) return null;
 
-    const [plantsResult, entriesResult] = await Promise.all([
+    const [plantsResult, entriesResult, assessmentsResult] = await Promise.all([
       supabase
         .from('user_plants')
         .select('*')
@@ -666,28 +820,64 @@ export async function pullOrSeedGardenWithSupabase(
         .select('*')
         .eq('user_id', userId)
         .order('timestamp', { ascending: false }),
+      supabase
+        .from('health_assessments')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
     ]);
 
-    if (plantsResult.error || entriesResult.error) {
+    if (plantsResult.error || entriesResult.error || assessmentsResult.error) {
       console.warn(
         '[Supabase] Could not fetch user garden:',
-        plantsResult.error?.message || entriesResult.error?.message
+        plantsResult.error?.message ||
+          entriesResult.error?.message ||
+          assessmentsResult.error?.message
       );
       return null;
     }
 
-    const remotePlants = (plantsResult.data as DbUserPlantRow[]).map(mapRowToPlant);
+    const remoteAssessments = (
+      (assessmentsResult.data ?? []) as DbHealthAssessmentRow[]
+    ).map(mapRowToHealthAssessment);
+
+    const latestByPlantId = new Map<string, HealthAssessment>();
+    for (const assessment of remoteAssessments) {
+      if (!latestByPlantId.has(assessment.plantId)) {
+        latestByPlantId.set(assessment.plantId, assessment);
+      }
+    }
+
+    const remotePlants = (plantsResult.data as DbUserPlantRow[]).map((row) => {
+      const mapped = mapRowToPlant(row);
+      if (!mapped.latestHealthAssessment) {
+        const fallbackAssessment = latestByPlantId.get(mapped.id);
+        if (fallbackAssessment) {
+          return { ...mapped, latestHealthAssessment: fallbackAssessment };
+        }
+      }
+      return mapped;
+    });
     const remoteEntries = (entriesResult.data as DbNotebookEntryRow[]).map(mapRowToEntry);
 
-    if (remotePlants.length === 0 && localPlants.length > 0) {
-      await syncPlantsBatchToSupabase(localPlants);
-      await syncCareEntriesBatchToSupabase(localEntries);
-      return { plants: localPlants, entries: localEntries };
+    if (remotePlants.length === 0 && options?.allowSeed && localPlants.length > 0) {
+      const plantSync = await syncPlantsBatchToSupabase(localPlants);
+      const entrySync = await syncCareEntriesBatchToSupabase(localEntries);
+      const localAssessments = options.localAssessments ?? [];
+      for (const assessment of localAssessments) {
+        await syncHealthAssessmentToSupabase(assessment);
+      }
+      return {
+        plants: plantSync.plants,
+        entries: entrySync.entries,
+        healthAssessments: localAssessments,
+      };
     }
 
     return {
       plants: remotePlants,
       entries: remoteEntries,
+      healthAssessments: remoteAssessments,
     };
   } catch (err) {
     console.warn('[Supabase] pullOrSeedGardenWithSupabase error:', err);

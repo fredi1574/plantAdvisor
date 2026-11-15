@@ -3,13 +3,14 @@ import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { AppState, Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { BotanicalSplashScreen } from '@/components/splash-screen';
 import { useIsDark, usePalette } from '@/hooks/use-theme';
 import { initializeNotifications } from '@/services/notificationService';
 import { useAuthStore } from '@/store/useAuthStore';
+import { usePlantStore } from '@/store/usePlantStore';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Ignore if already prevented
@@ -51,6 +52,15 @@ export default function RootLayout() {
     }
     return () => sub?.remove();
   }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && isAuthenticated) {
+        void usePlantStore.getState().flushPendingSync();
+      }
+    });
+    return () => subscription.remove();
+  }, [isAuthenticated]);
 
   return (
     <GestureHandlerRootView
