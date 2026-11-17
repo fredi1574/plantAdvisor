@@ -2,7 +2,6 @@ import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import {
   Bell,
@@ -57,6 +56,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { usePalette } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
 import { confirmAction } from '@/services/dialogs';
+import { pickPlantImage } from '@/services/imagePicker';
 import { useThemeStore, type ThemePreference } from '@/store/useThemeStore';
 import {
   getNotificationPermissionStatus,
@@ -257,29 +257,23 @@ export default function ProfileScreen() {
   };
 
   const handlePickAvatar = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      showToast('Media library permission is required to choose a photo.');
-      return;
-    }
-
-    const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+    const picked = await pickPlantImage('library', {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.85,
     });
-
-    if (picked.canceled || !picked.assets[0]?.uri) return;
+    if (!picked.ok) {
+      if (picked.reason !== 'canceled' && picked.message) {
+        showToast(picked.message);
+      }
+      return;
+    }
 
     setIsUploadingAvatar(true);
     try {
-      const uploadedUrl = await uploadPlantPhotoIfNeeded(
-        picked.assets[0].uri,
-        'avatar'
-      );
+      const uploadedUrl = await uploadPlantPhotoIfNeeded(picked.uri, 'avatar');
       const res = await updateProfile({
-        avatarUrl: uploadedUrl ?? picked.assets[0].uri,
+        avatarUrl: uploadedUrl ?? picked.uri,
       });
       if (res.ok) {
         triggerSuccessHaptic();

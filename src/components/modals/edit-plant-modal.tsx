@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import {
   Camera,
   CheckCircle2,
@@ -25,6 +24,11 @@ import {
 } from 'react-native';
 
 import {
+  LIGHT_EXPOSURE_OPTIONS,
+  PLANT_TYPE_OPTIONS,
+  POT_MATERIAL_OPTIONS,
+} from '@/constants/plantOptions';
+import {
   CardShadow,
   MaxContentWidth,
   Radius,
@@ -32,7 +36,7 @@ import {
   type ThemePalette,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
-import { prepareImageForAI } from '@/services/imageUtils';
+import { pickPlantImage } from '@/services/imagePicker';
 import { usePlantStore } from '@/store/usePlantStore';
 import type {
   LightExposure,
@@ -48,29 +52,6 @@ interface EditPlantModalProps {
   onSaved?: (nickname: string) => void;
   onRequestDelete?: (plant: UserPlant) => void;
 }
-
-const PLANT_TYPES: { key: PlantType; label: string }[] = [
-  { key: 'succulent', label: 'Succulent' },
-  { key: 'propagation', label: 'Propagation' },
-  { key: 'foliage', label: 'Foliage' },
-  { key: 'flowering', label: 'Flowering' },
-];
-
-const POT_MATERIALS: { key: PotMaterial; label: string }[] = [
-  { key: 'terracotta', label: 'Terracotta' },
-  { key: 'ceramic_glazed', label: 'Glazed Ceramic' },
-  { key: 'plastic_nursery', label: 'Nursery Pot' },
-  { key: 'glass_vessel', label: 'Glass Jar' },
-  { key: 'fabric_grow_bag', label: 'Grow Bag' },
-];
-
-const LIGHT_EXPOSURES: { key: LightExposure; label: string }[] = [
-  { key: 'bright_direct', label: 'Bright Direct' },
-  { key: 'bright_indirect', label: 'Bright Indirect' },
-  { key: 'medium_filtered', label: 'Medium Filtered' },
-  { key: 'low_shade', label: 'Low Shade' },
-  { key: 'grow_light', label: 'Grow Light' },
-];
 
 export function EditPlantModal({
   plant,
@@ -143,33 +124,24 @@ function EditPlantFormSheet({
   const [photoUri, setPhotoUri] = useState(plant.photoUri);
 
   const handlePickPhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
-
-    const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+    const result = await pickPlantImage('library', {
       allowsEditing: true,
       quality: 0.9,
+      prepareForAI: true,
     });
-
-    if (!picked.canceled && picked.assets[0]?.uri) {
-      const prepared = await prepareImageForAI(picked.assets[0].uri);
-      setPhotoUri(prepared.uri);
+    if (result.ok) {
+      setPhotoUri(result.uri);
     }
   };
 
   const handleTakePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) return;
-
-    const snapped = await ImagePicker.launchCameraAsync({
+    const result = await pickPlantImage('camera', {
       allowsEditing: true,
       quality: 0.9,
+      prepareForAI: true,
     });
-
-    if (!snapped.canceled && snapped.assets[0]?.uri) {
-      const prepared = await prepareImageForAI(snapped.assets[0].uri);
-      setPhotoUri(prepared.uri);
+    if (result.ok) {
+      setPhotoUri(result.uri);
     }
   };
 
@@ -403,7 +375,7 @@ function EditPlantFormSheet({
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Botanical Category</Text>
             <View style={styles.chipRow}>
-              {PLANT_TYPES.map((pt) => {
+              {PLANT_TYPE_OPTIONS.map((pt) => {
                 const active = plantType === pt.key;
                 return (
                   <Pressable
@@ -427,7 +399,7 @@ function EditPlantFormSheet({
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Light Exposure</Text>
             <View style={styles.chipRow}>
-              {LIGHT_EXPOSURES.map((le) => {
+              {LIGHT_EXPOSURE_OPTIONS.map((le) => {
                 const active = lightExposure === le.key;
                 return (
                   <Pressable
@@ -451,7 +423,7 @@ function EditPlantFormSheet({
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>Pot / Vessel Material</Text>
             <View style={styles.chipRow}>
-              {POT_MATERIALS.map((pm) => {
+              {POT_MATERIAL_OPTIONS.map((pm) => {
                 const active = potMaterial === pm.key;
                 return (
                   <Pressable

@@ -24,6 +24,10 @@ import {
 } from 'react-native';
 
 import {
+  SOIL_MOISTURE_OPTIONS,
+  type SoilMoistureLevel,
+} from '@/constants/plantOptions';
+import {
   CardShadow,
   MaxContentWidth,
   Radius,
@@ -52,18 +56,6 @@ const getEventTypes = (
   { key: 'repot', label: 'Repot', color: palette.accentTerracotta },
   { key: 'note', label: 'Note', color: palette.textSecondary },
   { key: 'ai_scan', label: 'AI Scan', color: palette.primary },
-];
-
-type SoilMoisture = NonNullable<NotebookEntry['metrics']>['soilMoisture'];
-
-const SOIL_MOISTURE_OPTIONS: {
-  key: NonNullable<SoilMoisture>;
-  label: string;
-}[] = [
-  { key: 'bone_dry', label: 'Bone Dry' },
-  { key: 'slightly_damp', label: 'Slightly Damp' },
-  { key: 'moist', label: 'Moist' },
-  { key: 'waterlogged', label: 'Waterlogged' },
 ];
 
 export function EditLogModal({
@@ -134,9 +126,9 @@ function EditLogFormSheet({
       ? String(entry.metrics.waterAmountMl)
       : ''
   );
-  const [soilMoisture, setSoilMoisture] = useState<SoilMoisture>(
-    entry.metrics?.soilMoisture
-  );
+  const [soilMoisture, setSoilMoisture] = useState<
+    SoilMoistureLevel | undefined
+  >(entry.metrics?.soilMoisture);
 
   const handleSave = () => {
     const finalTitle = title.trim() || entry.title;

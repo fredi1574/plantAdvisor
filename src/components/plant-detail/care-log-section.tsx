@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import {
   Camera,
   Droplets,
@@ -23,30 +22,23 @@ import { BotanicalInput } from '@/components/ui/botanical-input';
 import { Chip } from '@/components/ui/chip';
 import { SurfaceCard } from '@/components/ui/surface-card';
 import {
+  SOIL_MOISTURE_OPTIONS,
+  type SoilMoistureLevel,
+} from '@/constants/plantOptions';
+import {
   BorderWidth,
   Spacing,
   type ThemePalette,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { triggerLightHaptic } from '@/services/haptics';
+import { pickPlantImage } from '@/services/imagePicker';
 import { usePlantStore } from '@/store/usePlantStore';
 import type {
   CareEventType,
   NotebookEntry,
   UserPlant,
 } from '@/types/plant';
-
-type SoilMoisture = NonNullable<NotebookEntry['metrics']>['soilMoisture'];
-
-const SOIL_MOISTURE_OPTIONS: {
-  value: NonNullable<SoilMoisture>;
-  label: string;
-}[] = [
-  { value: 'bone_dry', label: 'Bone Dry' },
-  { value: 'slightly_damp', label: 'Slightly Damp' },
-  { value: 'moist', label: 'Moist' },
-  { value: 'waterlogged', label: 'Waterlogged' },
-];
 
 const getQuickActions = (
   palette: ThemePalette
@@ -104,7 +96,7 @@ const getQuickActions = (
 interface CareLogFormState {
   customNote: string;
   photoUri: string | undefined;
-  soilMoisture: SoilMoisture | undefined;
+  soilMoisture: SoilMoistureLevel | undefined;
   waterMl: string;
   rootCm: string;
   stemCm: string;
@@ -159,36 +151,11 @@ export function CareLogSection({
   };
 
   const handlePickLogPhoto = async (source: 'camera' | 'library') => {
-    try {
-      if (source === 'camera') {
-        const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm.granted) {
-          onShowToast('Camera permission is needed to attach a progress photo.');
-          return;
-        }
-        const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          quality: 0.75,
-        });
-        if (!result.canceled && result.assets[0]?.uri) {
-          updateForm('photoUri', result.assets[0].uri);
-        }
-      } else {
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) {
-          onShowToast('Photo library permission is needed to pick a photo.');
-          return;
-        }
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 0.75,
-        });
-        if (!result.canceled && result.assets[0]?.uri) {
-          updateForm('photoUri', result.assets[0].uri);
-        }
-      }
-    } catch {
-      onShowToast('Unable to select photo right now.');
+    const result = await pickPlantImage(source, { quality: 0.75 });
+    if (result.ok) {
+      updateForm('photoUri', result.uri);
+    } else if (result.reason !== 'canceled' && result.message) {
+      onShowToast(result.message);
     }
   };
 
@@ -344,14 +311,14 @@ export function CareLogSection({
             </Text>
             <View style={styles.moistureChipsRow}>
               {SOIL_MOISTURE_OPTIONS.map((opt) => {
-                const active = form.soilMoisture === opt.value;
+                const active = form.soilMoisture === opt.key;
                 return (
                   <Chip
-                    key={opt.value}
+                    key={opt.key}
                     label={opt.label}
                     selected={active}
                     onPress={() =>
-                      updateForm('soilMoisture', active ? undefined : opt.value)
+                      updateForm('soilMoisture', active ? undefined : opt.key)
                     }
                   />
                 );
