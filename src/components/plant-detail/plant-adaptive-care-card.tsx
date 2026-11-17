@@ -1,19 +1,20 @@
 import { CloudRain, SlidersHorizontal, Snowflake } from 'lucide-react-native';
-import { useMemo, useReducer, useState } from 'react';
+import { useReducer, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
+import { BotanicalInput } from '@/components/ui/botanical-input';
+import { Chip } from '@/components/ui/chip';
+import { SurfaceCard } from '@/components/ui/surface-card';
 import {
-  CardShadow,
+  BorderWidth,
   Radius,
   Spacing,
-  type ThemePalette,
+  Typography,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import {
@@ -89,7 +90,6 @@ export function PlantAdaptiveCareCard({
   onShowToast,
 }: PlantAdaptiveCareCardProps) {
   const palette = usePalette();
-  const styles = useMemo(() => createStyles(palette), [palette]);
   const updatePlant = usePlantStore((s) => s.updatePlant);
 
   const [hemisphere, setHemisphere] = useState<Hemisphere>('northern');
@@ -157,28 +157,33 @@ export function PlantAdaptiveCareCard({
   };
 
   return (
-    <View style={styles.adaptiveCard}>
-      <View style={styles.adaptiveHeader}>
-        <View style={styles.adaptiveTitleRow}>
+    <SurfaceCard variant="glass">
+      <View style={styles.headerRow}>
+        <View style={styles.titleRow}>
           <SlidersHorizontal size={16} color={palette.primary} />
-          <Text style={styles.adaptiveTitle}>Adaptive Care Intelligence</Text>
+          <Text style={[styles.title, { color: palette.textPrimary }]}>
+            Adaptive Care Intelligence
+          </Text>
         </View>
-        <Pressable
+        <Chip
+          label={hemisphere === 'northern' ? 'N. Hemisphere' : 'S. Hemisphere'}
+          variant="subtle"
           onPress={() =>
             setHemisphere((h) => (h === 'northern' ? 'southern' : 'northern'))
           }
-          style={styles.hemispherePill}>
-          <Text style={styles.hemispherePillText}>
-            {hemisphere === 'northern' ? 'N. Hemisphere' : 'S. Hemisphere'}
-          </Text>
-        </Pressable>
+          textStyle={{ fontWeight: '600', color: palette.textSecondary }}
+        />
       </View>
 
-      <Text style={styles.adaptiveSummary}>{adaptiveInterval.summary}</Text>
+      <Text style={[styles.summary, { color: palette.textPrimary }]}>
+        {adaptiveInterval.summary}
+      </Text>
 
-      <View style={styles.adaptiveFactorsList}>
+      <View style={styles.factorsList}>
         {adaptiveInterval.factors.map((factor, idx) => (
-          <Text key={idx} style={styles.adaptiveFactorText}>
+          <Text
+            key={idx}
+            style={[styles.factorText, { color: palette.textSecondary }]}>
             • {factor}
           </Text>
         ))}
@@ -188,65 +193,60 @@ export function PlantAdaptiveCareCard({
         plant.customWateringIntervalDays && (
         <Pressable
           onPress={handleApplyAdaptiveInterval}
-          style={styles.applyAdaptiveBtn}>
-          <Text style={styles.applyAdaptiveBtnText}>
+          style={[styles.applyBtn, { backgroundColor: palette.primary }]}>
+          <Text style={[styles.applyBtnText, { color: palette.textInverse }]}>
             Apply {adaptiveInterval.suggestedIntervalDays}-Day Interval
           </Text>
         </Pressable>
       )}
 
       {!plant.isIndoor && (
-        <View style={styles.weatherSection}>
-          <View style={styles.weatherHeaderRow}>
-            <View style={styles.adaptiveTitleRow}>
+        <View
+          style={[
+            styles.weatherSection,
+            { borderTopColor: palette.borderSubtle },
+          ]}>
+          <View style={styles.headerRow}>
+            <View style={styles.titleRow}>
               <CloudRain size={15} color={palette.waterBlue} />
-              <Text style={styles.weatherTitle}>
+              <Text
+                style={[styles.weatherTitle, { color: palette.textPrimary }]}>
                 Outdoor Forecast (Open-Meteo)
               </Text>
             </View>
-            <Pressable
+            <Chip
+              label={weather.advisory ? 'Refresh' : 'Check Weather'}
+              variant="primarySoft"
+              loading={weather.isLoading}
               onPress={handleFetchWeather}
-              disabled={weather.isLoading}
-              style={styles.weatherFetchBtn}>
-              {weather.isLoading ? (
-                <ActivityIndicator size="small" color={palette.primary} />
-              ) : (
-                <Text style={styles.weatherFetchBtnText}>
-                  {weather.advisory ? 'Refresh' : 'Check Weather'}
-                </Text>
-              )}
-            </Pressable>
+            />
           </View>
 
           <View style={styles.coordRow}>
-            <TextInput
+            <BotanicalInput
+              surface="subtle"
               value={weather.latitudeInput}
               onChangeText={(value) =>
                 dispatchWeather({ type: 'SET_LATITUDE', value })
               }
               placeholder="Lat"
-              placeholderTextColor={palette.textMuted}
               keyboardType="numeric"
               style={styles.coordInput}
             />
-            <TextInput
+            <BotanicalInput
+              surface="subtle"
               value={weather.longitudeInput}
               onChangeText={(value) =>
                 dispatchWeather({ type: 'SET_LONGITUDE', value })
               }
               placeholder="Lon"
-              placeholderTextColor={palette.textMuted}
               keyboardType="numeric"
               style={styles.coordInput}
             />
           </View>
 
           {weather.error ? (
-            <Text
-              style={[
-                styles.adaptiveFactorText,
-                { color: palette.criticalText },
-              ]}>
+            <Text style={[styles.factorText, { color: palette.criticalText }]}>
               {weather.error}
             </Text>
           ) : null}
@@ -256,17 +256,23 @@ export function PlantAdaptiveCareCard({
               <View
                 key={idx}
                 style={[
-                  styles.weatherAlertBox,
-                  alert.kind === 'frost' && {
-                    backgroundColor: palette.criticalBg,
-                    borderColor: palette.criticalBorder,
-                  },
-                  alert.kind === 'rain' && {
-                    backgroundColor: palette.waterAlertBg,
-                    borderColor: palette.waterAlertBorder,
+                  styles.alertBox,
+                  {
+                    backgroundColor:
+                      alert.kind === 'frost'
+                        ? palette.criticalBg
+                        : alert.kind === 'rain'
+                          ? palette.waterAlertBg
+                          : palette.bgSubtle,
+                    borderColor:
+                      alert.kind === 'frost'
+                        ? palette.criticalBorder
+                        : alert.kind === 'rain'
+                          ? palette.waterAlertBorder
+                          : palette.borderSubtle,
                   },
                 ]}>
-                <View style={styles.adaptiveTitleRow}>
+                <View style={styles.titleRow}>
                   {alert.kind === 'frost' ? (
                     <Snowflake size={14} color={palette.criticalText} />
                   ) : (
@@ -274,146 +280,96 @@ export function PlantAdaptiveCareCard({
                   )}
                   <Text
                     style={[
-                      styles.weatherAlertTitle,
-                      alert.kind === 'frost' && {
-                        color: palette.criticalText,
+                      styles.alertTitle,
+                      {
+                        color:
+                          alert.kind === 'frost'
+                            ? palette.criticalText
+                            : palette.textPrimary,
                       },
                     ]}>
                     {alert.title}
                   </Text>
                 </View>
-                <Text style={styles.adaptiveFactorText}>{alert.message}</Text>
+                <Text
+                  style={[
+                    styles.factorText,
+                    { color: palette.textSecondary },
+                  ]}>
+                  {alert.message}
+                </Text>
               </View>
             ))}
         </View>
       )}
-    </View>
+    </SurfaceCard>
   );
 }
 
-const createStyles = (palette: ThemePalette) =>
-  StyleSheet.create({
-    adaptiveCard: {
-      backgroundColor: palette.glassSurface,
-      borderWidth: 1,
-      borderColor: palette.glassBorder,
-      borderRadius: Radius.xl,
-      padding: Spacing.md,
-      gap: Spacing.sm,
-      ...CardShadow,
-    },
-    adaptiveHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: Spacing.xs,
-    },
-    adaptiveTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    adaptiveTitle: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-    hemispherePill: {
-      backgroundColor: palette.bgSubtle,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: Radius.full,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: 4,
-    },
-    hemispherePillText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: palette.textSecondary,
-    },
-    adaptiveSummary: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: palette.textPrimary,
-      lineHeight: 19,
-    },
-    adaptiveFactorsList: {
-      gap: 3,
-    },
-    adaptiveFactorText: {
-      fontSize: 12,
-      color: palette.textSecondary,
-      lineHeight: 17,
-    },
-    applyAdaptiveBtn: {
-      alignSelf: 'flex-start',
-      backgroundColor: palette.primary,
-      borderRadius: Radius.full,
-      paddingHorizontal: Spacing.md,
-      paddingVertical: 8,
-      marginTop: 2,
-    },
-    applyAdaptiveBtnText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.textInverse,
-    },
-    weatherSection: {
-      marginTop: Spacing.xs,
-      paddingTop: Spacing.sm,
-      borderTopWidth: 1,
-      borderTopColor: palette.borderSubtle,
-      gap: Spacing.xs,
-    },
-    weatherHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    weatherTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-    weatherFetchBtn: {
-      backgroundColor: palette.primarySoft,
-      borderWidth: 1,
-      borderColor: palette.primaryBorder,
-      borderRadius: Radius.full,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: 5,
-    },
-    weatherFetchBtnText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: palette.primary,
-    },
-    coordRow: {
-      flexDirection: 'row',
-      gap: Spacing.xs,
-    },
-    coordInput: {
-      flex: 1,
-      backgroundColor: palette.bgSubtle,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: Radius.md,
-      paddingHorizontal: Spacing.sm,
-      paddingVertical: 6,
-      fontSize: 12,
-      color: palette.textPrimary,
-    },
-    weatherAlertBox: {
-      backgroundColor: palette.bgSubtle,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: Radius.md,
-      padding: Spacing.sm,
-      gap: 4,
-    },
-    weatherAlertTitle: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-  });
+const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.xs,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  summary: {
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
+  },
+  factorsList: {
+    gap: 3,
+  },
+  factorText: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  applyBtn: {
+    alignSelf: 'flex-start',
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.half,
+  },
+  applyBtnText: {
+    ...Typography.caption,
+    fontWeight: '700',
+  },
+  weatherSection: {
+    marginTop: Spacing.xs,
+    paddingTop: Spacing.sm,
+    borderTopWidth: BorderWidth.hairline,
+    gap: Spacing.xs,
+  },
+  weatherTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  coordRow: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  coordInput: {
+    flex: 1,
+  },
+  alertBox: {
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    gap: Spacing.xs,
+  },
+  alertTitle: {
+    ...Typography.caption,
+    fontWeight: '700',
+  },
+});

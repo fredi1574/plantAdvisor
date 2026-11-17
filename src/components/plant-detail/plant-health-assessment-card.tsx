@@ -15,18 +15,20 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
 import { AiLimitModal } from '@/components/modals/ai-limit-modal';
+import { BotanicalInput } from '@/components/ui/botanical-input';
+import { Chip } from '@/components/ui/chip';
+import { SurfaceCard } from '@/components/ui/surface-card';
 import {
-  CardShadow,
+  BorderWidth,
   getHealthBadgeTheme,
   getUrgencyBadgeTheme,
   Radius,
   Spacing,
-  type ThemePalette,
+  Typography,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import {
@@ -135,8 +137,10 @@ export function PlantHealthAssessmentCard({
   onShowToast,
 }: PlantHealthAssessmentCardProps) {
   const palette = usePalette();
-  const styles = useMemo(() => createStyles(palette), [palette]);
-  const healthBadgeTheme = useMemo(() => getHealthBadgeTheme(palette), [palette]);
+  const healthBadgeTheme = useMemo(
+    () => getHealthBadgeTheme(palette),
+    [palette]
+  );
   const urgencyBadgeTheme = useMemo(
     () => getUrgencyBadgeTheme(palette),
     [palette]
@@ -226,80 +230,95 @@ export function PlantHealthAssessmentCard({
   return (
     <>
       {state.error && (
-        <View style={styles.errorBanner}>
+        <View
+          style={[
+            styles.errorBanner,
+            {
+              backgroundColor: palette.criticalBg,
+              borderColor: palette.criticalBorder,
+            },
+          ]}>
           <AlertCircle size={16} color={palette.criticalText} />
-          <Text style={styles.errorBannerText}>{state.error}</Text>
+          <Text style={[styles.errorBannerText, { color: palette.criticalText }]}>
+            {state.error}
+          </Text>
         </View>
       )}
 
       {assessment && (
-        <View style={styles.assessmentCard}>
-          <View style={styles.assessmentHeaderRow}>
-            <View style={styles.assessmentTitleGroup}>
+        <SurfaceCard>
+          <View style={styles.headerRow}>
+            <View style={styles.titleGroup}>
               <Sparkles size={18} color={palette.primary} />
-              <View>
-                <Text style={styles.assessmentTitle}>
+              <View style={styles.titleTextWrap}>
+                <Text style={[styles.title, { color: palette.textPrimary }]}>
                   AI Health & Condition Assessment
                 </Text>
-                <Text style={styles.assessmentMeta}>
+                <Text style={[styles.meta, { color: palette.textSecondary }]}>
                   Analyzed photo + {plantEntries.length} care logs • Adjusted
                   water cycle: {assessment.adjustedWateringIntervalDays}d
                 </Text>
               </View>
             </View>
 
-            <Pressable
+            <Chip
+              label="Re-Analyze"
+              variant="primarySoft"
+              size="md"
+              loading={isRescanning}
               onPress={handleInstantAiRescan}
-              disabled={isRescanning}
-              style={({ pressed }) => [
-                styles.rescanPillBtn,
-                pressed && { opacity: 0.75 },
-              ]}>
-              {isRescanning ? (
-                <ActivityIndicator size="small" color={palette.primary} />
-              ) : (
-                <Text style={styles.rescanPillText}>Re-Analyze</Text>
-              )}
-            </Pressable>
+              style={styles.rescanChip}
+            />
           </View>
 
-          {/* Succulent Guardrail Banner */}
           {(assessment.succulentGuardrailApplied ||
             plant.species.baselineCare.succulentGuardrails
               .isSucculentOrCactus) && (
-            <View style={styles.guardrailCallout}>
+            <View
+              style={[
+                styles.guardrailCallout,
+                {
+                  backgroundColor: palette.attentionBg,
+                  borderColor: palette.attentionBorder,
+                },
+              ]}>
               <ShieldAlert size={16} color={palette.attentionText} />
-              <Text style={styles.guardrailCalloutText}>
+              <Text
+                style={[
+                  styles.guardrailText,
+                  { color: palette.attentionText },
+                ]}>
                 {assessment.succulentGuardrailApplied ??
                   plant.species.baselineCare.succulentGuardrails.rotWarningNote}
               </Text>
             </View>
           )}
 
-          {/* Diagnosis Summary */}
-          <Text style={styles.diagnosisBody}>
+          <Text style={[styles.diagnosisBody, { color: palette.textPrimary }]}>
             {assessment.diagnosisSummary}
           </Text>
 
-          {/* Detected Symptoms */}
           {assessment.detectedSymptoms.length > 0 && (
-            <View style={styles.symptomsBlock}>
-              <Text style={styles.subBlockLabel}>DETECTED INDICATORS</Text>
+            <SurfaceCard variant="nested">
+              <Text style={[styles.eyebrow, { color: palette.textSecondary }]}>
+                DETECTED INDICATORS
+              </Text>
               {assessment.detectedSymptoms.map((sym, idx) => (
-                <Text key={idx} style={styles.symptomBullet}>
+                <Text
+                  key={idx}
+                  style={[styles.symptomBullet, { color: palette.textPrimary }]}>
                   • {sym}
                 </Text>
               ))}
-            </View>
+            </SurfaceCard>
           )}
 
-          {/* Interactive Checkable "Next Steps" */}
           <View style={styles.actionsSection}>
             <View style={styles.actionsHeaderRow}>
-              <Text style={styles.subBlockLabel}>
+              <Text style={[styles.eyebrow, { color: palette.textSecondary }]}>
                 ACTIONABLE NEXT STEPS (TAP TO CHECK OFF)
               </Text>
-              <Text style={styles.actionsCounter}>
+              <Text style={[styles.actionsCounter, { color: palette.primary }]}>
                 {assessment.recommendedActions.filter((a) => a.completed).length}
                 /{assessment.recommendedActions.length} done
               </Text>
@@ -315,8 +334,15 @@ export function PlantHealthAssessmentCard({
                     toggleRecommendedAction(plant.id, action.id);
                   }}
                   style={({ pressed }) => [
-                    styles.checkableActionCard,
-                    action.completed && styles.checkableActionDone,
+                    styles.actionCard,
+                    {
+                      backgroundColor: action.completed
+                        ? palette.primarySoft
+                        : palette.bgPrimary,
+                      borderColor: action.completed
+                        ? palette.primaryBorder
+                        : palette.borderSubtle,
+                    },
                     pressed && { opacity: 0.85 },
                   ]}>
                   {action.completed ? (
@@ -325,18 +351,18 @@ export function PlantHealthAssessmentCard({
                     <Square size={20} color={palette.textSecondary} />
                   )}
 
-                  <View style={styles.checkableTextCol}>
-                    <View style={styles.checkableTopLine}>
+                  <View style={styles.actionTextCol}>
+                    <View style={styles.actionTopLine}>
                       <View
                         style={[
-                          styles.urgencyMiniBadge,
+                          styles.urgencyBadge,
                           {
                             backgroundColor: urg.bg,
                             borderColor: urg.border,
                           },
                         ]}>
                         <Text
-                          style={[styles.urgencyMiniText, { color: urg.text }]}>
+                          style={[styles.urgencyText, { color: urg.text }]}>
                           {urg.label}
                         </Text>
                       </View>
@@ -345,13 +371,22 @@ export function PlantHealthAssessmentCard({
                     <Text
                       style={[
                         styles.actionInstruction,
+                        {
+                          color: action.completed
+                            ? palette.textSecondary
+                            : palette.textPrimary,
+                        },
                         action.completed && styles.actionInstructionDone,
                       ]}>
                       {action.instruction}
                     </Text>
 
                     {Boolean(action.rationale) && (
-                      <Text style={styles.actionRationale}>
+                      <Text
+                        style={[
+                          styles.actionRationale,
+                          { color: palette.textSecondary },
+                        ]}>
                         Why: {action.rationale}
                       </Text>
                     )}
@@ -361,26 +396,41 @@ export function PlantHealthAssessmentCard({
             })}
           </View>
 
-          {/* Interactive Diagnostic Follow-Up Questions */}
           {assessment.followUpQuestions.length > 0 && (
-            <View style={styles.followUpBox}>
+            <View
+              style={[
+                styles.followUpBox,
+                { backgroundColor: palette.bgSubtle },
+              ]}>
               <View style={styles.followUpTitleRow}>
                 <HelpCircle size={14} color={palette.primary} />
-                <Text style={styles.followUpTitle}>
+                <Text style={[styles.followUpTitle, { color: palette.primary }]}>
                   Botanical Follow-Up Checks
                 </Text>
               </View>
+
               {assessment.followUpQuestions.map((q, idx) => {
                 const answer = state.followUpAnswers[idx] ?? '';
                 return (
-                  <View key={idx} style={{ gap: 6, marginTop: idx > 0 ? 6 : 0 }}>
-                    <Text style={styles.followUpQuestion}>• {q}</Text>
+                  <View
+                    key={idx}
+                    style={[styles.followUpItem, idx > 0 && { marginTop: 6 }]}>
+                    <Text
+                      style={[
+                        styles.followUpQuestion,
+                        { color: palette.textSecondary },
+                      ]}>
+                      • {q}
+                    </Text>
                     <View style={styles.followUpChipsRow}>
                       {QUICK_FOLLOW_UP_CHIPS.map((chip) => {
                         const selected = answer === chip;
                         return (
-                          <Pressable
+                          <Chip
                             key={chip}
+                            label={chip}
+                            selected={selected}
+                            selectedStyle="solid"
                             onPress={() => {
                               triggerLightHaptic();
                               dispatch({
@@ -389,29 +439,16 @@ export function PlantHealthAssessmentCard({
                                 value: selected ? '' : chip,
                               });
                             }}
-                            style={[
-                              styles.followUpChip,
-                              selected && styles.followUpChipSelected,
-                            ]}>
-                            <Text
-                              style={[
-                                styles.followUpChipText,
-                                selected && styles.followUpChipTextSelected,
-                              ]}>
-                              {chip}
-                            </Text>
-                          </Pressable>
+                          />
                         );
                       })}
                     </View>
-                    <TextInput
+                    <BotanicalInput
                       value={answer}
                       onChangeText={(value) =>
                         dispatch({ type: 'SET_FOLLOW_UP', index: idx, value })
                       }
                       placeholder="Or type a short observation..."
-                      placeholderTextColor={palette.textMuted}
-                      style={styles.followUpInput}
                     />
                   </View>
                 );
@@ -422,6 +459,7 @@ export function PlantHealthAssessmentCard({
                 disabled={isRefiningDiagnosis}
                 style={({ pressed }) => [
                   styles.refineBtn,
+                  { backgroundColor: palette.primary },
                   pressed && { opacity: 0.85 },
                   isRefiningDiagnosis && { opacity: 0.65 },
                 ]}>
@@ -430,7 +468,8 @@ export function PlantHealthAssessmentCard({
                 ) : (
                   <Sparkles size={14} color={palette.textInverse} />
                 )}
-                <Text style={styles.refineBtnText}>
+                <Text
+                  style={[styles.refineBtnText, { color: palette.textInverse }]}>
                   {isRefiningDiagnosis
                     ? 'Refining Diagnosis...'
                     : 'Refine Diagnosis with Answers'}
@@ -439,9 +478,12 @@ export function PlantHealthAssessmentCard({
             </View>
           )}
 
-          {/* Scan History Drawer / Accordion */}
           {plantAssessments.length > 0 && (
-            <View style={styles.historyContainer}>
+            <View
+              style={[
+                styles.historyContainer,
+                { borderTopColor: palette.borderSubtle },
+              ]}>
               <Pressable
                 onPress={() => {
                   triggerLightHaptic();
@@ -450,7 +492,11 @@ export function PlantHealthAssessmentCard({
                 style={styles.historyToggleRow}>
                 <View style={styles.historyToggleTitleRow}>
                   <History size={14} color={palette.textSecondary} />
-                  <Text style={styles.historyToggleText}>
+                  <Text
+                    style={[
+                      styles.historyToggleText,
+                      { color: palette.textSecondary },
+                    ]}>
                     Scan History ({plantAssessments.length})
                   </Text>
                 </View>
@@ -465,7 +511,10 @@ export function PlantHealthAssessmentCard({
                 plantAssessments.map((hist) => {
                   const histBadge = healthBadgeTheme[hist.healthStatus];
                   return (
-                    <View key={hist.id} style={styles.historyCard}>
+                    <SurfaceCard
+                      key={hist.id}
+                      variant="nested"
+                      style={styles.historyCard}>
                       <View style={styles.historyCardHeader}>
                         <Text
                           style={[
@@ -475,19 +524,27 @@ export function PlantHealthAssessmentCard({
                           {histBadge.label} · every{' '}
                           {hist.adjustedWateringIntervalDays}d
                         </Text>
-                        <Text style={styles.historyCardDate}>
+                        <Text
+                          style={[
+                            styles.historyCardDate,
+                            { color: palette.textMuted },
+                          ]}>
                           {new Date(hist.createdAt).toLocaleDateString()}
                         </Text>
                       </View>
-                      <Text style={styles.historyCardSummary}>
+                      <Text
+                        style={[
+                          styles.historyCardSummary,
+                          { color: palette.textSecondary },
+                        ]}>
                         {hist.diagnosisSummary}
                       </Text>
-                    </View>
+                    </SurfaceCard>
                   );
                 })}
             </View>
           )}
-        </View>
+        </SurfaceCard>
       )}
 
       <AiLimitModal
@@ -499,287 +556,198 @@ export function PlantHealthAssessmentCard({
   );
 }
 
-const createStyles = (palette: ThemePalette) =>
-  StyleSheet.create({
-    errorBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      backgroundColor: palette.criticalBg,
-      borderColor: palette.criticalBorder,
-      borderWidth: 1,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: Radius.md,
-    },
-    errorBannerText: {
-      flex: 1,
-      fontSize: 13,
-      fontWeight: '600',
-      color: palette.criticalText,
-    },
-    assessmentCard: {
-      backgroundColor: palette.bgSurface,
-      borderRadius: Radius.lg,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.sm,
-      gap: Spacing.md,
-      ...CardShadow,
-    },
-    assessmentHeaderRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      gap: 8,
-    },
-    assessmentTitleGroup: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    assessmentTitle: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-    assessmentMeta: {
-      fontSize: 12,
-      color: palette.textSecondary,
-    },
-    rescanPillBtn: {
-      backgroundColor: palette.primarySoft,
-      borderWidth: 1,
-      borderColor: palette.primaryBorder,
-      paddingHorizontal: 11,
-      paddingVertical: 6,
-      borderRadius: Radius.full,
-    },
-    rescanPillText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.primary,
-    },
-    guardrailCallout: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 8,
-      backgroundColor: palette.attentionBg,
-      borderColor: palette.attentionBorder,
-      borderWidth: 1,
-      padding: 11,
-      borderRadius: Radius.md,
-    },
-    guardrailCalloutText: {
-      flex: 1,
-      fontSize: 12,
-      lineHeight: 17,
-      fontWeight: '600',
-      color: palette.attentionText,
-    },
-    diagnosisBody: {
-      fontSize: 14,
-      lineHeight: 21,
-      color: palette.textPrimary,
-    },
-    symptomsBlock: {
-      backgroundColor: palette.bgPrimary,
-      borderRadius: Radius.md,
-      padding: 12,
-      gap: 4,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-    },
-    subBlockLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.6,
-      color: palette.textSecondary,
-    },
-    symptomBullet: {
-      fontSize: 13,
-      lineHeight: 19,
-      color: palette.textPrimary,
-    },
-    actionsSection: {
-      gap: 8,
-    },
-    actionsHeaderRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    actionsCounter: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.primary,
-    },
-    checkableActionCard: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 10,
-      backgroundColor: palette.bgPrimary,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: Radius.md,
-      padding: 12,
-    },
-    checkableActionDone: {
-      backgroundColor: palette.primarySoft,
-      borderColor: palette.primaryBorder,
-    },
-    checkableTextCol: {
-      flex: 1,
-      gap: 4,
-    },
-    checkableTopLine: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    urgencyMiniBadge: {
-      paddingHorizontal: 7,
-      paddingVertical: 2,
-      borderRadius: 6,
-      borderWidth: 1,
-    },
-    urgencyMiniText: {
-      fontSize: 10,
-      fontWeight: '700',
-      textTransform: 'uppercase',
-    },
-    actionInstruction: {
-      fontSize: 14,
-      lineHeight: 20,
-      fontWeight: '600',
-      color: palette.textPrimary,
-    },
-    actionInstructionDone: {
-      textDecorationLine: 'line-through',
-      color: palette.textSecondary,
-    },
-    actionRationale: {
-      fontSize: 12,
-      color: palette.textSecondary,
-    },
-    followUpBox: {
-      backgroundColor: palette.bgSubtle,
-      borderRadius: Radius.md,
-      padding: 12,
-      gap: 4,
-    },
-    followUpTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 2,
-    },
-    followUpTitle: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.primary,
-    },
-    followUpQuestion: {
-      fontSize: 12,
-      lineHeight: 18,
-      color: palette.textSecondary,
-    },
-    followUpChipsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    followUpChip: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 999,
-      borderWidth: 1,
-      backgroundColor: palette.bgSurface,
-      borderColor: palette.borderSubtle,
-    },
-    followUpChipSelected: {
-      backgroundColor: palette.primary,
-      borderColor: palette.primary,
-    },
-    followUpChipText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: palette.textSecondary,
-    },
-    followUpChipTextSelected: {
-      color: palette.textInverse,
-    },
-    followUpInput: {
-      backgroundColor: palette.bgSurface,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: 10,
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      fontSize: 12,
-      color: palette.textPrimary,
-    },
-    refineBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      marginTop: 6,
-      backgroundColor: palette.primary,
-      paddingVertical: 10,
-      borderRadius: 12,
-    },
-    refineBtnText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.textInverse,
-    },
-    historyContainer: {
-      borderTopWidth: 1,
-      borderTopColor: palette.borderSubtle,
-      paddingTop: 10,
-      gap: 8,
-    },
-    historyToggleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    historyToggleTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    historyToggleText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.textSecondary,
-    },
-    historyCard: {
-      backgroundColor: palette.bgPrimary,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      padding: 10,
-      gap: 4,
-    },
-    historyCardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    historyCardBadgeText: {
-      fontSize: 11,
-      fontWeight: '800',
-    },
-    historyCardDate: {
-      fontSize: 11,
-      color: palette.textMuted,
-    },
-    historyCardSummary: {
-      fontSize: 12,
-      color: palette.textSecondary,
-      lineHeight: 17,
-    },
-  });
+const styles = StyleSheet.create({
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderWidth: BorderWidth.hairline,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: Radius.md,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  titleGroup: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  titleTextWrap: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  meta: {
+    ...Typography.caption,
+  },
+  rescanChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  guardrailCallout: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    borderWidth: BorderWidth.hairline,
+    padding: 11,
+    borderRadius: Radius.md,
+  },
+  guardrailText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+  },
+  diagnosisBody: {
+    ...Typography.body,
+    lineHeight: 21,
+  },
+  eyebrow: {
+    ...Typography.eyebrow,
+    letterSpacing: 0.6,
+  },
+  symptomBullet: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  actionsSection: {
+    gap: Spacing.sm,
+  },
+  actionsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  actionsCounter: {
+    ...Typography.caption,
+    fontWeight: '700',
+  },
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+  },
+  actionTextCol: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  actionTopLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  urgencyBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: BorderWidth.hairline,
+  },
+  urgencyText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  actionInstruction: {
+    ...Typography.body,
+    fontWeight: '600',
+  },
+  actionInstructionDone: {
+    textDecorationLine: 'line-through',
+  },
+  actionRationale: {
+    ...Typography.caption,
+  },
+  followUpBox: {
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    gap: Spacing.xs,
+  },
+  followUpTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  followUpTitle: {
+    ...Typography.caption,
+    fontWeight: '700',
+  },
+  followUpItem: {
+    gap: 6,
+  },
+  followUpQuestion: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  followUpChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  refineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 6,
+    paddingVertical: 10,
+    borderRadius: Radius.md,
+  },
+  refineBtnText: {
+    ...Typography.caption,
+    fontWeight: '700',
+  },
+  historyContainer: {
+    borderTopWidth: BorderWidth.hairline,
+    paddingTop: 10,
+    gap: Spacing.sm,
+  },
+  historyToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  historyToggleTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  historyToggleText: {
+    ...Typography.caption,
+    fontWeight: '700',
+  },
+  historyCard: {
+    padding: 10,
+  },
+  historyCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  historyCardBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  historyCardDate: {
+    fontSize: 11,
+  },
+  historyCardSummary: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+});

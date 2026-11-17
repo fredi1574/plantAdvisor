@@ -15,14 +15,15 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
 import { SwipeableLogItem } from '@/components/plant-detail/swipeable-log-item';
+import { BotanicalInput } from '@/components/ui/botanical-input';
+import { Chip } from '@/components/ui/chip';
+import { SurfaceCard } from '@/components/ui/surface-card';
 import {
-  CardShadow,
-  Radius,
+  BorderWidth,
   Spacing,
   type ThemePalette,
 } from '@/constants/theme';
@@ -140,7 +141,6 @@ export function CareLogSection({
   onDeleteEntry,
 }: CareLogSectionProps) {
   const palette = usePalette();
-  const styles = useMemo(() => createStyles(palette), [palette]);
   const quickActions = useMemo(() => getQuickActions(palette), [palette]);
 
   const logCareEvent = usePlantStore((s) => s.logCareEvent);
@@ -251,56 +251,74 @@ export function CareLogSection({
   };
 
   return (
-    <View style={styles.timelineSectionCard}>
+    <SurfaceCard>
       <View style={styles.headerRow}>
-        <Text style={styles.sectionHeaderTitle}>
+        <Text
+          style={[styles.sectionHeaderTitle, { color: palette.textPrimary }]}>
           Quick-Log Care or Propagation Milestone
         </Text>
-        <Pressable
+        <Chip
+          label={showDetailedLog ? 'Hide Details' : 'Photo & Metrics'}
+          selected={showDetailedLog}
+          icon={
+            <Camera
+              size={12}
+              color={showDetailedLog ? palette.primary : palette.textSecondary}
+            />
+          }
           onPress={() => {
             triggerLightHaptic();
             setShowDetailedLog((prev) => !prev);
           }}
-          style={[
-            styles.toggleDetailsBtn,
-            showDetailedLog && styles.toggleDetailsBtnActive,
-          ]}>
-          <Camera
-            size={12}
-            color={showDetailedLog ? palette.primary : palette.textSecondary}
-          />
-          <Text
-            style={[
-              styles.toggleDetailsText,
-              showDetailedLog && styles.toggleDetailsTextActive,
-            ]}>
-            {showDetailedLog ? 'Hide Details' : 'Photo & Metrics'}
-          </Text>
-        </Pressable>
+        />
       </View>
 
-      <TextInput
+      <BotanicalInput
+        surface="primary"
+        compact={false}
         value={form.customNote}
         onChangeText={(value) => updateForm('customNote', value)}
         placeholder="Optional note (e.g., 'Root reached 10.5cm' or 'Bottom-soaked for 15m')..."
-        placeholderTextColor={palette.textMuted}
-        style={styles.quickNoteInput}
       />
 
       {showDetailedLog && (
-        <View style={styles.detailedDrawer}>
+        <SurfaceCard variant="nested" style={styles.detailedDrawer}>
           <View style={styles.photoPickerRow}>
             <Pressable
               onPress={() => void handlePickLogPhoto('camera')}
-              style={styles.photoPickerBtn}>
+              style={[
+                styles.photoPickerBtn,
+                {
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                },
+              ]}>
               <Camera size={14} color={palette.primary} />
-              <Text style={styles.photoPickerBtnText}>Camera</Text>
+              <Text
+                style={[
+                  styles.photoPickerBtnText,
+                  { color: palette.textPrimary },
+                ]}>
+                Camera
+              </Text>
             </Pressable>
             <Pressable
               onPress={() => void handlePickLogPhoto('library')}
-              style={styles.photoPickerBtn}>
+              style={[
+                styles.photoPickerBtn,
+                {
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                },
+              ]}>
               <ImageIcon size={14} color={palette.primary} />
-              <Text style={styles.photoPickerBtnText}>Library</Text>
+              <Text
+                style={[
+                  styles.photoPickerBtnText,
+                  { color: palette.textPrimary },
+                ]}>
+                Library
+              </Text>
             </Pressable>
           </View>
 
@@ -311,123 +329,130 @@ export function CareLogSection({
                 style={styles.photoPreview}
                 contentFit="cover"
               />
-              <Pressable
+              <Chip
+                label="Remove Photo"
+                icon={<X size={12} color={palette.textSecondary} />}
                 onPress={() => updateForm('photoUri', undefined)}
-                style={styles.removePhotoBtn}>
-                <X size={12} color={palette.textSecondary} />
-                <Text style={styles.removePhotoText}>Remove Photo</Text>
-              </Pressable>
+              />
             </View>
           )}
 
           <View style={styles.moistureSection}>
-            <Text style={styles.moistureLabel}>Soil Moisture Prior</Text>
+            <Text
+              style={[styles.moistureLabel, { color: palette.textSecondary }]}>
+              Soil Moisture Prior
+            </Text>
             <View style={styles.moistureChipsRow}>
               {SOIL_MOISTURE_OPTIONS.map((opt) => {
                 const active = form.soilMoisture === opt.value;
                 return (
-                  <Pressable
+                  <Chip
                     key={opt.value}
+                    label={opt.label}
+                    selected={active}
                     onPress={() =>
                       updateForm('soilMoisture', active ? undefined : opt.value)
                     }
-                    style={[
-                      styles.moistureChip,
-                      active && styles.moistureChipActive,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.moistureChipText,
-                        active && styles.moistureChipTextActive,
-                      ]}>
-                      {opt.label}
-                    </Text>
-                  </Pressable>
+                  />
                 );
               })}
             </View>
           </View>
 
           <View style={styles.metricsRow}>
-            <TextInput
+            <BotanicalInput
               value={form.waterMl}
               onChangeText={(value) => updateForm('waterMl', value)}
               placeholder="Water (ml)"
-              placeholderTextColor={palette.textMuted}
               keyboardType="numeric"
               style={styles.metricInput}
             />
-            <TextInput
+            <BotanicalInput
               value={form.rootCm}
               onChangeText={(value) => updateForm('rootCm', value)}
               placeholder="Root (cm)"
-              placeholderTextColor={palette.textMuted}
               keyboardType="decimal-pad"
               style={styles.metricInput}
             />
           </View>
 
           <View style={styles.metricsRow}>
-            <TextInput
+            <BotanicalInput
               value={form.stemCm}
               onChangeText={(value) => updateForm('stemCm', value)}
               placeholder="Stem (cm)"
-              placeholderTextColor={palette.textMuted}
               keyboardType="decimal-pad"
               style={styles.metricInput}
             />
-            <TextInput
+            <BotanicalInput
               value={form.leafCount}
               onChangeText={(value) => updateForm('leafCount', value)}
               placeholder="Leaf count"
-              placeholderTextColor={palette.textMuted}
               keyboardType="numeric"
               style={styles.metricInput}
             />
           </View>
-        </View>
+        </SurfaceCard>
       )}
 
       <View style={styles.quickActionsGrid}>
         {quickActions.map((qa) => {
           const isSelected = selectedQuickType === qa.type;
           return (
-            <Pressable
+            <Chip
               key={qa.type}
+              label={`+ ${qa.label}`}
+              variant="subtle"
+              size="md"
               onPress={() => handleQuickLog(qa.type)}
-              style={({ pressed }) => [
-                styles.quickActionBtn,
-                isSelected && {
-                  borderColor: qa.color,
-                  backgroundColor: palette.bgPrimary,
-                },
-                pressed && { opacity: 0.75 },
-              ]}>
-              {qa.type === 'water' && <Droplets size={15} color={qa.color} />}
-              {qa.type === 'propagation' && (
-                <Sprout size={15} color={qa.color} />
-              )}
-              {qa.type === 'fertilize' && (
-                <FlaskConical size={15} color={qa.color} />
-              )}
-              {qa.type === 'prune' && <Scissors size={15} color={qa.color} />}
-              {qa.type === 'repot' && <Sprout size={15} color={qa.color} />}
-              {qa.type === 'note' && <FileText size={15} color={qa.color} />}
-              <Text style={styles.quickActionLabel}>+ {qa.label}</Text>
-            </Pressable>
+              icon={
+                <>
+                  {qa.type === 'water' && (
+                    <Droplets size={15} color={qa.color} />
+                  )}
+                  {qa.type === 'propagation' && (
+                    <Sprout size={15} color={qa.color} />
+                  )}
+                  {qa.type === 'fertilize' && (
+                    <FlaskConical size={15} color={qa.color} />
+                  )}
+                  {qa.type === 'prune' && (
+                    <Scissors size={15} color={qa.color} />
+                  )}
+                  {qa.type === 'repot' && (
+                    <Sprout size={15} color={qa.color} />
+                  )}
+                  {qa.type === 'note' && (
+                    <FileText size={15} color={qa.color} />
+                  )}
+                </>
+              }
+              style={
+                isSelected
+                  ? {
+                      borderColor: qa.color,
+                      backgroundColor: palette.bgPrimary,
+                    }
+                  : undefined
+              }
+              textStyle={{ color: palette.textPrimary }}
+            />
           );
         })}
       </View>
 
-      <View style={styles.timelineDivider} />
+      <View
+        style={[
+          styles.timelineDivider,
+          { backgroundColor: palette.borderSubtle },
+        ]}
+      />
 
-      <View style={styles.timelineHeaderBlock}>
-        <Text style={styles.sectionHeaderTitle}>
-          Chronological Notebook Timeline ({plantEntries.length})
-        </Text>
-      </View>
+      <Text style={[styles.sectionHeaderTitle, { color: palette.textPrimary }]}>
+        Chronological Notebook Timeline ({plantEntries.length})
+      </Text>
 
-      <View style={styles.timelineList}>
+      <View>
         {plantEntries.map((entry, idx) => (
           <SwipeableLogItem
             key={entry.id}
@@ -438,199 +463,81 @@ export function CareLogSection({
           />
         ))}
       </View>
-    </View>
+    </SurfaceCard>
   );
 }
 
-const createStyles = (palette: ThemePalette) =>
-  StyleSheet.create({
-    timelineSectionCard: {
-      backgroundColor: palette.bgSurface,
-      borderRadius: Radius.lg,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.sm,
-      gap: Spacing.md,
-      ...CardShadow,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    sectionHeaderTitle: {
-      fontSize: 17,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-    toggleDetailsBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 9,
-      paddingVertical: 4,
-      borderRadius: 999,
-      backgroundColor: palette.bgPrimary,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-    },
-    toggleDetailsBtnActive: {
-      backgroundColor: palette.primarySoft,
-      borderColor: palette.primary,
-    },
-    toggleDetailsText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: palette.textSecondary,
-    },
-    toggleDetailsTextActive: {
-      color: palette.primary,
-    },
-    quickNoteInput: {
-      backgroundColor: palette.bgPrimary,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: Radius.md,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      fontSize: 13,
-      color: palette.textPrimary,
-    },
-    detailedDrawer: {
-      backgroundColor: palette.bgPrimary,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      padding: 12,
-      gap: 10,
-    },
-    photoPickerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    photoPickerBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 8,
-      borderRadius: 10,
-      backgroundColor: palette.bgSurface,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-    },
-    photoPickerBtnText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-    photoPreviewRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    photoPreview: {
-      width: 56,
-      height: 56,
-      borderRadius: 10,
-    },
-    removePhotoBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 999,
-      backgroundColor: palette.bgSurface,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-    },
-    removePhotoText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: palette.textSecondary,
-    },
-    moistureSection: {
-      gap: 6,
-    },
-    moistureLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: palette.textSecondary,
-    },
-    moistureChipsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    moistureChip: {
-      paddingHorizontal: 9,
-      paddingVertical: 5,
-      borderRadius: 999,
-      borderWidth: 1,
-      backgroundColor: palette.bgSurface,
-      borderColor: palette.borderSubtle,
-    },
-    moistureChipActive: {
-      backgroundColor: palette.primarySoft,
-      borderColor: palette.primary,
-    },
-    moistureChipText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: palette.textSecondary,
-    },
-    moistureChipTextActive: {
-      color: palette.primary,
-    },
-    metricsRow: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    metricInput: {
-      flex: 1,
-      backgroundColor: palette.bgSurface,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: 10,
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      fontSize: 12,
-      color: palette.textPrimary,
-    },
-    quickActionsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    quickActionBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: palette.bgSubtle,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: Radius.full,
-    },
-    quickActionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-    timelineDivider: {
-      height: 1,
-      backgroundColor: palette.borderSubtle,
-      marginVertical: 4,
-    },
-    timelineHeaderBlock: {
-      gap: 4,
-    },
-    timelineList: {
-      gap: 0,
-    },
-  });
+const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  sectionHeaderTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  detailedDrawer: {
+    borderRadius: 14,
+    gap: 10,
+  },
+  photoPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  photoPickerBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+    borderRadius: 10,
+    borderWidth: BorderWidth.hairline,
+  },
+  photoPickerBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  photoPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  photoPreview: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+  },
+  moistureSection: {
+    gap: 6,
+  },
+  moistureLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  moistureChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  metricInput: {
+    flex: 1,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  timelineDivider: {
+    height: BorderWidth.hairline,
+    marginVertical: Spacing.xs,
+  },
+});
