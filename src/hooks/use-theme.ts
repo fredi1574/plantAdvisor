@@ -2,7 +2,7 @@
  * Theme hooks for light and dark botanical palettes.
  */
 
-import { Colors, DarkPalette, LightPalette, type ThemePalette } from '@/constants/theme';
+import { DarkPalette, LightPalette, type ThemePalette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeStore } from '@/store/useThemeStore';
 
@@ -17,9 +17,4 @@ export function useIsDark(): boolean {
 
 export function usePalette(): ThemePalette {
   return useIsDark() ? DarkPalette : LightPalette;
-}
-
-export function useTheme() {
-  const isDark = useIsDark();
-  return Colors[isDark ? 'dark' : 'light'];
 }

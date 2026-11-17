@@ -174,25 +174,6 @@ export function getUrgencyBadgeTheme(palette: ThemePalette): Record<
 export const HealthBadgeTheme = getHealthBadgeTheme(LightPalette);
 export const UrgencyBadgeTheme = getUrgencyBadgeTheme(LightPalette);
 
-export const Colors = {
-  light: {
-    text: LightPalette.textPrimary,
-    background: LightPalette.bgPrimary,
-    backgroundElement: LightPalette.bgSubtle,
-    backgroundSelected: LightPalette.bgElevated,
-    textSecondary: LightPalette.textSecondary,
-  },
-  dark: {
-    text: DarkPalette.textPrimary,
-    background: DarkPalette.bgPrimary,
-    backgroundElement: DarkPalette.bgSubtle,
-    backgroundSelected: DarkPalette.bgElevated,
-    textSecondary: DarkPalette.textSecondary,
-  },
-} as const;
-
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
 export const Fonts = Platform.select({
   ios: {
     sans: 'system-ui',
