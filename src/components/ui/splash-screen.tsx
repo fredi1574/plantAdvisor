@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 
-import { BotanicalBackground } from '@/components/botanical-background';
+import { BotanicalBackground } from '@/components/ui/botanical-background';
 import {
   BorderWidth,
   Fonts,
@@ -20,7 +20,7 @@ import {
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 
-const LOGO_SOURCE = require('../../logo_transparent.png');
+const LOGO_SOURCE = require('../../../logo_transparent.png');
 
 interface BotanicalSplashScreenProps {
   onFinish?: () => void;

@@ -12,7 +12,7 @@ import {
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GlassPill } from '@/components/glass-pill';
+import { GlassPill } from '@/components/ui/glass-pill';
 import {
   BorderWidth,
   Radius,

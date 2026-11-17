@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { CheckCircle2, Droplets, MapPin } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { GlassPill } from '@/components/glass-pill';
+import { GlassPill } from '@/components/ui/glass-pill';
 import {
   BorderWidth,
   CardShadow,

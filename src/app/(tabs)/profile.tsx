@@ -16,10 +16,12 @@ import {
   LogOut,
   Monitor,
   Moon,
+  Plane,
   RefreshCw,
   RotateCcw,
   Save,
   Send,
+  Share2,
   Sprout,
   Sun,
   User as UserIcon,
@@ -31,6 +33,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
@@ -49,9 +52,9 @@ import {
   Typography,
   type ThemePalette,
 } from '@/constants/theme';
-import { BotanicalBackground } from '@/components/botanical-background';
-import { FeedbackBanner } from '@/components/feedback-banner';
-import { ScreenHeader } from '@/components/screen-header';
+import { BotanicalBackground } from '@/components/ui/botanical-background';
+import { FeedbackBanner } from '@/components/ui/feedback-banner';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { usePalette } from '@/hooks/use-theme';
 import { useThemeStore, type ThemePreference } from '@/store/useThemeStore';
 import {
@@ -60,6 +63,7 @@ import {
   requestNotificationPermissions,
   sendTestCareNotification,
 } from '@/services/notificationService';
+import { generatePlantSitterCareSheet } from '@/services/careIntelligenceService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePlantStore } from '@/store/usePlantStore';
 import { triggerLightHaptic, triggerSuccessHaptic } from '@/services/haptics';
@@ -100,6 +104,8 @@ export default function ProfileScreen() {
   const syncWithSupabase = usePlantStore((s) => s.syncWithSupabase);
   const notificationPrefs = usePlantStore((s) => s.notificationPrefs);
   const setNotificationPrefs = usePlantStore((s) => s.setNotificationPrefs);
+  const vacationMode = usePlantStore((s) => s.vacationMode);
+  const setVacationMode = usePlantStore((s) => s.setVacationMode);
   const resetToSeedData = usePlantStore((s) => s.resetToSeedData);
 
   const [draftName, setDraftName] = useState<string | null>(null);
@@ -837,6 +843,104 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
+          {/* Vacation / Care Snooze Mode Card */}
+          <View style={styles.card}>
+            <View style={styles.sectionTitleRow}>
+              <Plane size={17} color={palette.primary} />
+              <Text style={styles.sectionTitle}>Vacation & Care Snooze</Text>
+            </View>
+            <Text style={styles.cardDescription}>
+              Pause watering alarms while away and generate a Plant Sitter Care
+              Sheet for anyone watching your conservatory.
+            </Text>
+
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleTextCol}>
+                <Text style={styles.toggleLabel}>Vacation Mode</Text>
+                <Text style={styles.toggleSublabel}>
+                  Active window: {vacationMode.startDate} →{' '}
+                  {vacationMode.endDate}
+                </Text>
+              </View>
+              <Switch
+                value={vacationMode.enabled}
+                onValueChange={(val) => {
+                  triggerLightHaptic();
+                  void setVacationMode({ enabled: val });
+                }}
+                trackColor={{
+                  false: palette.borderSubtle,
+                  true: palette.primary,
+                }}
+              />
+            </View>
+
+            <View style={styles.vacationDateRow}>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Departure (YYYY-MM-DD)</Text>
+                <TextInput
+                  value={vacationMode.startDate}
+                  onChangeText={(val) => void setVacationMode({ startDate: val })}
+                  placeholder="2026-11-15"
+                  placeholderTextColor={palette.textMuted}
+                  style={styles.input}
+                />
+              </View>
+              <View style={[styles.fieldGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Return (YYYY-MM-DD)</Text>
+                <TextInput
+                  value={vacationMode.endDate}
+                  onChangeText={(val) => void setVacationMode({ endDate: val })}
+                  placeholder="2026-11-22"
+                  placeholderTextColor={palette.textMuted}
+                  style={styles.input}
+                />
+              </View>
+            </View>
+
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleTextCol}>
+                <Text style={styles.toggleLabel}>Snooze Watering Alarms</Text>
+                <Text style={styles.toggleSublabel}>
+                  Suppress local reminders during the vacation dates
+                </Text>
+              </View>
+              <Switch
+                value={vacationMode.snoozeNotifications}
+                onValueChange={(val) => {
+                  triggerLightHaptic();
+                  void setVacationMode({ snoozeNotifications: val });
+                }}
+                trackColor={{
+                  false: palette.borderSubtle,
+                  true: palette.primary,
+                }}
+              />
+            </View>
+
+            <Pressable
+              onPress={() => {
+                const sheet = generatePlantSitterCareSheet(
+                  plants,
+                  vacationMode.startDate,
+                  vacationMode.endDate
+                );
+                void Share.share({
+                  title: 'FloraLog Plant Sitter Care Sheet',
+                  message: sheet,
+                });
+              }}
+              style={({ pressed }) => [
+                styles.secondaryBtn,
+                pressed && { opacity: 0.85 },
+              ]}>
+              <Share2 size={15} color={palette.primary} />
+              <Text style={styles.secondaryBtnText}>
+                Share Plant Sitter Care Sheet
+              </Text>
+            </Pressable>
+          </View>
+
           {/* Sample Garden Card */}
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -1336,5 +1440,9 @@ const createStyles = (palette: ThemePalette) =>
     fontSize: 13,
     fontWeight: '700',
     color: palette.criticalText,
+  },
+  vacationDateRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
   },
 });

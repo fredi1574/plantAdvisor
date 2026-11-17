@@ -9,10 +9,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BotanicalBackground } from '@/components/botanical-background';
-import { CareScheduleView } from '@/components/care-schedule-view';
-import { FeedbackBanner } from '@/components/feedback-banner';
-import { ScreenHeader } from '@/components/screen-header';
+import { CareScheduleView } from '@/components/calendar/care-schedule-view';
+import { BotanicalBackground } from '@/components/ui/botanical-background';
+import { FeedbackBanner } from '@/components/ui/feedback-banner';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import {
   BottomTabInset,
   MaxContentWidth,

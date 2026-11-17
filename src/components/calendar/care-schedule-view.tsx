@@ -13,7 +13,7 @@ import {
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { GlassCard } from "@/components/glass-card";
+import { GlassCard } from "@/components/ui/glass-card";
 import {
   BorderWidth,
   Fonts,

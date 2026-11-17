@@ -10,8 +10,9 @@ import {
   Sparkles,
   Sprout,
   Stethoscope,
+  X,
 } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -24,7 +25,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { BotanicalBackground } from "@/components/botanical-background";
+import { PetSafetyBadge } from "@/components/garden/pet-safety-badge";
+import { AiLimitModal } from "@/components/modals/ai-limit-modal";
+import { BotanicalBackground } from "@/components/ui/botanical-background";
 import {
   BottomTabInset,
   CardShadow,
@@ -37,14 +40,20 @@ import {
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
 import {
+  AiQuotaExceededError,
   diagnosePlantHealth,
+  fetchAiQuotaStatus,
   identifyPlant,
   isMockAiEnabled,
+  subscribeToAiQuota,
 } from "@/services/aiPlantService";
 import { triggerSuccessHaptic } from "@/services/haptics";
 import { prepareImageForAI } from "@/services/imageUtils";
 import { usePlantStore } from "@/store/usePlantStore";
 import type {
+  AiQuotaStatus,
+  DiagnosticPhotoAngle,
+  DiagnosticPhotoInput,
   LightExposure,
   PlantDiagnosisResult,
   PlantIdentificationResult,
@@ -85,6 +94,16 @@ const SYMPTOM_CHIPS = [
   "Stretched / leggy stems",
   "Brown crispy leaf tips",
 ] as const;
+
+const DIAGNOSTIC_ANGLE_SLOTS: {
+  angle: DiagnosticPhotoAngle;
+  label: string;
+  hint: string;
+}[] = [
+    { angle: "canopy", label: "Whole Plant / Canopy", hint: "Overall shape & light" },
+    { angle: "closeup", label: "Leaf / Stem Close-Up", hint: "Spots, pests, edema" },
+    { angle: "soil", label: "Soil Surface & Pot Base", hint: "Moisture & drainage" },
+  ];
 
 export default function ScanScreen() {
   const palette = usePalette();
@@ -132,8 +151,19 @@ export default function ScanScreen() {
     params.plantId || plants[0]?.id || "",
   );
   const [observationNotes, setObservationNotes] = useState<string>("");
+  const [diagnosticPhotos, setDiagnosticPhotos] = useState<
+    Partial<Record<DiagnosticPhotoAngle, string>>
+  >({});
   const [diagnosisResult, setDiagnosisResult] =
     useState<PlantDiagnosisResult | null>(null);
+  const [aiQuota, setAiQuota] = useState<AiQuotaStatus | null>(null);
+  const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAiQuota(setAiQuota);
+    void fetchAiQuotaStatus();
+    return unsubscribe;
+  }, []);
 
   const [prevParams, setPrevParams] = useState({
     mode: params.mode,
@@ -219,11 +249,43 @@ export default function ScanScreen() {
     }
   };
 
+  const handleStartManualEntry = () => {
+    const manualName = searchQuery.trim() || "Custom Plant";
+    setMode("identify");
+    setErrorMessage(null);
+    setNickname(manualName);
+    setIdResult({
+      commonName: manualName,
+      scientificName: "Custom Species",
+      family: "Botanical Specimen",
+      plantType: "foliage",
+      confidence: 1,
+      identificationNotes:
+        "Added manually without AI identification. You can adjust watering and species details anytime.",
+      baselineCare: {
+        idealLight: "Bright indirect light",
+        baseWateringDays: 7,
+        soilRecommendation: "Well-draining indoor potting mix",
+        succulentGuardrails: {
+          isSucculentOrCactus: false,
+          neverMistFoliage: false,
+          soakAndDryRequired: false,
+          minimumDryBackDays: 4,
+          rotWarningNote: "Check top 2 inches of soil before watering.",
+        },
+      },
+    });
+  };
+
   const handleRunIdentification = async () => {
     if (!imageUri && !searchQuery.trim()) {
       setErrorMessage(
         "Please enter a plant name or select/capture a photo first.",
       );
+      return;
+    }
+    if (aiQuota && aiQuota.remaining <= 0) {
+      setShowLimitModal(true);
       return;
     }
     setErrorMessage(null);
@@ -234,9 +296,14 @@ export default function ScanScreen() {
       setNickname(result.commonName);
       triggerSuccessHaptic();
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : "Failed to identify plant.",
-      );
+      if (err instanceof AiQuotaExceededError) {
+        setAiQuota(err.quota);
+        setShowLimitModal(true);
+      } else {
+        setErrorMessage(
+          err instanceof Error ? err.message : "Failed to identify plant.",
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -262,33 +329,94 @@ export default function ScanScreen() {
     });
   };
 
+  const handlePickDiagnosticAnglePhoto = async (
+    angle: DiagnosticPhotoAngle,
+    source: "library" | "camera",
+  ) => {
+    setErrorMessage(null);
+    if (source === "camera") {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setErrorMessage("Camera permission is required to snap a photo.");
+        return;
+      }
+      const snapped = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.85,
+      });
+      if (!snapped.canceled && snapped.assets[0]?.uri) {
+        const prepared = await prepareImageForAI(snapped.assets[0].uri);
+        setDiagnosticPhotos((prev) => ({ ...prev, [angle]: prepared.uri }));
+      }
+    } else {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setErrorMessage(
+          "Photo library permission is required to upload a plant photo.",
+        );
+        return;
+      }
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.85,
+      });
+      if (!picked.canceled && picked.assets[0]?.uri) {
+        const prepared = await prepareImageForAI(picked.assets[0].uri);
+        setDiagnosticPhotos((prev) => ({ ...prev, [angle]: prepared.uri }));
+      }
+    }
+  };
+
   const handleRunHealthDiagnosis = async () => {
     if (!selectedPlant) {
       setErrorMessage("No plant selected for diagnosis.");
       return;
     }
+    if (aiQuota && aiQuota.remaining <= 0) {
+      setShowLimitModal(true);
+      return;
+    }
     setErrorMessage(null);
     setIsLoading(true);
     try {
+      const multiAngleInputs: DiagnosticPhotoInput[] = DIAGNOSTIC_ANGLE_SLOTS.map(
+        (slot) => ({
+          angle: slot.angle,
+          label: slot.label,
+          uri: diagnosticPhotos[slot.angle] || "",
+        }),
+      ).filter((item) => Boolean(item.uri));
+
+      const diagnosisInput =
+        multiAngleInputs.length > 0
+          ? multiAngleInputs
+          : imageUri || selectedPlant.photoUri;
+
+      const primaryPhotoUri =
+        multiAngleInputs[0]?.uri || imageUri || selectedPlant.photoUri;
+
       const diagnosis = await diagnosePlantHealth(
-        imageUri || selectedPlant.photoUri,
+        diagnosisInput,
         selectedPlant,
         selectedPlantLogs,
         observationNotes,
       );
       setDiagnosisResult(diagnosis);
-      saveHealthAssessment(
-        selectedPlant.id,
-        diagnosis,
-        imageUri || selectedPlant.photoUri,
-      );
+      saveHealthAssessment(selectedPlant.id, diagnosis, primaryPhotoUri);
       triggerSuccessHaptic();
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error
-          ? err.message
-          : "Failed to run AI health diagnosis.",
-      );
+      if (err instanceof AiQuotaExceededError) {
+        setAiQuota(err.quota);
+        setShowLimitModal(true);
+      } else {
+        setErrorMessage(
+          err instanceof Error
+            ? err.message
+            : "Failed to run AI health diagnosis.",
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -313,29 +441,56 @@ export default function ScanScreen() {
           <View style={styles.headerBlock}>
             <View style={styles.eyebrowRow}>
               <Text style={styles.eyebrow}>AI BOTANIST & SCANNER</Text>
-              <View
-                style={[
-                  styles.engineBadge,
-                  isLiveAi ? styles.engineBadgeLive : styles.engineBadgeMock,
-                ]}
-              >
-                <View
+              {aiQuota ? (
+                <Pressable
+                  onPress={() => {
+                    if (aiQuota.remaining <= 0) setShowLimitModal(true);
+                  }}
                   style={[
-                    styles.engineDot,
-                    isLiveAi ? styles.engineDotLive : styles.engineDotMock,
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.engineBadgeText,
-                    isLiveAi
-                      ? styles.engineBadgeTextLive
-                      : styles.engineBadgeTextMock,
+                    styles.quotaPill,
+                    aiQuota.remaining === 0
+                      ? {
+                          backgroundColor: palette.criticalBg,
+                          borderColor: palette.criticalBorder,
+                        }
+                      : aiQuota.remaining <= 1
+                        ? {
+                            backgroundColor: palette.attentionBg,
+                            borderColor: palette.attentionBorder,
+                          }
+                        : {
+                            backgroundColor: palette.primarySoft,
+                            borderColor: palette.primaryBorder,
+                          },
                   ]}
                 >
-                  {isLiveAi ? "Live Gemini AI" : "Botanical Mock"}
-                </Text>
-              </View>
+                  <Sparkles
+                    size={11}
+                    color={
+                      aiQuota.remaining === 0
+                        ? palette.criticalText
+                        : aiQuota.remaining <= 1
+                          ? palette.attentionText
+                          : palette.primary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.quotaPillText,
+                      {
+                        color:
+                          aiQuota.remaining === 0
+                            ? palette.criticalText
+                            : aiQuota.remaining <= 1
+                              ? palette.attentionText
+                              : palette.primary,
+                      },
+                    ]}
+                  >
+                    {aiQuota.remaining} / {aiQuota.limit} free AI scans left today
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
             <Text style={styles.headerTitle}>Add or Scan Plant</Text>
             <Text style={styles.headerSubtitle}>
@@ -525,6 +680,13 @@ export default function ScanScreen() {
                   <Text style={styles.resultNotes}>
                     {idResult.identificationNotes}
                   </Text>
+
+                  {idResult.petSafety ? (
+                    <PetSafetyBadge
+                      petSafety={idResult.petSafety}
+                      showDetails
+                    />
+                  ) : null}
 
                   {/* Baseline Care Grid */}
                   <View style={styles.careSpecBox}>
@@ -755,6 +917,84 @@ export default function ScanScreen() {
 
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>
+                  Multi-Angle Diagnostic Photos (Up to 3)
+                </Text>
+                <View style={styles.angleGrid}>
+                  {DIAGNOSTIC_ANGLE_SLOTS.map((slot) => {
+                    const uri = diagnosticPhotos[slot.angle];
+                    return (
+                      <View key={slot.angle} style={styles.angleSlot}>
+                        <View style={styles.angleSlotHeader}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.angleSlotTitle}>
+                              {slot.label}
+                            </Text>
+                            <Text style={styles.angleSlotHint}>
+                              {slot.hint}
+                            </Text>
+                          </View>
+                          {uri ? (
+                            <Pressable
+                              onPress={() =>
+                                setDiagnosticPhotos((prev) => {
+                                  const next = { ...prev };
+                                  delete next[slot.angle];
+                                  return next;
+                                })
+                              }
+                              style={styles.angleClearBtn}
+                            >
+                              <X size={14} color={palette.textSecondary} />
+                            </Pressable>
+                          ) : null}
+                        </View>
+
+                        {uri ? (
+                          <Image
+                            source={{ uri }}
+                            style={styles.anglePreview}
+                            contentFit="cover"
+                          />
+                        ) : (
+                          <View style={styles.angleActionsRow}>
+                            <Pressable
+                              onPress={() =>
+                                handlePickDiagnosticAnglePhoto(
+                                  slot.angle,
+                                  "camera",
+                                )
+                              }
+                              style={styles.anglePickBtn}
+                            >
+                              <Camera size={14} color={palette.primary} />
+                              <Text style={styles.anglePickBtnText}>
+                                Camera
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              onPress={() =>
+                                handlePickDiagnosticAnglePhoto(
+                                  slot.angle,
+                                  "library",
+                                )
+                              }
+                              style={styles.anglePickBtn}
+                            >
+                              <ImageIcon size={14} color={palette.primary} />
+                              <Text style={styles.anglePickBtnText}>
+                                Library
+                              </Text>
+                            </Pressable>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>
                   Visual Symptoms / Observations (Optional)
                 </Text>
                 <TextInput
@@ -905,6 +1145,13 @@ export default function ScanScreen() {
           )}
         </View>
       </ScrollView>
+
+      <AiLimitModal
+        visible={showLimitModal}
+        quota={aiQuota}
+        onClose={() => setShowLimitModal(false)}
+        onAddManual={handleStartManualEntry}
+      />
     </SafeAreaView>
   );
 }
@@ -1345,5 +1592,75 @@ const createStyles = (palette: ThemePalette) =>
       fontSize: 13,
       lineHeight: 19,
       color: palette.textPrimary,
+    },
+    angleGrid: {
+      gap: Spacing.xs,
+    },
+    angleSlot: {
+      backgroundColor: palette.bgSubtle,
+      borderWidth: 1,
+      borderColor: palette.borderSubtle,
+      borderRadius: Radius.md,
+      padding: Spacing.sm,
+      gap: Spacing.xs,
+    },
+    angleSlotHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: Spacing.xs,
+    },
+    angleSlotTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: palette.textPrimary,
+    },
+    angleSlotHint: {
+      fontSize: 11,
+      color: palette.textMuted,
+    },
+    angleClearBtn: {
+      padding: 4,
+      borderRadius: Radius.full,
+      backgroundColor: palette.bgSurface,
+    },
+    anglePreview: {
+      width: "100%",
+      height: 110,
+      borderRadius: Radius.md,
+    },
+    angleActionsRow: {
+      flexDirection: "row",
+      gap: Spacing.xs,
+    },
+    anglePickBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      backgroundColor: palette.bgSurface,
+      borderWidth: 1,
+      borderColor: palette.borderSubtle,
+      borderRadius: Radius.md,
+      paddingVertical: 8,
+    },
+    anglePickBtnText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: palette.primary,
+    },
+    quotaPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      borderRadius: Radius.full,
+      borderWidth: 1,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    quotaPillText: {
+      fontSize: 11,
+      fontWeight: "700",
     },
   });

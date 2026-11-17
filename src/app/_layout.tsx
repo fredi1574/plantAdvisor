@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { AppState, Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { BotanicalSplashScreen } from '@/components/splash-screen';
+import { BotanicalSplashScreen } from '@/components/ui/splash-screen';
 import { useIsDark, usePalette } from '@/hooks/use-theme';
 import { initializeNotifications } from '@/services/notificationService';
 import { useAuthStore } from '@/store/useAuthStore';

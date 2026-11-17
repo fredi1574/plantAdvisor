@@ -28,12 +28,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { BotanicalBackground } from "@/components/botanical-background";
-import { EditPlantModal } from "@/components/edit-plant-modal";
-import { FeedbackBanner } from "@/components/feedback-banner";
-import { PlantGridCard } from "@/components/plant-grid-card";
-import { ScreenHeader } from "@/components/screen-header";
-import { SwipeablePlantCard } from "@/components/swipeable-plant-card";
+import { PlantGridCard } from "@/components/garden/plant-grid-card";
+import { SwipeablePlantCard } from "@/components/garden/swipeable-plant-card";
+import { EditPlantModal } from "@/components/modals/edit-plant-modal";
+import { BotanicalBackground } from "@/components/ui/botanical-background";
+import { FeedbackBanner } from "@/components/ui/feedback-banner";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import {
   BorderWidth,
   BottomTabInset,
