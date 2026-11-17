@@ -1,161 +1,56 @@
-import { Image } from "expo-image";
-import * as ImagePicker from "expo-image-picker";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from 'expo-router';
 import {
   AlertCircle,
-  Camera,
-  CheckCircle2,
-  Image as ImageIcon,
-  ShieldAlert,
   Sparkles,
   Sprout,
   Stethoscope,
-  X,
-} from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
+} from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
-  TextInput,
   View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PetSafetyBadge } from "@/components/garden/pet-safety-badge";
-import { AiLimitModal } from "@/components/modals/ai-limit-modal";
-import { BotanicalBackground } from "@/components/ui/botanical-background";
+import { AiLimitModal } from '@/components/modals/ai-limit-modal';
+import { HealthDiagnosisFlow } from '@/components/scan/health-diagnosis-flow';
+import { IdentifyPlantFlow } from '@/components/scan/identify-plant-flow';
+import { PhotoCaptureCard } from '@/components/scan/photo-capture-card';
+import { BotanicalBackground } from '@/components/ui/botanical-background';
 import {
+  BorderWidth,
   BottomTabInset,
-  CardShadow,
-  getHealthBadgeTheme,
-  getUrgencyBadgeTheme,
   MaxContentWidth,
   Radius,
   Spacing,
-  type ThemePalette,
-} from "@/constants/theme";
-import { usePalette } from "@/hooks/use-theme";
+  Typography,
+} from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
 import {
-  AiQuotaExceededError,
-  diagnosePlantHealth,
   fetchAiQuotaStatus,
-  identifyPlant,
   subscribeToAiQuota,
-} from "@/services/aiPlantService";
-import { triggerSuccessHaptic } from "@/services/haptics";
-import { prepareImageForAI } from "@/services/imageUtils";
-import { usePlantStore } from "@/store/usePlantStore";
-import type {
-  AiQuotaStatus,
-  DiagnosticPhotoAngle,
-  DiagnosticPhotoInput,
-  LightExposure,
-  PlantDiagnosisResult,
-  PlantIdentificationResult,
-  PotMaterial,
-} from "@/types/plant";
+} from '@/services/aiPlantService';
+import type { AiQuotaStatus } from '@/types/plant';
 
-type ScanWorkflowMode = "identify" | "diagnose";
-
-const DEMO_PRESETS = [
-  {
-    label: "Jade Succulent",
-    query: "Crassula ovata Jade Plant",
-    uri: "https://images.unsplash.com/photo-1509423350716-97f9360b4e09?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    label: "Echeveria Rosette",
-    query: "Echeveria elegans succulent",
-    uri: "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    label: "Avocado Pit Prop",
-    query: "Persea americana Avocado seed propagation",
-    uri: "https://images.unsplash.com/photo-1592150621744-aca64f48394a?auto=format&fit=crop&w=900&q=80",
-  },
-];
-
-const LIGHT_EXPOSURE_OPTIONS: { key: LightExposure; label: string }[] = [
-  { key: "bright_direct", label: "Bright Direct" },
-  { key: "bright_indirect", label: "Bright Indirect" },
-  { key: "medium_filtered", label: "Medium Filtered" },
-  { key: "low_shade", label: "Low Shade" },
-  { key: "grow_light", label: "Grow Light" },
-];
-
-const SYMPTOM_CHIPS = [
-  "Yellowing lower leaves",
-  "Soft or mushy leaves",
-  "Stretched / leggy stems",
-  "Brown crispy leaf tips",
-] as const;
-
-const DIAGNOSTIC_ANGLE_SLOTS: {
-  angle: DiagnosticPhotoAngle;
-  label: string;
-  hint: string;
-}[] = [
-    { angle: "canopy", label: "Whole Plant / Canopy", hint: "Overall shape & light" },
-    { angle: "closeup", label: "Leaf / Stem Close-Up", hint: "Spots, pests, edema" },
-    { angle: "soil", label: "Soil Surface & Pot Base", hint: "Moisture & drainage" },
-  ];
+type ScanWorkflowMode = 'identify' | 'diagnose';
 
 export default function ScanScreen() {
   const palette = usePalette();
-  const styles = useMemo(() => createStyles(palette), [palette]);
-  const healthBadgeTheme = useMemo(
-    () => getHealthBadgeTheme(palette),
-    [palette],
-  );
-  const urgencyBadgeTheme = useMemo(
-    () => getUrgencyBadgeTheme(palette),
-    [palette],
-  );
   const params = useLocalSearchParams<{ mode?: string; plantId?: string }>();
-  const plants = usePlantStore((s) => s.plants);
-  const entries = usePlantStore((s) => s.entries);
-  const addPlant = usePlantStore((s) => s.addPlant);
-  const saveHealthAssessment = usePlantStore((s) => s.saveHealthAssessment);
 
   const [mode, setMode] = useState<ScanWorkflowMode>(
-    params.mode === "diagnose" ? "diagnose" : "identify",
+    params.mode === 'diagnose' ? 'diagnose' : 'identify'
   );
-
-  // Shared media state
-  const [imageUri, setImageUri] = useState<string>("");
-  const [imageDimensions, setImageDimensions] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [imageUri, setImageUri] = useState('');
+  const [imageDimensions, setImageDimensions] = useState('');
+  const [photoRevision, setPhotoRevision] = useState(0);
+  const [manualEntryRevision, setManualEntryRevision] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Workflow 1: Identify & Add Plant state
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [idResult, setIdResult] = useState<PlantIdentificationResult | null>(
-    null,
-  );
-  const [nickname, setNickname] = useState<string>("");
-  const [location, setLocation] = useState<string>("South Living Room Sill");
-  const [hasDrainageHole, setHasDrainageHole] = useState<boolean>(true);
-  const [potMaterial, setPotMaterial] = useState<PotMaterial>("terracotta");
-  const [lightExposure, setLightExposure] =
-    useState<LightExposure>("bright_direct");
-  const [isIndoor, setIsIndoor] = useState<boolean>(true);
-
-  // Workflow 2: Health Diagnosis state
-  const [selectedPlantId, setSelectedPlantId] = useState<string>(
-    params.plantId || plants[0]?.id || "",
-  );
-  const [observationNotes, setObservationNotes] = useState<string>("");
-  const [diagnosticPhotos, setDiagnosticPhotos] = useState<
-    Partial<Record<DiagnosticPhotoAngle, string>>
-  >({});
-  const [diagnosisResult, setDiagnosisResult] =
-    useState<PlantDiagnosisResult | null>(null);
   const [aiQuota, setAiQuota] = useState<AiQuotaStatus | null>(null);
-  const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToAiQuota(setAiQuota);
@@ -172,273 +67,64 @@ export default function ScanScreen() {
     params.plantId !== prevParams.plantId
   ) {
     setPrevParams({ mode: params.mode, plantId: params.plantId });
-    if (params.mode === "diagnose") {
-      setMode("diagnose");
-    }
-    if (params.plantId) {
-      setSelectedPlantId(params.plantId);
+    if (params.mode === 'diagnose') {
+      setMode('diagnose');
     }
   }
 
-  const selectedPlant = useMemo(
-    () => plants.find((p) => p.id === selectedPlantId) ?? plants[0],
-    [plants, selectedPlantId],
-  );
-
-  const selectedPlantLogs = useMemo(
-    () =>
-      entries
-        .filter((e) => e.plantId === selectedPlant?.id)
-        .sort(
-          (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-        ),
-    [entries, selectedPlant],
-  );
-
-  const handlePickFromLibrary = async () => {
-    setErrorMessage(null);
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setErrorMessage(
-        "Photo library permission is required to upload a plant photo.",
-      );
-      return;
-    }
-
-    const picked = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 0.9,
-    });
-
-    if (!picked.canceled && picked.assets[0]?.uri) {
-      const prepared = await prepareImageForAI(picked.assets[0].uri);
-      setImageUri(prepared.uri);
-      setImageDimensions(
-        `${prepared.width}×${prepared.height}px (${prepared.mimeType})`,
-      );
-      setSearchQuery("");
-      setIdResult(null);
-    }
+  const handleImageSelected = (uri: string, dimensions: string) => {
+    setImageUri(uri);
+    setImageDimensions(dimensions);
+    setPhotoRevision((n) => n + 1);
   };
 
-  const handleTakePhoto = async () => {
-    setErrorMessage(null);
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setErrorMessage("Camera permission is required to snap a photo.");
-      return;
+  const handleQuotaExceeded = (quota?: AiQuotaStatus) => {
+    if (quota) {
+      setAiQuota(quota);
     }
-
-    const snapped = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 0.9,
-    });
-
-    if (!snapped.canceled && snapped.assets[0]?.uri) {
-      const prepared = await prepareImageForAI(snapped.assets[0].uri);
-      setImageUri(prepared.uri);
-      setImageDimensions(
-        `${prepared.width}×${prepared.height}px (${prepared.mimeType})`,
-      );
-      setSearchQuery("");
-      setIdResult(null);
-    }
+    setShowLimitModal(true);
   };
 
   const handleStartManualEntry = () => {
-    const manualName = searchQuery.trim() || "Custom Plant";
-    setMode("identify");
+    setMode('identify');
     setErrorMessage(null);
-    setNickname(manualName);
-    setIdResult({
-      commonName: manualName,
-      scientificName: "Custom Species",
-      family: "Botanical Specimen",
-      plantType: "foliage",
-      confidence: 1,
-      identificationNotes:
-        "Added manually without AI identification. You can adjust watering and species details anytime.",
-      baselineCare: {
-        idealLight: "Bright indirect light",
-        baseWateringDays: 7,
-        soilRecommendation: "Well-draining indoor potting mix",
-        succulentGuardrails: {
-          isSucculentOrCactus: false,
-          neverMistFoliage: false,
-          soakAndDryRequired: false,
-          minimumDryBackDays: 4,
-          rotWarningNote: "Check top 2 inches of soil before watering.",
-        },
-      },
-    });
+    setManualEntryRevision((n) => n + 1);
   };
 
-  const handleRunIdentification = async () => {
-    if (!imageUri && !searchQuery.trim()) {
-      setErrorMessage(
-        "Please enter a plant name or select/capture a photo first.",
-      );
-      return;
-    }
-    if (aiQuota && aiQuota.remaining <= 0) {
-      setShowLimitModal(true);
-      return;
-    }
-    setErrorMessage(null);
-    setIsLoading(true);
-    try {
-      const result = await identifyPlant(imageUri || searchQuery, searchQuery);
-      setIdResult(result);
-      setNickname(result.commonName);
-      triggerSuccessHaptic();
-    } catch (err) {
-      if (err instanceof AiQuotaExceededError) {
-        setAiQuota(err.quota);
-        setShowLimitModal(true);
-      } else {
-        setErrorMessage(
-          err instanceof Error ? err.message : "Failed to identify plant.",
-        );
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSaveIdentifiedPlant = () => {
-    if (!idResult) return;
-    const created = addPlant({
-      nickname: nickname || idResult.commonName,
-      location,
-      isIndoor,
-      lightExposure,
-      hasDrainageHole,
-      potMaterial,
-      photoUri: imageUri || DEMO_PRESETS[0].uri,
-      identification: idResult,
-    });
-
-    setIdResult(null);
-    router.push({
-      pathname: "/plant/[id]",
-      params: { id: created.id },
-    });
-  };
-
-  const handlePickDiagnosticAnglePhoto = async (
-    angle: DiagnosticPhotoAngle,
-    source: "library" | "camera",
-  ) => {
-    setErrorMessage(null);
-    if (source === "camera") {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        setErrorMessage("Camera permission is required to snap a photo.");
-        return;
-      }
-      const snapped = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        quality: 0.85,
-      });
-      if (!snapped.canceled && snapped.assets[0]?.uri) {
-        const prepared = await prepareImageForAI(snapped.assets[0].uri);
-        setDiagnosticPhotos((prev) => ({ ...prev, [angle]: prepared.uri }));
-      }
-    } else {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        setErrorMessage(
-          "Photo library permission is required to upload a plant photo.",
-        );
-        return;
-      }
-      const picked = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        quality: 0.85,
-      });
-      if (!picked.canceled && picked.assets[0]?.uri) {
-        const prepared = await prepareImageForAI(picked.assets[0].uri);
-        setDiagnosticPhotos((prev) => ({ ...prev, [angle]: prepared.uri }));
-      }
-    }
-  };
-
-  const handleRunHealthDiagnosis = async () => {
-    if (!selectedPlant) {
-      setErrorMessage("No plant selected for diagnosis.");
-      return;
-    }
-    if (aiQuota && aiQuota.remaining <= 0) {
-      setShowLimitModal(true);
-      return;
-    }
-    setErrorMessage(null);
-    setIsLoading(true);
-    try {
-      const multiAngleInputs: DiagnosticPhotoInput[] = DIAGNOSTIC_ANGLE_SLOTS.map(
-        (slot) => ({
-          angle: slot.angle,
-          label: slot.label,
-          uri: diagnosticPhotos[slot.angle] || "",
-        }),
-      ).filter((item) => Boolean(item.uri));
-
-      const diagnosisInput =
-        multiAngleInputs.length > 0
-          ? multiAngleInputs
-          : imageUri || selectedPlant.photoUri;
-
-      const primaryPhotoUri =
-        multiAngleInputs[0]?.uri || imageUri || selectedPlant.photoUri;
-
-      const diagnosis = await diagnosePlantHealth(
-        diagnosisInput,
-        selectedPlant,
-        selectedPlantLogs,
-        observationNotes,
-      );
-      setDiagnosisResult(diagnosis);
-      saveHealthAssessment(selectedPlant.id, diagnosis, primaryPhotoUri);
-      triggerSuccessHaptic();
-    } catch (err) {
-      if (err instanceof AiQuotaExceededError) {
-        setAiQuota(err.quota);
-        setShowLimitModal(true);
-      } else {
-        setErrorMessage(
-          err instanceof Error
-            ? err.message
-            : "Failed to run AI health diagnosis.",
-        );
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const quotaColors =
+    aiQuota?.remaining === 0
+      ? {
+          bg: palette.criticalBg,
+          border: palette.criticalBorder,
+          text: palette.criticalText,
+        }
+      : (aiQuota?.remaining ?? 2) <= 1
+        ? {
+            bg: palette.attentionBg,
+            border: palette.attentionBorder,
+            text: palette.attentionText,
+          }
+        : {
+            bg: palette.primarySoft,
+            border: palette.primaryBorder,
+            text: palette.primary,
+          };
 
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}
-      edges={["top"]}
-    >
+      edges={['top']}>
       <BotanicalBackground variant="scan" />
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: BottomTabInset + Spacing.xl },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         <View style={styles.maxContainer}>
-          {/* Screen Title */}
           <View style={styles.headerBlock}>
             <View style={styles.eyebrowRow}>
-              <Text style={styles.eyebrow}>AI BOTANIST & SCANNER</Text>
+              <Text style={[styles.eyebrow, { color: palette.primary }]}>
+                AI BOTANIST & SCANNER
+              </Text>
               {aiQuota ? (
                 <Pressable
                   onPress={() => {
@@ -446,73 +132,51 @@ export default function ScanScreen() {
                   }}
                   style={[
                     styles.quotaPill,
-                    aiQuota.remaining === 0
-                      ? {
-                          backgroundColor: palette.criticalBg,
-                          borderColor: palette.criticalBorder,
-                        }
-                      : aiQuota.remaining <= 1
-                        ? {
-                            backgroundColor: palette.attentionBg,
-                            borderColor: palette.attentionBorder,
-                          }
-                        : {
-                            backgroundColor: palette.primarySoft,
-                            borderColor: palette.primaryBorder,
-                          },
-                  ]}
-                >
-                  <Sparkles
-                    size={11}
-                    color={
-                      aiQuota.remaining === 0
-                        ? palette.criticalText
-                        : aiQuota.remaining <= 1
-                          ? palette.attentionText
-                          : palette.primary
-                    }
-                  />
+                    {
+                      backgroundColor: quotaColors.bg,
+                      borderColor: quotaColors.border,
+                    },
+                  ]}>
+                  <Sparkles size={11} color={quotaColors.text} />
                   <Text
-                    style={[
-                      styles.quotaPillText,
-                      {
-                        color:
-                          aiQuota.remaining === 0
-                            ? palette.criticalText
-                            : aiQuota.remaining <= 1
-                              ? palette.attentionText
-                              : palette.primary,
-                      },
-                    ]}
-                  >
-                    {aiQuota.remaining} / {aiQuota.limit} free AI scans left today
+                    style={[styles.quotaPillText, { color: quotaColors.text }]}>
+                    {aiQuota.remaining} / {aiQuota.limit} free AI scans left
+                    today
                   </Text>
                 </Pressable>
               ) : null}
             </View>
-            <Text style={styles.headerTitle}>Add or Scan Plant</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>
+              Add or Scan Plant
+            </Text>
+            <Text
+              style={[styles.headerSubtitle, { color: palette.textSecondary }]}>
               Identify a new plant or run a context-aware AI Health Scan
               combining leaf photos with your care timeline.
             </Text>
           </View>
 
-          {/* Workflow Switcher */}
-          <View style={styles.segmentedBar}>
+          <View
+            style={[
+              styles.segmentedBar,
+              {
+                backgroundColor: palette.bgSubtle,
+                borderColor: palette.borderSubtle,
+              },
+            ]}>
             <Pressable
               onPress={() => {
-                setMode("identify");
+                setMode('identify');
                 setErrorMessage(null);
               }}
               style={[
                 styles.segmentBtn,
-                mode === "identify" && styles.segmentBtnActive,
-              ]}
-            >
+                mode === 'identify' && { backgroundColor: palette.primary },
+              ]}>
               <Sprout
                 size={16}
                 color={
-                  mode === "identify"
+                  mode === 'identify'
                     ? palette.textInverse
                     : palette.textSecondary
                 }
@@ -520,27 +184,30 @@ export default function ScanScreen() {
               <Text
                 style={[
                   styles.segmentBtnText,
-                  mode === "identify" && styles.segmentBtnTextActive,
-                ]}
-              >
+                  {
+                    color:
+                      mode === 'identify'
+                        ? palette.textInverse
+                        : palette.textSecondary,
+                  },
+                ]}>
                 1. Identify & Add Plant
               </Text>
             </Pressable>
 
             <Pressable
               onPress={() => {
-                setMode("diagnose");
+                setMode('diagnose');
                 setErrorMessage(null);
               }}
               style={[
                 styles.segmentBtn,
-                mode === "diagnose" && styles.segmentBtnActive,
-              ]}
-            >
+                mode === 'diagnose' && { backgroundColor: palette.primary },
+              ]}>
               <Stethoscope
                 size={16}
                 color={
-                  mode === "diagnose"
+                  mode === 'diagnose'
                     ? palette.textInverse
                     : palette.textSecondary
                 }
@@ -548,598 +215,62 @@ export default function ScanScreen() {
               <Text
                 style={[
                   styles.segmentBtnText,
-                  mode === "diagnose" && styles.segmentBtnTextActive,
-                ]}
-              >
+                  {
+                    color:
+                      mode === 'diagnose'
+                        ? palette.textInverse
+                        : palette.textSecondary,
+                  },
+                ]}>
                 2. AI Health Scan
               </Text>
             </Pressable>
           </View>
 
-          {/* Photo Capture / Upload & Demo Presets Card */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>
-              Step 1 — Photo or Sample Preset
-            </Text>
-
-            {imageUri ? (
-              <View style={styles.previewWrapper}>
-                <Image
-                  source={{ uri: imageUri }}
-                  style={styles.previewImage}
-                  contentFit="cover"
-                />
-                {Boolean(imageDimensions) && (
-                  <View style={styles.compressionBadge}>
-                    <Text style={styles.compressionBadgeText}>
-                      Optimized ≤1024px: {imageDimensions}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ) : (
-              <View style={styles.emptyPreviewBox}>
-                <Camera size={28} color={palette.primaryMuted} />
-                <Text style={styles.emptyPreviewTitle}>
-                  Snap a leaf photo or choose a sample below
-                </Text>
-                <Text style={styles.emptyPreviewSub}>
-                  Auto-resized & compressed to ≤1024×1024 via
-                  expo-image-manipulator
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.mediaButtonsRow}>
-              <Pressable
-                onPress={handleTakePhoto}
-                style={({ pressed }) => [
-                  styles.secondaryMediaBtn,
-                  pressed && { opacity: 0.8 },
-                ]}
-              >
-                <Camera size={16} color={palette.primary} />
-                <Text style={styles.secondaryMediaBtnText}>Camera</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handlePickFromLibrary}
-                style={({ pressed }) => [
-                  styles.secondaryMediaBtn,
-                  pressed && { opacity: 0.8 },
-                ]}
-              >
-                <ImageIcon size={16} color={palette.primary} />
-                <Text style={styles.secondaryMediaBtnText}>Photo Library</Text>
-              </Pressable>
-            </View>
-          </View>
+          <PhotoCaptureCard
+            imageUri={imageUri}
+            imageDimensions={imageDimensions}
+            onImageSelected={handleImageSelected}
+            onError={setErrorMessage}
+          />
 
           {errorMessage && (
-            <View style={styles.errorBanner}>
+            <View
+              style={[
+                styles.errorBanner,
+                {
+                  backgroundColor: palette.criticalBg,
+                  borderColor: palette.criticalBorder,
+                },
+              ]}>
               <AlertCircle size={16} color={palette.criticalText} />
-              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+              <Text
+                style={[
+                  styles.errorBannerText,
+                  { color: palette.criticalText },
+                ]}>
+                {errorMessage}
+              </Text>
             </View>
           )}
 
-          {/* WORKFLOW 1: IDENTIFY & ADD PLANT */}
-          {mode === "identify" ? (
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>
-                Step 2 — Botanical Name or Visual Clues
-              </Text>
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="e.g., Crassula ovata, Jade Plant, Avocado seed, Monstera..."
-                placeholderTextColor={palette.textMuted}
-                style={styles.textInput}
-              />
-
-              <Pressable
-                onPress={handleRunIdentification}
-                disabled={isLoading}
-                style={({ pressed }) => [
-                  styles.primaryActionBtn,
-                  (pressed || isLoading) && { opacity: 0.85 },
-                ]}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color={palette.textInverse} size="small" />
-                ) : (
-                  <Sparkles size={17} color={palette.textInverse} />
-                )}
-                <Text style={styles.primaryActionBtnText}>
-                  {isLoading
-                    ? "Analyzing Specimen..."
-                    : "Run AI Plant Identification"}
-                </Text>
-              </Pressable>
-
-              {/* Identification Result & Add-to-Garden Form */}
-              {idResult && (
-                <View style={styles.resultContainer}>
-                  <View style={styles.resultHeaderRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.resultCommonName}>
-                        {idResult.commonName}
-                      </Text>
-                      <Text style={styles.resultScientific}>
-                        {idResult.scientificName} • {idResult.family}
-                      </Text>
-                    </View>
-                    <View style={styles.confidenceBadge}>
-                      <Text style={styles.confidenceText}>
-                        {Math.round(idResult.confidence * 100)}% Match
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.resultNotes}>
-                    {idResult.identificationNotes}
-                  </Text>
-
-                  {idResult.petSafety ? (
-                    <PetSafetyBadge
-                      petSafety={idResult.petSafety}
-                      showDetails
-                    />
-                  ) : null}
-
-                  {/* Baseline Care Grid */}
-                  <View style={styles.careSpecBox}>
-                    <Text style={styles.careSpecLine}>
-                      <Text style={styles.careSpecLabel}>Ideal Light: </Text>
-                      {idResult.baselineCare.idealLight}
-                    </Text>
-                    <Text style={styles.careSpecLine}>
-                      <Text style={styles.careSpecLabel}>Base Watering: </Text>
-                      Every {idResult.baselineCare.baseWateringDays} days
-                    </Text>
-                    <Text style={styles.careSpecLine}>
-                      <Text style={styles.careSpecLabel}>Substrate: </Text>
-                      {idResult.baselineCare.soilRecommendation}
-                    </Text>
-                  </View>
-
-                  {/* Succulent Guardrail Callout */}
-                  {idResult.baselineCare.succulentGuardrails
-                    .isSucculentOrCactus && (
-                      <View style={styles.guardrailBox}>
-                        <ShieldAlert size={16} color={palette.attentionText} />
-                        <Text style={styles.guardrailText}>
-                          {
-                            idResult.baselineCare.succulentGuardrails
-                              .rotWarningNote
-                          }
-                        </Text>
-                      </View>
-                    )}
-
-                  {/* Customize Specimen Details before Saving */}
-                  <View style={styles.formDivider} />
-                  <Text style={styles.sectionTitle}>
-                    Step 3 — Save Specimen to My Garden
-                  </Text>
-
-                  <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>Plant Nickname</Text>
-                    <TextInput
-                      value={nickname}
-                      onChangeText={setNickname}
-                      style={styles.textInput}
-                      placeholder="e.g., Sunny Window Jade"
-                      placeholderTextColor={palette.textMuted}
-                    />
-                  </View>
-
-                  <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>
-                      Location in Home / Garden
-                    </Text>
-                    <TextInput
-                      value={location}
-                      onChangeText={setLocation}
-                      style={styles.textInput}
-                      placeholder="e.g., South Living Room Sill"
-                      placeholderTextColor={palette.textMuted}
-                    />
-                  </View>
-
-                  <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>Light Exposure</Text>
-                    <View style={styles.presetRow}>
-                      {LIGHT_EXPOSURE_OPTIONS.map((opt) => (
-                        <Pressable
-                          key={opt.key}
-                          onPress={() => setLightExposure(opt.key)}
-                          style={[
-                            styles.presetChip,
-                            lightExposure === opt.key && styles.presetChipActive,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.presetChipText,
-                              lightExposure === opt.key &&
-                              styles.presetChipTextActive,
-                            ]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
-
-                  <View style={styles.switchRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.fieldLabel}>Indoor Specimen</Text>
-                      <Text style={styles.switchSub}>
-                        Toggle off if grown outdoors on a patio or garden bed
-                      </Text>
-                    </View>
-                    <Switch
-                      value={isIndoor}
-                      onValueChange={setIsIndoor}
-                      trackColor={{
-                        false: palette.borderSubtle,
-                        true: palette.primary,
-                      }}
-                    />
-                  </View>
-
-                  <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>Pot / Vessel Material</Text>
-                    <View style={styles.presetRow}>
-                      {(
-                        [
-                          { key: "terracotta", label: "Terracotta" },
-                          { key: "ceramic_glazed", label: "Glazed Ceramic" },
-                          { key: "plastic_nursery", label: "Nursery Pot" },
-                          { key: "glass_vessel", label: "Glass Jar" },
-                        ] as const
-                      ).map((pm) => (
-                        <Pressable
-                          key={pm.key}
-                          onPress={() => setPotMaterial(pm.key)}
-                          style={[
-                            styles.presetChip,
-                            potMaterial === pm.key && styles.presetChipActive,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.presetChipText,
-                              potMaterial === pm.key &&
-                              styles.presetChipTextActive,
-                            ]}
-                          >
-                            {pm.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
-
-                  <View style={styles.switchRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.fieldLabel}>
-                        Container Has Bottom Drainage Hole
-                      </Text>
-                      <Text style={styles.switchSub}>
-                        Critical for preventing anaerobic root rot in succulents
-                      </Text>
-                    </View>
-                    <Switch
-                      value={hasDrainageHole}
-                      onValueChange={setHasDrainageHole}
-                      trackColor={{
-                        false: palette.borderSubtle,
-                        true: palette.primary,
-                      }}
-                    />
-                  </View>
-
-                  <Pressable
-                    onPress={handleSaveIdentifiedPlant}
-                    style={({ pressed }) => [
-                      styles.terracottaBtn,
-                      pressed && { opacity: 0.85 },
-                    ]}
-                  >
-                    <CheckCircle2 size={17} color={palette.textInverse} />
-                    <Text style={styles.primaryActionBtnText}>
-                      Add to My Garden & Open Notebook
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
+          {mode === 'identify' ? (
+            <IdentifyPlantFlow
+              imageUri={imageUri}
+              photoRevision={photoRevision}
+              manualEntryRevision={manualEntryRevision}
+              aiQuota={aiQuota}
+              onQuotaExceeded={handleQuotaExceeded}
+              onError={setErrorMessage}
+            />
           ) : (
-            /* WORKFLOW 2: AI HEALTH & CONDITION SCAN */
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>
-                Step 2 — Select Specimen & Describe Symptoms
-              </Text>
-
-              <View style={styles.presetRow}>
-                {plants.map((plant) => {
-                  const active = plant.id === selectedPlant?.id;
-                  return (
-                    <Pressable
-                      key={plant.id}
-                      onPress={() => setSelectedPlantId(plant.id)}
-                      style={[
-                        styles.presetChip,
-                        active && styles.presetChipActive,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.presetChipText,
-                          active && styles.presetChipTextActive,
-                        ]}
-                      >
-                        {plant.nickname} ({plant.species.commonName})
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {selectedPlant && (
-                <View style={styles.contextSummaryBox}>
-                  <Text style={styles.contextSummaryTitle}>
-                    Historical Context Injected into AI Prompt:
-                  </Text>
-                  <Text style={styles.contextSummaryItem}>
-                    • Species: {selectedPlant.species.commonName} (
-                    {selectedPlant.species.scientificName},{" "}
-                    {selectedPlant.species.family})
-                  </Text>
-                  <Text style={styles.contextSummaryItem}>
-                    • Container: {selectedPlant.potMaterial.replace("_", " ")} •{" "}
-                    {selectedPlant.hasDrainageHole
-                      ? "Has drainage hole"
-                      : "NO drainage hole"}
-                  </Text>
-                  <Text style={styles.contextSummaryItem}>
-                    • Care Timeline: {selectedPlantLogs.length} logged events
-                    (Last watered:{" "}
-                    {new Date(selectedPlant.lastWateredAt).toLocaleDateString()}
-                    )
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>
-                  Multi-Angle Diagnostic Photos (Up to 3)
-                </Text>
-                <View style={styles.angleGrid}>
-                  {DIAGNOSTIC_ANGLE_SLOTS.map((slot) => {
-                    const uri = diagnosticPhotos[slot.angle];
-                    return (
-                      <View key={slot.angle} style={styles.angleSlot}>
-                        <View style={styles.angleSlotHeader}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.angleSlotTitle}>
-                              {slot.label}
-                            </Text>
-                            <Text style={styles.angleSlotHint}>
-                              {slot.hint}
-                            </Text>
-                          </View>
-                          {uri ? (
-                            <Pressable
-                              onPress={() =>
-                                setDiagnosticPhotos((prev) => {
-                                  const next = { ...prev };
-                                  delete next[slot.angle];
-                                  return next;
-                                })
-                              }
-                              style={styles.angleClearBtn}
-                            >
-                              <X size={14} color={palette.textSecondary} />
-                            </Pressable>
-                          ) : null}
-                        </View>
-
-                        {uri ? (
-                          <Image
-                            source={{ uri }}
-                            style={styles.anglePreview}
-                            contentFit="cover"
-                          />
-                        ) : (
-                          <View style={styles.angleActionsRow}>
-                            <Pressable
-                              onPress={() =>
-                                handlePickDiagnosticAnglePhoto(
-                                  slot.angle,
-                                  "camera",
-                                )
-                              }
-                              style={styles.anglePickBtn}
-                            >
-                              <Camera size={14} color={palette.primary} />
-                              <Text style={styles.anglePickBtnText}>
-                                Camera
-                              </Text>
-                            </Pressable>
-                            <Pressable
-                              onPress={() =>
-                                handlePickDiagnosticAnglePhoto(
-                                  slot.angle,
-                                  "library",
-                                )
-                              }
-                              style={styles.anglePickBtn}
-                            >
-                              <ImageIcon size={14} color={palette.primary} />
-                              <Text style={styles.anglePickBtnText}>
-                                Library
-                              </Text>
-                            </Pressable>
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>
-                  Visual Symptoms / Observations (Optional)
-                </Text>
-                <TextInput
-                  value={observationNotes}
-                  onChangeText={setObservationNotes}
-                  multiline
-                  numberOfLines={3}
-                  style={[
-                    styles.textInput,
-                    { minHeight: 72, textAlignVertical: "top" },
-                  ]}
-                  placeholder="Describe any yellowing, wrinkling, stretching, spots, or root growth..."
-                  placeholderTextColor={palette.textMuted}
-                />
-                <View style={styles.presetRow}>
-                  {SYMPTOM_CHIPS.map((symptom) => (
-                    <Pressable
-                      key={symptom}
-                      onPress={() =>
-                        setObservationNotes((prev) =>
-                          prev.trim()
-                            ? `${prev.trim().replace(/[.;]+$/, "")}; ${symptom.toLowerCase()}.`
-                            : `${symptom}.`,
-                        )
-                      }
-                      style={styles.presetChip}
-                    >
-                      <Text style={styles.presetChipText}>+ {symptom}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
-              <Pressable
-                onPress={handleRunHealthDiagnosis}
-                disabled={isLoading}
-                style={({ pressed }) => [
-                  styles.primaryActionBtn,
-                  (pressed || isLoading) && { opacity: 0.85 },
-                ]}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color={palette.textInverse} size="small" />
-                ) : (
-                  <Stethoscope size={17} color={palette.textInverse} />
-                )}
-                <Text style={styles.primaryActionBtnText}>
-                  {isLoading
-                    ? "Cross-Referencing Photo & Care Logs..."
-                    : "Run AI Health & Condition Scan"}
-                </Text>
-              </Pressable>
-
-              {/* Diagnosis Output Card */}
-              {diagnosisResult && selectedPlant && (
-                <View style={styles.resultContainer}>
-                  <View style={styles.resultHeaderRow}>
-                    <Text style={styles.resultCommonName}>
-                      AI Diagnosis Complete
-                    </Text>
-                    <View
-                      style={[
-                        styles.statusPill,
-                        {
-                          backgroundColor:
-                            healthBadgeTheme[diagnosisResult.healthStatus].bg,
-                          borderColor:
-                            healthBadgeTheme[diagnosisResult.healthStatus]
-                              .border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusPillText,
-                          {
-                            color:
-                              healthBadgeTheme[diagnosisResult.healthStatus]
-                                .text,
-                          },
-                        ]}
-                      >
-                        {healthBadgeTheme[diagnosisResult.healthStatus].label}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.resultNotes}>
-                    {diagnosisResult.diagnosisSummary}
-                  </Text>
-
-                  {diagnosisResult.succulentGuardrailApplied && (
-                    <View style={styles.guardrailBox}>
-                      <ShieldAlert size={16} color={palette.attentionText} />
-                      <Text style={styles.guardrailText}>
-                        {diagnosisResult.succulentGuardrailApplied}
-                      </Text>
-                    </View>
-                  )}
-
-                  <Text style={styles.subHeader}>Recommended Next Steps:</Text>
-                  {diagnosisResult.recommendedActions.map((act, idx) => {
-                    const urg = urgencyBadgeTheme[act.urgency];
-                    return (
-                      <View key={idx} style={styles.actionRowItem}>
-                        <View
-                          style={[
-                            styles.urgencyPill,
-                            {
-                              backgroundColor: urg.bg,
-                              borderColor: urg.border,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[styles.urgencyText, { color: urg.text }]}
-                          >
-                            {urg.label}
-                          </Text>
-                        </View>
-                        <Text style={styles.actionRowText}>
-                          {act.instruction}
-                        </Text>
-                      </View>
-                    );
-                  })}
-
-                  <Pressable
-                    onPress={() =>
-                      router.push({
-                        pathname: "/plant/[id]",
-                        params: { id: selectedPlant.id },
-                      })
-                    }
-                    style={({ pressed }) => [
-                      styles.terracottaBtn,
-                      pressed && { opacity: 0.85 },
-                    ]}
-                  >
-                    <CheckCircle2 size={16} color={palette.textInverse} />
-                    <Text style={styles.primaryActionBtnText}>
-                      View in {selectedPlant.nickname} Notebook
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
+            <HealthDiagnosisFlow
+              imageUri={imageUri}
+              initialPlantId={params.plantId}
+              aiQuota={aiQuota}
+              onQuotaExceeded={handleQuotaExceeded}
+              onError={setErrorMessage}
+            />
           )}
         </View>
       </ScrollView>
@@ -1154,511 +285,88 @@ export default function ScanScreen() {
   );
 }
 
-const createStyles = (palette: ThemePalette) =>
-  StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: palette.bgPrimary,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.md,
-      paddingBottom: Spacing.xxl * 1.5,
-      alignItems: "center",
-    },
-    maxContainer: {
-      width: "100%",
-      maxWidth: MaxContentWidth,
-      gap: Spacing.md,
-    },
-    headerBlock: {
-      gap: 4,
-    },
-    eyebrowRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-    engineBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: Radius.full,
-      borderWidth: 1,
-    },
-    engineBadgeLive: {
-      backgroundColor: palette.thrivingBg,
-      borderColor: palette.thrivingBorder,
-    },
-    engineBadgeMock: {
-      backgroundColor: palette.bgSubtle,
-      borderColor: palette.borderSubtle,
-    },
-    engineDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-    },
-    engineDotLive: {
-      backgroundColor: palette.thrivingText,
-    },
-    engineDotMock: {
-      backgroundColor: palette.textMuted,
-    },
-    engineBadgeText: {
-      fontSize: 11,
-      fontWeight: "600",
-    },
-    engineBadgeTextLive: {
-      color: palette.thrivingText,
-    },
-    engineBadgeTextMock: {
-      color: palette.textSecondary,
-    },
-    eyebrow: {
-      fontSize: 11,
-      fontWeight: "700",
-      letterSpacing: 0.8,
-      color: palette.primary,
-    },
-    headerTitle: {
-      fontSize: 28,
-      lineHeight: 34,
-      fontWeight: "700",
-      color: palette.textPrimary,
-    },
-    headerSubtitle: {
-      fontSize: 14,
-      lineHeight: 20,
-      color: palette.textSecondary,
-    },
-    segmentedBar: {
-      flexDirection: "row",
-      backgroundColor: palette.bgSubtle,
-      padding: 4,
-      borderRadius: Radius.md,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      gap: 6,
-    },
-    segmentBtn: {
-      flex: 1,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-      paddingVertical: 10,
-      borderRadius: Radius.sm,
-    },
-    segmentBtnActive: {
-      backgroundColor: palette.primary,
-    },
-    segmentBtnText: {
-      fontSize: 13,
-      fontWeight: "700",
-      color: palette.textSecondary,
-    },
-    segmentBtnTextActive: {
-      color: palette.textInverse,
-    },
-    card: {
-      backgroundColor: palette.bgSurface,
-      borderRadius: Radius.lg,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.sm,
-      gap: Spacing.md,
-      ...CardShadow,
-    },
-    sectionTitle: {
-      fontSize: 16,
-      fontWeight: "700",
-      color: palette.textPrimary,
-    },
-    previewWrapper: {
-      position: "relative",
-      borderRadius: Radius.md,
-      overflow: "hidden",
-      height: 190,
-      backgroundColor: palette.bgSubtle,
-    },
-    previewImage: {
-      width: "100%",
-      height: "100%",
-    },
-    compressionBadge: {
-      position: "absolute",
-      bottom: 8,
-      right: 8,
-      backgroundColor: "rgba(28, 40, 32, 0.82)",
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: Radius.full,
-    },
-    compressionBadgeText: {
-      fontSize: 11,
-      fontWeight: "600",
-      color: palette.textInverse,
-    },
-    emptyPreviewBox: {
-      borderWidth: 1,
-      borderStyle: "dashed",
-      borderColor: palette.borderSubtle,
-      backgroundColor: palette.bgPrimary,
-      borderRadius: Radius.md,
-      paddingVertical: 24,
-      paddingHorizontal: 16,
-      alignItems: "center",
-      gap: 6,
-    },
-    emptyPreviewTitle: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: palette.textPrimary,
-    },
-    emptyPreviewSub: {
-      fontSize: 12,
-      color: palette.textMuted,
-      textAlign: "center",
-    },
-    mediaButtonsRow: {
-      flexDirection: "row",
-      gap: Spacing.sm,
-    },
-    secondaryMediaBtn: {
-      flex: 1,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-      paddingVertical: 10,
-      borderRadius: Radius.md,
-      backgroundColor: palette.primarySoft,
-      borderWidth: 1,
-      borderColor: palette.primaryBorder,
-    },
-    secondaryMediaBtnText: {
-      fontSize: 13,
-      fontWeight: "700",
-      color: palette.primary,
-    },
-    presetBlock: {
-      gap: 6,
-    },
-    presetLabel: {
-      fontSize: 12,
-      fontWeight: "600",
-      color: palette.textSecondary,
-    },
-    presetRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 8,
-    },
-    presetChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: Radius.full,
-      backgroundColor: palette.bgSubtle,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-    },
-    presetChipActive: {
-      backgroundColor: palette.primary,
-      borderColor: palette.primary,
-    },
-    presetChipText: {
-      fontSize: 12,
-      fontWeight: "600",
-      color: palette.textPrimary,
-    },
-    presetChipTextActive: {
-      color: palette.textInverse,
-    },
-    errorBanner: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      backgroundColor: palette.criticalBg,
-      borderColor: palette.criticalBorder,
-      borderWidth: 1,
-      padding: 12,
-      borderRadius: Radius.md,
-    },
-    errorBannerText: {
-      flex: 1,
-      fontSize: 13,
-      fontWeight: "600",
-      color: palette.criticalText,
-    },
-    textInput: {
-      backgroundColor: palette.bgPrimary,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: Radius.md,
-      paddingHorizontal: 14,
-      paddingVertical: 11,
-      fontSize: 14,
-      color: palette.textPrimary,
-    },
-    primaryActionBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      backgroundColor: palette.primary,
-      paddingVertical: 13,
-      borderRadius: Radius.md,
-    },
-    terracottaBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      backgroundColor: palette.accentTerracotta,
-      paddingVertical: 13,
-      borderRadius: Radius.md,
-      marginTop: 4,
-    },
-    primaryActionBtnText: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: palette.textInverse,
-    },
-    resultContainer: {
-      marginTop: 8,
-      paddingTop: 14,
-      borderTopWidth: 1,
-      borderTopColor: palette.borderSubtle,
-      gap: 12,
-    },
-    resultHeaderRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: 8,
-    },
-    resultCommonName: {
-      fontSize: 18,
-      fontWeight: "700",
-      color: palette.textPrimary,
-    },
-    resultScientific: {
-      fontSize: 13,
-      fontStyle: "italic",
-      color: palette.textSecondary,
-    },
-    confidenceBadge: {
-      backgroundColor: palette.thrivingBg,
-      borderColor: palette.thrivingBorder,
-      borderWidth: 1,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: Radius.full,
-    },
-    confidenceText: {
-      fontSize: 12,
-      fontWeight: "700",
-      color: palette.thrivingText,
-    },
-    resultNotes: {
-      fontSize: 14,
-      lineHeight: 20,
-      color: palette.textSecondary,
-    },
-    careSpecBox: {
-      backgroundColor: palette.bgPrimary,
-      borderRadius: Radius.md,
-      padding: 12,
-      gap: 6,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-    },
-    careSpecLine: {
-      fontSize: 13,
-      lineHeight: 19,
-      color: palette.textPrimary,
-    },
-    careSpecLabel: {
-      fontWeight: "700",
-      color: palette.primary,
-    },
-    guardrailBox: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: 8,
-      backgroundColor: palette.attentionBg,
-      borderColor: palette.attentionBorder,
-      borderWidth: 1,
-      padding: 12,
-      borderRadius: Radius.md,
-    },
-    guardrailText: {
-      flex: 1,
-      fontSize: 12,
-      lineHeight: 18,
-      fontWeight: "600",
-      color: palette.attentionText,
-    },
-    formDivider: {
-      height: 1,
-      backgroundColor: palette.borderSubtle,
-      marginVertical: 4,
-    },
-    fieldGroup: {
-      gap: 6,
-    },
-    fieldLabel: {
-      fontSize: 13,
-      fontWeight: "700",
-      color: palette.textPrimary,
-    },
-    switchRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 12,
-      paddingVertical: 4,
-    },
-    switchSub: {
-      fontSize: 12,
-      color: palette.textSecondary,
-    },
-    contextSummaryBox: {
-      backgroundColor: palette.bgPrimary,
-      borderRadius: Radius.md,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      gap: 4,
-    },
-    contextSummaryTitle: {
-      fontSize: 12,
-      fontWeight: "700",
-      color: palette.primary,
-      marginBottom: 2,
-    },
-    contextSummaryItem: {
-      fontSize: 12,
-      color: palette.textSecondary,
-    },
-    statusPill: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: Radius.full,
-      borderWidth: 1,
-    },
-    statusPillText: {
-      fontSize: 11,
-      fontWeight: "700",
-      textTransform: "uppercase",
-    },
-    subHeader: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: palette.textPrimary,
-    },
-    actionRowItem: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: 8,
-      backgroundColor: palette.bgPrimary,
-      padding: 10,
-      borderRadius: Radius.md,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-    },
-    urgencyPill: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: Radius.sm,
-      borderWidth: 1,
-    },
-    urgencyText: {
-      fontSize: 10,
-      fontWeight: "700",
-      textTransform: "uppercase",
-    },
-    actionRowText: {
-      flex: 1,
-      fontSize: 13,
-      lineHeight: 19,
-      color: palette.textPrimary,
-    },
-    angleGrid: {
-      gap: Spacing.xs,
-    },
-    angleSlot: {
-      backgroundColor: palette.bgSubtle,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: Radius.md,
-      padding: Spacing.sm,
-      gap: Spacing.xs,
-    },
-    angleSlotHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: Spacing.xs,
-    },
-    angleSlotTitle: {
-      fontSize: 13,
-      fontWeight: "700",
-      color: palette.textPrimary,
-    },
-    angleSlotHint: {
-      fontSize: 11,
-      color: palette.textMuted,
-    },
-    angleClearBtn: {
-      padding: 4,
-      borderRadius: Radius.full,
-      backgroundColor: palette.bgSurface,
-    },
-    anglePreview: {
-      width: "100%",
-      height: 110,
-      borderRadius: Radius.md,
-    },
-    angleActionsRow: {
-      flexDirection: "row",
-      gap: Spacing.xs,
-    },
-    anglePickBtn: {
-      flex: 1,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-      backgroundColor: palette.bgSurface,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: Radius.md,
-      paddingVertical: 8,
-    },
-    anglePickBtnText: {
-      fontSize: 12,
-      fontWeight: "600",
-      color: palette.primary,
-    },
-    quotaPill: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      borderRadius: Radius.full,
-      borderWidth: 1,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-    },
-    quotaPillText: {
-      fontSize: 11,
-      fontWeight: "700",
-    },
-  });
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: BottomTabInset + Spacing.xl,
+    alignItems: 'center',
+  },
+  maxContainer: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    gap: Spacing.md,
+  },
+  headerBlock: {
+    gap: Spacing.xs,
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  eyebrow: {
+    ...Typography.eyebrow,
+    letterSpacing: 0.8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '700',
+  },
+  headerSubtitle: {
+    ...Typography.body,
+  },
+  segmentedBar: {
+    flexDirection: 'row',
+    padding: Spacing.xs,
+    borderRadius: Radius.md,
+    borderWidth: BorderWidth.hairline,
+    gap: 6,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: Radius.sm,
+  },
+  segmentBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderWidth: BorderWidth.hairline,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  quotaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: Radius.full,
+    borderWidth: BorderWidth.hairline,
+    paddingHorizontal: 10,
+    paddingVertical: Spacing.xs,
+  },
+  quotaPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+});
