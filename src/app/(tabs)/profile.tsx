@@ -29,7 +29,6 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -56,6 +55,8 @@ import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { usePalette } from '@/hooks/use-theme';
+import { useToast } from '@/hooks/use-toast';
+import { confirmAction } from '@/services/dialogs';
 import { useThemeStore, type ThemePreference } from '@/store/useThemeStore';
 import {
   getNotificationPermissionStatus,
@@ -112,7 +113,7 @@ export default function ProfileScreen() {
   const [draftLevel, setDraftLevel] = useState<ExperienceLevel | null>(null);
   const [draftBio, setDraftBio] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const { message: toast, showToast } = useToast(3200);
   const [permissionStatus, setPermissionStatus] = useState<
     'granted' | 'denied' | 'undetermined' | 'unsupported'
   >('undetermined');
@@ -221,11 +222,6 @@ export default function ProfileScreen() {
     draftLevel ?? profile?.experienceLevel ?? 'enthusiast';
   const bio = draftBio ?? profile?.bio ?? '';
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3200);
-  };
-
   const handleSaveProfile = async () => {
     const res = await updateProfile({
       displayName,
@@ -248,34 +244,22 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = () => {
-    const performSignOut = async () => {
-      await signOut();
-      router.replace('/auth');
-    };
-
-    if (Platform.OS === 'web') {
-      if (
-        typeof window !== 'undefined' &&
-        window.confirm('Sign out of your FloraLog cloud account?')
-      ) {
-        void performSignOut();
-      }
-    } else {
-      Alert.alert('Sign Out', 'Sign out of your FloraLog cloud account?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: () => void performSignOut(),
-        },
-      ]);
-    }
+    confirmAction({
+      title: 'Sign Out',
+      message: 'Sign out of your FloraLog cloud account?',
+      confirmLabel: 'Sign Out',
+      destructive: true,
+      onConfirm: async () => {
+        await signOut();
+        router.replace('/auth');
+      },
+    });
   };
 
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setToast('Media library permission is required to choose a photo.');
+      showToast('Media library permission is required to choose a photo.');
       return;
     }
 
@@ -299,47 +283,30 @@ export default function ProfileScreen() {
       });
       if (res.ok) {
         triggerSuccessHaptic();
-        setToast('Profile photo updated.');
+        showToast('Profile photo updated.');
       } else {
-        setToast(res.error ?? 'Could not update profile photo.');
+        showToast(res.error ?? 'Could not update profile photo.');
       }
     } catch {
-      setToast('Failed to upload profile photo.');
+      showToast('Failed to upload profile photo.');
     } finally {
       setIsUploadingAvatar(false);
     }
   };
 
   const handleResetToSampleGarden = () => {
-    const performReset = () => {
-      resetToSeedData();
-      triggerSuccessHaptic();
-      setToast('Restored the sample conservatory.');
-    };
-
-    if (Platform.OS === 'web') {
-      if (
-        typeof window !== 'undefined' &&
-        window.confirm(
-          'Replace your current local garden with the sample conservatory? This cannot be undone.'
-        )
-      ) {
-        performReset();
-      }
-    } else {
-      Alert.alert(
-        'Reset to Sample Garden',
+    confirmAction({
+      title: 'Reset to Sample Garden',
+      message:
         'Replace your current local garden with the sample conservatory? This cannot be undone.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Reset',
-            style: 'destructive',
-            onPress: performReset,
-          },
-        ]
-      );
-    }
+      confirmLabel: 'Reset',
+      destructive: true,
+      onConfirm: () => {
+        resetToSeedData();
+        triggerSuccessHaptic();
+        showToast('Restored the sample conservatory.');
+      },
+    });
   };
 
   const initials = (

@@ -11,10 +11,8 @@ import {
   Sun,
   Trash2,
 } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,15 +31,19 @@ import { PlantHealthAssessmentCard } from '@/components/plant-detail/plant-healt
 import { VisualProgressGallery } from '@/components/plant-detail/visual-progress-gallery';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
+import { SurfaceCard } from '@/components/ui/surface-card';
 import {
+  BorderWidth,
   CardShadow,
   getHealthBadgeTheme,
   MaxContentWidth,
   Radius,
   Spacing,
-  type ThemePalette,
+  Typography,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { useToast } from '@/hooks/use-toast';
+import { confirmAction } from '@/services/dialogs';
 import {
   getDaysUntilNextWater,
   usePlantStore,
@@ -50,8 +52,10 @@ import type { NotebookEntry } from '@/types/plant';
 
 export default function PlantDetailNotebookScreen() {
   const palette = usePalette();
-  const styles = useMemo(() => createStyles(palette), [palette]);
-  const healthBadgeTheme = useMemo(() => getHealthBadgeTheme(palette), [palette]);
+  const healthBadgeTheme = useMemo(
+    () => getHealthBadgeTheme(palette),
+    [palette]
+  );
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const plants = usePlantStore((s) => s.plants);
@@ -62,27 +66,7 @@ export default function PlantDetailNotebookScreen() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<NotebookEntry | null>(null);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-      }
-    };
-  }, []);
-
-  const showToast = useCallback((message: string) => {
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
-    }
-    setFeedbackMessage(message);
-    toastTimerRef.current = setTimeout(() => {
-      setFeedbackMessage(null);
-      toastTimerRef.current = null;
-    }, 3500);
-  }, []);
+  const { message: feedbackMessage, showToast } = useToast();
 
   const plant = useMemo(
     () => (id ? plants.find((p) => p.id === id) : plants[0]),
@@ -113,13 +97,18 @@ export default function PlantDetailNotebookScreen() {
 
   if (!plant) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>Plant not found</Text>
+          <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>
+            Plant not found
+          </Text>
           <Pressable
             onPress={() => router.replace('/(tabs)')}
-            style={styles.backBtnPill}>
-            <Text style={styles.backBtnText}>Return to My Garden</Text>
+            style={[styles.backBtnPill, { backgroundColor: palette.primary }]}>
+            <Text style={[styles.backBtnText, { color: palette.textInverse }]}>
+              Return to My Garden
+            </Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -130,49 +119,37 @@ export default function PlantDetailNotebookScreen() {
   const needsWater = daysUntilWater <= 0;
   const healthStatus = plant.latestHealthAssessment?.healthStatus ?? 'thriving';
   const healthTheme = healthBadgeTheme[healthStatus];
+  const showDrainageWarning =
+    !plant.hasDrainageHole && plant.species.plantType === 'succulent';
 
   const handleDeleteCurrentPlant = () => {
-    const performDelete = () => {
-      deletePlant(plant.id);
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/(tabs)');
-      }
-    };
-
-    const confirmText = `Are you sure you want to delete "${plant.nickname}" (${plant.species.commonName}) and its care history?`;
-
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(confirmText)) {
-        performDelete();
-      }
-    } else {
-      Alert.alert('Delete Plant', confirmText, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: performDelete },
-      ]);
-    }
+    confirmAction({
+      title: 'Delete Plant',
+      message: `Are you sure you want to delete "${plant.nickname}" (${plant.species.commonName}) and its care history?`,
+      confirmLabel: 'Delete',
+      destructive: true,
+      onConfirm: () => {
+        deletePlant(plant.id);
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/(tabs)');
+        }
+      },
+    });
   };
 
   const handleDeleteLogEntry = (entry: NotebookEntry) => {
-    const performDelete = () => {
-      deleteCareEntry(entry.id);
-      showToast(`Removed log "${entry.title}".`);
-    };
-
-    const confirmText = `Are you sure you want to delete the log "${entry.title}"?`;
-
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(confirmText)) {
-        performDelete();
-      }
-    } else {
-      Alert.alert('Delete Care Log', confirmText, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: performDelete },
-      ]);
-    }
+    confirmAction({
+      title: 'Delete Care Log',
+      message: `Are you sure you want to delete the log "${entry.title}"?`,
+      confirmLabel: 'Delete',
+      destructive: true,
+      onConfirm: () => {
+        deleteCareEntry(entry.id);
+        showToast(`Removed log "${entry.title}".`);
+      },
+    });
   };
 
   return (
@@ -200,7 +177,9 @@ export default function PlantDetailNotebookScreen() {
                 pressed && { opacity: 0.75 },
               ]}>
               <ArrowLeft size={18} color={palette.textPrimary} />
-              <Text style={styles.navBackText}>My Garden</Text>
+              <Text style={[styles.navBackText, { color: palette.textPrimary }]}>
+                My Garden
+              </Text>
             </Pressable>
 
             <Pressable
@@ -212,22 +191,25 @@ export default function PlantDetailNotebookScreen() {
               }
               style={({ pressed }) => [
                 styles.scanShortcutBtn,
+                { backgroundColor: palette.primary },
                 pressed && { opacity: 0.85 },
               ]}>
               <Stethoscope size={15} color={palette.textInverse} />
-              <Text style={styles.scanShortcutText}>Photo Health Scan</Text>
+              <Text
+                style={[styles.scanShortcutText, { color: palette.textInverse }]}>
+                Photo Health Scan
+              </Text>
             </Pressable>
           </View>
 
-          {/* User Feedback Toast */}
           <FeedbackBanner message={feedbackMessage} />
 
           {/* 1. SPECIMEN HEADER CARD */}
-          <View style={styles.heroCard}>
+          <SurfaceCard>
             <View style={styles.heroTopRow}>
               <Image
                 source={{ uri: plant.photoUri }}
-                style={styles.heroPhoto}
+                style={[styles.heroPhoto, { backgroundColor: palette.bgSubtle }]}
                 contentFit="cover"
               />
 
@@ -256,15 +238,24 @@ export default function PlantDetailNotebookScreen() {
                     </Text>
                   </View>
 
-                  <View style={styles.familyChip}>
-                    <Text style={styles.familyChipText}>
+                  <View
+                    style={[
+                      styles.familyChip,
+                      { backgroundColor: palette.bgSubtle },
+                    ]}>
+                    <Text
+                      style={[styles.familyChipText, { color: palette.primary }]}>
                       {plant.species.family}
                     </Text>
                   </View>
                 </View>
 
-                <Text style={styles.heroNickname}>{plant.nickname}</Text>
-                <Text style={styles.heroSpecies}>
+                <Text
+                  style={[styles.heroNickname, { color: palette.textPrimary }]}>
+                  {plant.nickname}
+                </Text>
+                <Text
+                  style={[styles.heroSpecies, { color: palette.textSecondary }]}>
                   {plant.species.commonName} •{' '}
                   <Text style={styles.italicScientific}>
                     {plant.species.scientificName}
@@ -273,14 +264,19 @@ export default function PlantDetailNotebookScreen() {
 
                 <View style={styles.locationRow}>
                   <MapPin size={13} color={palette.textSecondary} />
-                  <Text style={styles.locationLabel}>
+                  <Text
+                    style={[
+                      styles.locationLabel,
+                      { color: palette.textSecondary },
+                    ]}>
                     {plant.location} • {plant.isIndoor ? 'Indoor' : 'Outdoor'}
                   </Text>
                 </View>
 
                 <View style={styles.locationRow}>
                   <Calendar size={12} color={palette.textMuted} />
-                  <Text style={styles.acquiredLabel}>
+                  <Text
+                    style={[styles.acquiredLabel, { color: palette.textMuted }]}>
                     Acquired{' '}
                     {new Date(plant.acquiredAt).toLocaleDateString(undefined, {
                       month: 'short',
@@ -297,20 +293,38 @@ export default function PlantDetailNotebookScreen() {
               <View
                 style={[
                   styles.specBadge,
-                  !plant.hasDrainageHole &&
-                    plant.species.plantType === 'succulent' &&
-                    styles.specBadgeWarning,
+                  {
+                    backgroundColor: showDrainageWarning
+                      ? palette.attentionBg
+                      : palette.bgPrimary,
+                    borderColor: showDrainageWarning
+                      ? palette.attentionBorder
+                      : palette.borderSubtle,
+                  },
                 ]}>
-                <Text style={styles.specBadgeLabel}>CONTAINER & DRAINAGE</Text>
-                <Text style={styles.specBadgeValue}>
+                <Text style={[styles.specBadgeLabel, { color: palette.textMuted }]}>
+                  CONTAINER & DRAINAGE
+                </Text>
+                <Text
+                  style={[styles.specBadgeValue, { color: palette.textPrimary }]}>
                   {plant.potMaterial.replace('_', ' ')} •{' '}
                   {plant.hasDrainageHole ? 'Drainage Hole ✓' : 'No Drainage Hole'}
                 </Text>
               </View>
 
-              <View style={styles.specBadge}>
-                <Text style={styles.specBadgeLabel}>CURRENT EXPOSURE</Text>
-                <Text style={styles.specBadgeValue}>
+              <View
+                style={[
+                  styles.specBadge,
+                  {
+                    backgroundColor: palette.bgPrimary,
+                    borderColor: palette.borderSubtle,
+                  },
+                ]}>
+                <Text style={[styles.specBadgeLabel, { color: palette.textMuted }]}>
+                  CURRENT EXPOSURE
+                </Text>
+                <Text
+                  style={[styles.specBadgeValue, { color: palette.textPrimary }]}>
                   {plant.lightExposure.replace('_', ' ')} •{' '}
                   {plant.isIndoor ? 'Indoor' : 'Outdoor'}
                 </Text>
@@ -319,9 +333,18 @@ export default function PlantDetailNotebookScreen() {
               <View
                 style={[
                   styles.specBadge,
-                  needsWater && styles.specBadgeWaterDue,
+                  {
+                    backgroundColor: needsWater
+                      ? palette.waterAlertBg
+                      : palette.bgPrimary,
+                    borderColor: needsWater
+                      ? palette.waterAlertBorder
+                      : palette.borderSubtle,
+                  },
                 ]}>
-                <Text style={styles.specBadgeLabel}>NEXT WATER COUNTDOWN</Text>
+                <Text style={[styles.specBadgeLabel, { color: palette.textMuted }]}>
+                  NEXT WATER COUNTDOWN
+                </Text>
                 <View style={styles.waterCountdownRow}>
                   <Droplets
                     size={15}
@@ -332,7 +355,11 @@ export default function PlantDetailNotebookScreen() {
                   <Text
                     style={[
                       styles.specBadgeValue,
-                      needsWater && { color: palette.waterAlertText },
+                      {
+                        color: needsWater
+                          ? palette.waterAlertText
+                          : palette.textPrimary,
+                      },
                     ]}>
                     {daysUntilWater === 0
                       ? 'Due Today'
@@ -346,31 +373,41 @@ export default function PlantDetailNotebookScreen() {
 
             {/* Baseline Species Light & Soil bars */}
             <View style={styles.baselineStack}>
-              <View style={styles.baselineStrip}>
+              <View
+                style={[
+                  styles.baselineStrip,
+                  { backgroundColor: palette.primarySoft },
+                ]}>
                 <Sun size={14} color={palette.primary} />
-                <Text style={styles.baselineStripText}>
-                  <Text style={{ fontWeight: '700' }}>Ideal Light: </Text>
+                <Text
+                  style={[styles.baselineStripText, { color: palette.primary }]}>
+                  <Text style={styles.boldText}>Ideal Light: </Text>
                   {plant.species.baselineCare.idealLight}
                 </Text>
               </View>
-              <View style={styles.baselineStrip}>
+              <View
+                style={[
+                  styles.baselineStrip,
+                  { backgroundColor: palette.primarySoft },
+                ]}>
                 <Layers size={14} color={palette.primary} />
-                <Text style={styles.baselineStripText}>
-                  <Text style={{ fontWeight: '700' }}>Recommended Soil: </Text>
+                <Text
+                  style={[styles.baselineStripText, { color: palette.primary }]}>
+                  <Text style={styles.boldText}>Recommended Soil: </Text>
                   {plant.species.baselineCare.soilRecommendation}
                 </Text>
               </View>
             </View>
 
             {plant.species.petSafety ? (
-              <View style={{ marginTop: Spacing.sm }}>
+              <View style={styles.petSafetyWrap}>
                 <PetSafetyBadge
                   petSafety={plant.species.petSafety}
                   showDetails
                 />
               </View>
             ) : null}
-          </View>
+          </SurfaceCard>
 
           <GrowthTrendChart
             entries={plantEntries}
@@ -384,10 +421,8 @@ export default function PlantDetailNotebookScreen() {
             acquiredAt={plant.acquiredAt}
           />
 
-          {/* ADAPTIVE CARE INTELLIGENCE (Season, Pot Material & Outdoor Weather) */}
           <PlantAdaptiveCareCard plant={plant} onShowToast={showToast} />
 
-          {/* 2. LATEST AI HEALTH ASSESSMENT CARD (with Interactive Checkable Next Steps) */}
           <PlantHealthAssessmentCard
             plant={plant}
             plantEntries={plantEntries}
@@ -395,7 +430,6 @@ export default function PlantDetailNotebookScreen() {
             onShowToast={showToast}
           />
 
-          {/* 3. QUICK-ACTION CARE EVENT LOGGER + CHRONOLOGICAL NOTEBOOK TIMELINE */}
           <CareLogSection
             plant={plant}
             plantEntries={plantEntries}
@@ -404,30 +438,47 @@ export default function PlantDetailNotebookScreen() {
             onDeleteEntry={handleDeleteLogEntry}
           />
 
-          {/* 4. BOTTOM SPECIMEN MANAGEMENT ACTIONS (Edit & Delete Plant) */}
+          {/* Bottom Specimen Management Actions */}
           <View style={styles.bottomActionsRow}>
             <Pressable
               onPress={() => setIsEditModalOpen(true)}
               style={({ pressed }) => [
-                styles.bottomEditBtn,
+                styles.bottomActionBtn,
+                {
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                },
                 pressed && { opacity: 0.8 },
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Edit ${plant.nickname}`}>
               <Pencil size={16} color={palette.primary} />
-              <Text style={styles.bottomEditBtnText}>Edit Plant Details</Text>
+              <Text
+                style={[styles.bottomActionText, { color: palette.primary }]}>
+                Edit Plant Details
+              </Text>
             </Pressable>
 
             <Pressable
               onPress={handleDeleteCurrentPlant}
               style={({ pressed }) => [
-                styles.bottomDeleteBtn,
+                styles.bottomActionBtn,
+                {
+                  backgroundColor: palette.criticalBg,
+                  borderColor: palette.criticalBorder,
+                },
                 pressed && { opacity: 0.8 },
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Delete ${plant.nickname}`}>
               <Trash2 size={16} color={palette.criticalText} />
-              <Text style={styles.bottomDeleteBtnText}>Delete Plant</Text>
+              <Text
+                style={[
+                  styles.bottomActionText,
+                  { color: palette.criticalText },
+                ]}>
+                Delete Plant
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -456,271 +507,215 @@ export default function PlantDetailNotebookScreen() {
   );
 }
 
-const createStyles = (palette: ThemePalette) =>
-  StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: palette.bgPrimary,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingHorizontal: Spacing.lg,
-      paddingTop: Spacing.sm,
-      paddingBottom: Spacing.xxl * 1.5,
-      alignItems: 'center',
-    },
-    maxContainer: {
-      width: '100%',
-      maxWidth: MaxContentWidth,
-      gap: Spacing.md,
-    },
-    emptyState: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-    },
-    emptyTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-    backBtnPill: {
-      backgroundColor: palette.primary,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: Radius.full,
-    },
-    backBtnText: {
-      color: palette.textInverse,
-      fontWeight: '700',
-    },
-    topNavRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 8,
-      paddingVertical: 4,
-    },
-    navBackBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingVertical: 6,
-      paddingRight: 10,
-    },
-    navBackText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-    scanShortcutBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: palette.primary,
-      paddingHorizontal: 13,
-      paddingVertical: 8,
-      borderRadius: Radius.full,
-    },
-    scanShortcutText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: palette.textInverse,
-    },
-    heroCard: {
-      backgroundColor: palette.bgSurface,
-      borderRadius: Radius.lg,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      paddingVertical: Spacing.md,
-      paddingHorizontal: Spacing.sm,
-      gap: Spacing.md,
-      ...CardShadow,
-    },
-    heroTopRow: {
-      flexDirection: 'row',
-      gap: Spacing.md,
-    },
-    heroPhoto: {
-      width: 92,
-      height: 92,
-      borderRadius: Radius.md,
-      backgroundColor: palette.bgSubtle,
-    },
-    heroTitleCol: {
-      flex: 1,
-      gap: 4,
-      justifyContent: 'center',
-    },
-    badgeLine: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    healthBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 9,
-      paddingVertical: 3,
-      borderRadius: Radius.full,
-      borderWidth: 1,
-    },
-    statusDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-    },
-    healthBadgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      textTransform: 'uppercase',
-    },
-    familyChip: {
-      backgroundColor: palette.bgSubtle,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: Radius.sm,
-    },
-    familyChipText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: palette.primary,
-    },
-    heroNickname: {
-      fontSize: 22,
-      lineHeight: 28,
-      fontWeight: '700',
-      color: palette.textPrimary,
-    },
-    heroSpecies: {
-      fontSize: 13,
-      color: palette.textSecondary,
-      fontWeight: '500',
-    },
-    italicScientific: {
-      fontStyle: 'italic',
-    },
-    locationRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      marginTop: 2,
-    },
-    locationLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: palette.textSecondary,
-    },
-    acquiredLabel: {
-      fontSize: 11,
-      fontWeight: '500',
-      color: palette.textMuted,
-    },
-    specsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: Spacing.sm,
-    },
-    specBadge: {
-      flex: 1,
-      minWidth: 150,
-      backgroundColor: palette.bgPrimary,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      borderRadius: Radius.md,
-      padding: 10,
-      gap: 3,
-    },
-    specBadgeWarning: {
-      backgroundColor: palette.attentionBg,
-      borderColor: palette.attentionBorder,
-    },
-    specBadgeWaterDue: {
-      backgroundColor: palette.waterAlertBg,
-      borderColor: palette.waterAlertBorder,
-    },
-    specBadgeLabel: {
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0.5,
-      color: palette.textMuted,
-    },
-    specBadgeValue: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: palette.textPrimary,
-      textTransform: 'capitalize',
-    },
-    waterCountdownRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-    },
-    baselineStack: {
-      gap: Spacing.xs + 2,
-    },
-    baselineStrip: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 8,
-      backgroundColor: palette.primarySoft,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: Radius.md,
-    },
-    baselineStripText: {
-      flex: 1,
-      fontSize: 12,
-      color: palette.primary,
-    },
-    bottomActionsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: Spacing.sm,
-      marginTop: 4,
-    },
-    bottomEditBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      backgroundColor: palette.bgSurface,
-      borderWidth: 1,
-      borderColor: palette.borderSubtle,
-      paddingVertical: 13,
-      paddingHorizontal: 16,
-      borderRadius: Radius.lg,
-      ...CardShadow,
-    },
-    bottomEditBtnText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: palette.primary,
-    },
-    bottomDeleteBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      backgroundColor: palette.criticalBg,
-      borderWidth: 1,
-      borderColor: palette.criticalBorder,
-      paddingVertical: 13,
-      paddingHorizontal: 16,
-      borderRadius: Radius.lg,
-      ...CardShadow,
-    },
-    bottomDeleteBtnText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: palette.criticalText,
-    },
-  });
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xxl * 1.5,
+    alignItems: 'center',
+  },
+  maxContainer: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    gap: Spacing.md,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+  },
+  emptyTitle: {
+    ...Typography.sectionTitle,
+  },
+  backBtnPill: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+  },
+  backBtnText: {
+    fontWeight: '700',
+  },
+  topNavRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  navBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingRight: 10,
+  },
+  navBackText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  scanShortcutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 13,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+  },
+  scanShortcutText: {
+    ...Typography.caption,
+    fontWeight: '700',
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  heroPhoto: {
+    width: 92,
+    height: 92,
+    borderRadius: Radius.md,
+  },
+  heroTitleCol: {
+    flex: 1,
+    gap: Spacing.xs,
+    justifyContent: 'center',
+  },
+  badgeLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  healthBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    borderWidth: BorderWidth.hairline,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  healthBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  familyChip: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: Radius.sm,
+  },
+  familyChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  heroNickname: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+  },
+  heroSpecies: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  italicScientific: {
+    fontStyle: 'italic',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.half,
+  },
+  locationLabel: {
+    ...Typography.caption,
+    fontWeight: '600',
+  },
+  acquiredLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  specsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  specBadge: {
+    flex: 1,
+    minWidth: 150,
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.md,
+    padding: 10,
+    gap: 3,
+  },
+  specBadgeLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  specBadgeValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  waterCountdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  baselineStack: {
+    gap: 6,
+  },
+  baselineStrip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+  },
+  baselineStripText: {
+    flex: 1,
+    ...Typography.caption,
+  },
+  boldText: {
+    fontWeight: '700',
+  },
+  petSafetyWrap: {
+    marginTop: Spacing.sm,
+  },
+  bottomActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  bottomActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    borderWidth: BorderWidth.hairline,
+    paddingVertical: 13,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.lg,
+    ...CardShadow,
+  },
+  bottomActionText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+});

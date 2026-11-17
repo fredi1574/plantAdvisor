@@ -44,7 +44,6 @@ import {
   diagnosePlantHealth,
   fetchAiQuotaStatus,
   identifyPlant,
-  isMockAiEnabled,
   subscribeToAiQuota,
 } from "@/services/aiPlantService";
 import { triggerSuccessHaptic } from "@/services/haptics";
@@ -144,7 +143,6 @@ export default function ScanScreen() {
   const [lightExposure, setLightExposure] =
     useState<LightExposure>("bright_direct");
   const [isIndoor, setIsIndoor] = useState<boolean>(true);
-  const isLiveAi = useMemo(() => !isMockAiEnabled(), []);
 
   // Workflow 2: Health Diagnosis state
   const [selectedPlantId, setSelectedPlantId] = useState<string>(

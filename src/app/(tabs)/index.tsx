@@ -17,7 +17,6 @@ import {
 } from "lucide-react-native";
 import { type ReactNode, useMemo, useState } from "react";
 import {
-  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -45,6 +44,8 @@ import {
   Typography,
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
+import { useToast } from "@/hooks/use-toast";
+import { confirmAction } from "@/services/dialogs";
 import { triggerLightHaptic } from "@/services/haptics";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -85,7 +86,6 @@ export default function MyGardenScreen() {
   const profile = useAuthStore((s) => s.profile);
   const plants = usePlantStore((s) => s.plants);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
-  const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
   const deletePlant = usePlantStore((s) => s.deletePlant);
 
   const [filter, setFilter] = useState<FilterMode>("all");
@@ -102,15 +102,8 @@ export default function MyGardenScreen() {
     user?.email?.split("@")[0]?.trim() ||
     "Gardener";
 
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const { message: feedbackMessage, showToast } = useToast();
   const [editingPlant, setEditingPlant] = useState<UserPlant | null>(null);
-
-  const showToast = (message: string) => {
-    setFeedbackMessage(message);
-    setTimeout(() => {
-      setFeedbackMessage(null);
-    }, 3500);
-  };
 
   const stats = useMemo(() => {
     const needsWaterCount = plants.filter(doesPlantNeedWatering).length;
@@ -220,51 +213,17 @@ export default function MyGardenScreen() {
     [stats, palette],
   );
 
-  const handleWaterAll = () => {
-    if (stats.needsWaterCount === 0) return;
-
-    const performWatering = () => {
-      const count = waterAllNeedingWater();
-      if (count > 0) {
-        showToast(
-          `All ${count} ${count === 1 ? "plant" : "plants"} marked as watered!`,
-        );
-      }
-    };
-
-    const confirmText = `Mark all ${stats.needsWaterCount} ${stats.needsWaterCount === 1 ? "plant" : "plants"
-      } needing water as watered?`;
-
-    if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.confirm(confirmText)) {
-        performWatering();
-      }
-    } else {
-      Alert.alert("Water All Plants", confirmText, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Mark Watered", style: "default", onPress: performWatering },
-      ]);
-    }
-  };
-
   const handleDeletePlant = (plant: UserPlant) => {
-    const performDelete = () => {
-      deletePlant(plant.id);
-      showToast(`Removed "${plant.nickname}" from My Garden.`);
-    };
-
-    const confirmText = `Are you sure you want to delete "${plant.nickname}" (${plant.species.commonName}) and its care history?`;
-
-    if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.confirm(confirmText)) {
-        performDelete();
-      }
-    } else {
-      Alert.alert("Delete Plant", confirmText, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: performDelete },
-      ]);
-    }
+    confirmAction({
+      title: "Delete Plant",
+      message: `Are you sure you want to delete "${plant.nickname}" (${plant.species.commonName}) and its care history?`,
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: () => {
+        deletePlant(plant.id);
+        showToast(`Removed "${plant.nickname}" from My Garden.`);
+      },
+    });
   };
 
   const filteredPlants = useMemo(() => {

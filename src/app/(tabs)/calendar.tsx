@@ -1,8 +1,5 @@
 import { CalendarDays } from 'lucide-react-native';
-import { useState } from 'react';
 import {
-  Alert,
-  Platform,
   ScrollView,
   StyleSheet,
   View,
@@ -19,6 +16,8 @@ import {
   Spacing,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { useToast } from '@/hooks/use-toast';
+import { confirmAction } from '@/services/dialogs';
 import {
   doesPlantNeedWatering,
   usePlantStore,
@@ -31,42 +30,27 @@ export default function CalendarScreen() {
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
   const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
 
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-
-  const showToast = (message: string) => {
-    setFeedbackMessage(message);
-    setTimeout(() => {
-      setFeedbackMessage(null);
-    }, 3500);
-  };
+  const { message: feedbackMessage, showToast } = useToast();
 
   const handleWaterAllDueToday = () => {
     const needsWaterCount = plants.filter(doesPlantNeedWatering).length;
     if (needsWaterCount === 0) return;
 
-    const performWatering = () => {
-      const count = waterAllNeedingWater();
-      if (count > 0) {
-        showToast(
-          `All ${count} ${count === 1 ? 'plant' : 'plants'} marked as watered!`
-        );
-      }
-    };
-
-    const confirmText = `Mark all ${needsWaterCount} ${
-      needsWaterCount === 1 ? 'plant' : 'plants'
-    } needing water as watered?`;
-
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined' && window.confirm(confirmText)) {
-        performWatering();
-      }
-    } else {
-      Alert.alert('Water All Plants', confirmText, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Mark Watered', style: 'default', onPress: performWatering },
-      ]);
-    }
+    confirmAction({
+      title: 'Water All Plants',
+      message: `Mark all ${needsWaterCount} ${
+        needsWaterCount === 1 ? 'plant' : 'plants'
+      } needing water as watered?`,
+      confirmLabel: 'Mark Watered',
+      onConfirm: () => {
+        const count = waterAllNeedingWater();
+        if (count > 0) {
+          showToast(
+            `All ${count} ${count === 1 ? 'plant' : 'plants'} marked as watered!`
+          );
+        }
+      },
+    });
   };
 
   return (
