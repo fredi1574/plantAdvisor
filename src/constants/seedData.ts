@@ -47,6 +47,14 @@ export const SEED_PLANTS: UserPlant[] = [
             'Crassulaceae Guardrail: Never mist leaves or water on a shallow schedule. Wait for 100% soil dry-back between deep soakings.',
         },
       },
+      petSafety: {
+        isToxicToCats: true,
+        isToxicToDogs: true,
+        toxicityLevel: 'mild',
+        toxicPrinciples: 'Unknown glycosides / saponins',
+        safetyNotes:
+          'Toxic to cats and dogs if ingested; can cause vomiting, lethargy, and incoordination.',
+      },
     },
     latestHealthAssessment: {
       id: 'ha-jade-01',
@@ -127,6 +135,14 @@ export const SEED_PLANTS: UserPlant[] = [
             'Keep the top half of the seed above the waterline and swap water every 5 days to maintain dissolved oxygen.',
         },
       },
+      petSafety: {
+        isToxicToCats: true,
+        isToxicToDogs: true,
+        toxicityLevel: 'moderate',
+        toxicPrinciples: 'Persin (leaves, bark, skin, and pit)',
+        safetyNotes:
+          'Keep pit and foliage out of reach of pets and small children; persin can cause GI upset and myocardial stress in animals.',
+      },
     },
     latestHealthAssessment: {
       id: 'ha-avocado-01',
@@ -194,6 +210,14 @@ export const SEED_PLANTS: UserPlant[] = [
           minimumDryBackDays: 5,
           rotWarningNote: 'Allow the top 5 cm of chunky aroid mix to dry between deep waterings.',
         },
+      },
+      petSafety: {
+        isToxicToCats: true,
+        isToxicToDogs: true,
+        toxicityLevel: 'moderate',
+        toxicPrinciples: 'Insoluble calcium oxalate crystals',
+        safetyNotes:
+          'Chewing leaves or stems causes immediate oral irritation, drooling, and swelling in cats, dogs, and children.',
       },
     },
     latestHealthAssessment: {

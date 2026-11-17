@@ -31,6 +31,7 @@ const PLANT_IDENTIFICATION_JSON_SCHEMA = {
     'confidence',
     'baselineCare',
     'identificationNotes',
+    'petSafety',
   ],
   properties: {
     commonName: { type: 'STRING' },
@@ -42,6 +43,26 @@ const PLANT_IDENTIFICATION_JSON_SCHEMA = {
     },
     confidence: { type: 'NUMBER' },
     identificationNotes: { type: 'STRING' },
+    petSafety: {
+      type: 'OBJECT',
+      required: [
+        'isToxicToCats',
+        'isToxicToDogs',
+        'toxicityLevel',
+        'toxicPrinciples',
+        'safetyNotes',
+      ],
+      properties: {
+        isToxicToCats: { type: 'BOOLEAN' },
+        isToxicToDogs: { type: 'BOOLEAN' },
+        toxicityLevel: {
+          type: 'STRING',
+          enum: ['safe', 'mild', 'moderate', 'severe'],
+        },
+        toxicPrinciples: { type: 'STRING' },
+        safetyNotes: { type: 'STRING' },
+      },
+    },
     baselineCare: {
       type: 'OBJECT',
       required: [
@@ -259,6 +280,20 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = body.action;
+
+  if (action === 'quota') {
+    const { data: quotaData, error: quotaError } = await supabase.rpc(
+      'get_ai_scan_quota'
+    );
+    if (quotaError) {
+      return jsonResponse(
+        { error: quotaError.message || 'Unable to fetch AI quota.' },
+        500
+      );
+    }
+    return jsonResponse({ quota: quotaData });
+  }
+
   const imageBase64 = typeof body.imageBase64 === 'string' ? body.imageBase64 : undefined;
   const imageMimeType =
     typeof body.imageMimeType === 'string' ? body.imageMimeType : 'image/jpeg';
@@ -298,6 +333,20 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const { data: quotaData, error: quotaError } = await supabase.rpc(
+      'consume_ai_scan_quota'
+    );
+    if (!quotaError && quotaData && quotaData.allowed === false) {
+      return jsonResponse(
+        {
+          code: 'QUOTA_EXCEEDED',
+          error: `Daily limit of ${quotaData.limit} free AI scans reached.`,
+          quota: quotaData,
+        },
+        429
+      );
+    }
+
     const geminiResp = await callGeminiWithFallback(
       geminiApiKey,
       parts,
@@ -319,7 +368,10 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: 'Empty identification response from Gemini.' }, 502);
     }
 
-    return jsonResponse({ result: JSON.parse(rawResult) });
+    return jsonResponse({
+      result: JSON.parse(rawResult),
+      quota: quotaError ? undefined : quotaData,
+    });
   }
 
   if (action === 'diagnose') {
@@ -358,13 +410,53 @@ Return strict JSON conforming to the schema.
 `.trim();
 
     const parts: Record<string, unknown>[] = [{ text: promptText }];
-    if (imageBase64) {
+    const diagnosticImages = Array.isArray(body.diagnosticImages)
+      ? (body.diagnosticImages as Array<{
+          angle?: string;
+          label?: string;
+          base64?: string;
+          mimeType?: string;
+        }>).slice(0, 3)
+      : [];
+
+    if (diagnosticImages.length > 0) {
+      for (const img of diagnosticImages) {
+        if (typeof img?.base64 === 'string' && img.base64.length > 0) {
+          if (img.base64.length > MAX_IMAGE_BASE64_CHARS) {
+            return jsonResponse({ error: 'Image payload exceeds maximum size.' }, 413);
+          }
+          parts.push({
+            text: `[Diagnostic Photo — ${String(img.label || img.angle || 'Specimen')}]`,
+          });
+          parts.push({
+            inlineData: {
+              mimeType: typeof img.mimeType === 'string' ? img.mimeType : 'image/jpeg',
+              data: img.base64,
+            },
+          });
+        }
+      }
+    } else if (imageBase64) {
       parts.push({
         inlineData: {
           mimeType: imageMimeType,
           data: imageBase64,
         },
       });
+    }
+
+    const { data: quotaData, error: quotaError } = await supabase.rpc(
+      'consume_ai_scan_quota'
+    );
+    if (!quotaError && quotaData && quotaData.allowed === false) {
+      return jsonResponse(
+        {
+          code: 'QUOTA_EXCEEDED',
+          error: `Daily limit of ${quotaData.limit} free AI scans reached.`,
+          quota: quotaData,
+        },
+        429
+      );
     }
 
     const geminiResp = await callGeminiWithFallback(
@@ -388,7 +480,10 @@ Return strict JSON conforming to the schema.
       return jsonResponse({ error: 'Empty diagnosis response from Gemini.' }, 502);
     }
 
-    return jsonResponse({ result: JSON.parse(rawResult) });
+    return jsonResponse({
+      result: JSON.parse(rawResult),
+      quota: quotaError ? undefined : quotaData,
+    });
   }
 
   return jsonResponse({ error: 'Unsupported action. Expected "identify" or "diagnose".' }, 400);

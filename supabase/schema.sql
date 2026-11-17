@@ -293,3 +293,135 @@ drop policy if exists "plant_photos_delete" on storage.objects;
 create policy "plant_photos_delete" on storage.objects
   for delete to authenticated
   using (bucket_id = 'plant-photos');
+
+-- ============================================================================
+-- 7. PER-USER AI SCAN QUOTAS (`ai_usage` + Atomic Quota RPCs)
+-- ============================================================================
+
+create table if not exists public.ai_usage (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  tier text not null default 'free' check (tier in ('free', 'pro')),
+  daily_scan_count integer not null default 0 check (daily_scan_count >= 0),
+  daily_limit integer not null default 5 check (daily_limit >= 1),
+  reset_at timestamptz not null default (
+    date_trunc('day', now() at time zone 'utc') + interval '1 day'
+  ),
+  updated_at timestamptz not null default now()
+);
+
+grant select on table public.ai_usage to authenticated;
+
+alter table public.ai_usage enable row level security;
+
+drop policy if exists "ai_usage_select_own" on public.ai_usage;
+create policy "ai_usage_select_own" on public.ai_usage
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+create or replace function public.get_ai_scan_quota()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_row public.ai_usage%rowtype;
+  v_next_reset timestamptz := (date_trunc('day', now() at time zone 'utc') + interval '1 day');
+begin
+  if v_user_id is null then
+    raise exception 'Unauthorized';
+  end if;
+
+  insert into public.ai_usage (user_id, reset_at)
+  values (v_user_id, v_next_reset)
+  on conflict (user_id) do nothing;
+
+  select * into v_row
+  from public.ai_usage
+  where user_id = v_user_id
+  for update;
+
+  if now() >= v_row.reset_at then
+    update public.ai_usage
+    set daily_scan_count = 0,
+        reset_at = v_next_reset,
+        updated_at = now()
+    where user_id = v_user_id
+    returning * into v_row;
+  end if;
+
+  return jsonb_build_object(
+    'allowed', v_row.daily_scan_count < v_row.daily_limit,
+    'used', v_row.daily_scan_count,
+    'limit', v_row.daily_limit,
+    'remaining', greatest(0, v_row.daily_limit - v_row.daily_scan_count),
+    'resetAt', v_row.reset_at,
+    'tier', v_row.tier
+  );
+end;
+$$;
+
+create or replace function public.consume_ai_scan_quota()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user_id uuid := auth.uid();
+  v_row public.ai_usage%rowtype;
+  v_next_reset timestamptz := (date_trunc('day', now() at time zone 'utc') + interval '1 day');
+begin
+  if v_user_id is null then
+    raise exception 'Unauthorized';
+  end if;
+
+  insert into public.ai_usage (user_id, reset_at)
+  values (v_user_id, v_next_reset)
+  on conflict (user_id) do nothing;
+
+  select * into v_row
+  from public.ai_usage
+  where user_id = v_user_id
+  for update;
+
+  if now() >= v_row.reset_at then
+    update public.ai_usage
+    set daily_scan_count = 0,
+        reset_at = v_next_reset,
+        updated_at = now()
+    where user_id = v_user_id
+    returning * into v_row;
+  end if;
+
+  if v_row.daily_scan_count >= v_row.daily_limit then
+    return jsonb_build_object(
+      'allowed', false,
+      'used', v_row.daily_scan_count,
+      'limit', v_row.daily_limit,
+      'remaining', 0,
+      'resetAt', v_row.reset_at,
+      'tier', v_row.tier
+    );
+  end if;
+
+  update public.ai_usage
+  set daily_scan_count = daily_scan_count + 1,
+      updated_at = now()
+  where user_id = v_user_id
+  returning * into v_row;
+
+  return jsonb_build_object(
+    'allowed', true,
+    'used', v_row.daily_scan_count,
+    'limit', v_row.daily_limit,
+    'remaining', greatest(0, v_row.daily_limit - v_row.daily_scan_count),
+    'resetAt', v_row.reset_at,
+    'tier', v_row.tier
+  );
+end;
+$$;
+
+grant execute on function public.get_ai_scan_quota() to authenticated;
+grant execute on function public.consume_ai_scan_quota() to authenticated;

@@ -40,6 +40,39 @@ export interface SucculentGuardrails {
   rotWarningNote: string;
 }
 
+export type ToxicityLevel = 'safe' | 'mild' | 'moderate' | 'severe';
+
+export interface PetSafetyInfo {
+  isToxicToCats: boolean;
+  isToxicToDogs: boolean;
+  toxicityLevel: ToxicityLevel;
+  toxicPrinciples: string;
+  safetyNotes: string;
+}
+
+export type DiagnosticPhotoAngle = 'canopy' | 'closeup' | 'soil';
+
+export interface DiagnosticPhotoInput {
+  angle: DiagnosticPhotoAngle;
+  uri: string;
+  label?: string;
+}
+
+export interface VacationModeConfig {
+  enabled: boolean;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  snoozeNotifications: boolean;
+}
+
+export interface AiQuotaStatus {
+  limit: number;
+  remaining: number;
+  used: number;
+  resetAt: string; // ISO-8601
+  tier: 'free' | 'pro';
+}
+
 export interface BaselineCare {
   idealLight: string;
   baseWateringDays: number;
@@ -57,6 +90,7 @@ export interface SpeciesCatalog {
   family: string;
   plantType: PlantType;
   baselineCare: BaselineCare;
+  petSafety?: PetSafetyInfo;
 }
 
 /**
@@ -139,6 +173,7 @@ export interface PlantIdentificationResult {
   confidence: number; // 0.0 - 1.0
   baselineCare: BaselineCare;
   identificationNotes: string;
+  petSafety?: PetSafetyInfo;
 }
 
 /**

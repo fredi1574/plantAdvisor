@@ -13,11 +13,155 @@
 import { prepareImageForAI } from "@/services/imageUtils";
 import { isSupabaseConfigured, supabase } from "@/services/supabase";
 import type {
+  AiQuotaStatus,
+  DiagnosticPhotoAngle,
+  DiagnosticPhotoInput,
   NotebookEntry,
   PlantDiagnosisResult,
   PlantIdentificationResult,
   UserPlant,
 } from "@/types/plant";
+
+export const DEFAULT_FREE_DAILY_SCAN_LIMIT = 5;
+
+export class AiQuotaExceededError extends Error {
+  quota: AiQuotaStatus;
+
+  constructor(message: string, quota: AiQuotaStatus) {
+    super(message);
+    this.name = "AiQuotaExceededError";
+    this.quota = quota;
+  }
+}
+
+function getNextUtcMidnightIso(): string {
+  const now = new Date();
+  const next = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0),
+  );
+  return next.toISOString();
+}
+
+let mockQuotaState: AiQuotaStatus = {
+  limit: DEFAULT_FREE_DAILY_SCAN_LIMIT,
+  remaining: DEFAULT_FREE_DAILY_SCAN_LIMIT,
+  used: 0,
+  resetAt: getNextUtcMidnightIso(),
+  tier: "free",
+};
+
+let latestKnownQuota: AiQuotaStatus | null = null;
+const quotaListeners = new Set<(quota: AiQuotaStatus) => void>();
+
+export function subscribeToAiQuota(
+  listener: (quota: AiQuotaStatus) => void,
+): () => void {
+  quotaListeners.add(listener);
+  if (latestKnownQuota) {
+    listener(latestKnownQuota);
+  }
+  return () => {
+    quotaListeners.delete(listener);
+  };
+}
+
+function publishQuota(quota: AiQuotaStatus): void {
+  latestKnownQuota = quota;
+  for (const listener of quotaListeners) {
+    listener(quota);
+  }
+}
+
+export function resetMockAiQuota(limit = DEFAULT_FREE_DAILY_SCAN_LIMIT): void {
+  mockQuotaState = {
+    limit,
+    remaining: limit,
+    used: 0,
+    resetAt: getNextUtcMidnightIso(),
+    tier: "free",
+  };
+  publishQuota(mockQuotaState);
+}
+
+function consumeMockQuotaOrThrow(): AiQuotaStatus {
+  if (Date.now() >= new Date(mockQuotaState.resetAt).getTime()) {
+    resetMockAiQuota(mockQuotaState.limit);
+  }
+  if (mockQuotaState.remaining <= 0) {
+    publishQuota(mockQuotaState);
+    throw new AiQuotaExceededError(
+      `Daily limit of ${mockQuotaState.limit} free AI scans reached.`,
+      mockQuotaState,
+    );
+  }
+  mockQuotaState = {
+    ...mockQuotaState,
+    used: mockQuotaState.used + 1,
+    remaining: Math.max(0, mockQuotaState.remaining - 1),
+  };
+  publishQuota(mockQuotaState);
+  return mockQuotaState;
+}
+
+export async function fetchAiQuotaStatus(): Promise<AiQuotaStatus> {
+  if (isMockAiEnabled() || !isSupabaseConfigured || !supabase) {
+    if (Date.now() >= new Date(mockQuotaState.resetAt).getTime()) {
+      resetMockAiQuota(mockQuotaState.limit);
+    }
+    publishQuota(mockQuotaState);
+    return mockQuotaState;
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke<{
+      quota?: AiQuotaStatus;
+      error?: string;
+    }>("plant-ai", {
+      body: { action: "quota" },
+    });
+
+    if (!error && data?.quota) {
+      publishQuota(data.quota);
+      return data.quota;
+    }
+  } catch {
+    // Fall back to cached or default quota if offline
+  }
+
+  const fallback = latestKnownQuota ?? mockQuotaState;
+  publishQuota(fallback);
+  return fallback;
+}
+
+async function handleEdgeFunctionError(
+  error: { message?: string; context?: unknown } | null,
+  fallbackMessage: string,
+): Promise<never> {
+  if (error?.context && typeof (error.context as Response).json === "function") {
+    try {
+      const payload = (await (error.context as Response).json()) as {
+        code?: string;
+        error?: string;
+        quota?: AiQuotaStatus;
+      };
+      if (payload?.code === "QUOTA_EXCEEDED" && payload.quota) {
+        publishQuota(payload.quota);
+        throw new AiQuotaExceededError(
+          payload.error || "Daily AI scan limit reached.",
+          payload.quota,
+        );
+      }
+      if (payload?.error) {
+        throw new Error(payload.error);
+      }
+    } catch (inner) {
+      if (inner instanceof AiQuotaExceededError) {
+        throw inner;
+      }
+    }
+  }
+  throw new Error(error?.message || fallbackMessage);
+}
 
 const SUCCULENT_FAMILIES = [
   "crassulaceae",
@@ -48,6 +192,7 @@ export const PLANT_IDENTIFICATION_JSON_SCHEMA = {
     "confidence",
     "baselineCare",
     "identificationNotes",
+    "petSafety",
   ],
   properties: {
     commonName: { type: "STRING" },
@@ -59,6 +204,26 @@ export const PLANT_IDENTIFICATION_JSON_SCHEMA = {
     },
     confidence: { type: "NUMBER" },
     identificationNotes: { type: "STRING" },
+    petSafety: {
+      type: "OBJECT",
+      required: [
+        "isToxicToCats",
+        "isToxicToDogs",
+        "toxicityLevel",
+        "toxicPrinciples",
+        "safetyNotes",
+      ],
+      properties: {
+        isToxicToCats: { type: "BOOLEAN" },
+        isToxicToDogs: { type: "BOOLEAN" },
+        toxicityLevel: {
+          type: "STRING",
+          enum: ["safe", "mild", "moderate", "severe"],
+        },
+        toxicPrinciples: { type: "STRING" },
+        safetyNotes: { type: "STRING" },
+      },
+    },
     baselineCare: {
       type: "OBJECT",
       required: [
@@ -201,7 +366,7 @@ export function enforceSucculentIdentificationGuardrails(
 /**
  * Post-processes any AI diagnosis to guarantee succulent guardrails are never violated
  */
-function enforceSucculentDiagnosisGuardrails(
+export function enforceSucculentDiagnosisGuardrails(
   result: PlantDiagnosisResult,
   plantProfile: UserPlant,
 ): PlantDiagnosisResult {
@@ -331,6 +496,7 @@ export async function identifyPlant(
   const combinedInput = `${imageUriOrName} ${hintQuery ?? ""}`.trim();
 
   if (isMockAiEnabled()) {
+    consumeMockQuotaOrThrow();
     const mockResult = await mockIdentifyPlant(combinedInput);
     return enforceSucculentIdentificationGuardrails(mockResult);
   }
@@ -350,6 +516,7 @@ export async function identifyPlant(
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase.functions.invoke<{
       result?: PlantIdentificationResult;
+      quota?: AiQuotaStatus;
       error?: string;
     }>("plant-ai", {
       body: {
@@ -362,7 +529,10 @@ export async function identifyPlant(
     });
 
     if (error) {
-      throw new Error(error.message || "Edge Function plant-ai identify failed.");
+      await handleEdgeFunctionError(error, "Edge Function plant-ai identify failed.");
+    }
+    if (data?.quota) {
+      publishQuota(data.quota);
     }
     if (data?.error || !data?.result) {
       throw new Error(
@@ -426,18 +596,43 @@ export async function identifyPlant(
   );
 }
 
+const ANGLE_LABELS: Record<DiagnosticPhotoAngle, string> = {
+  canopy: "Whole Plant / Canopy",
+  closeup: "Leaf / Stem Close-Up",
+  soil: "Soil Surface & Pot Base",
+};
+
+function normalizeDiagnosticPhotos(
+  imageInput: string | DiagnosticPhotoInput[] | undefined,
+): DiagnosticPhotoInput[] {
+  if (!imageInput) return [];
+  if (typeof imageInput === "string") {
+    return [{ angle: "canopy", uri: imageInput, label: ANGLE_LABELS.canopy }];
+  }
+  return imageInput
+    .filter((item) => Boolean(item?.uri))
+    .slice(0, 3)
+    .map((item) => ({
+      ...item,
+      label: item.label ?? ANGLE_LABELS[item.angle],
+    }));
+}
+
 /**
- * 2. Diagnose plant health by combining a photo with temporal care history (`recentLogs`) & `plantProfile`.
+ * 2. Diagnose plant health by combining up to 3 labeled photos with temporal care history (`recentLogs`) & `plantProfile`.
  */
 export async function diagnosePlantHealth(
-  imageUri: string | undefined,
+  imageInput: string | DiagnosticPhotoInput[] | undefined,
   plantProfile: UserPlant,
   recentLogs: NotebookEntry[],
   userObservationNotes?: string,
 ): Promise<PlantDiagnosisResult> {
+  const photos = normalizeDiagnosticPhotos(imageInput);
+
   if (isMockAiEnabled()) {
+    consumeMockQuotaOrThrow();
     const mockResult = await mockDiagnosePlantHealth(
-      imageUri,
+      photos,
       plantProfile,
       recentLogs,
       userObservationNotes,
@@ -453,11 +648,23 @@ export async function diagnosePlantHealth(
     metrics: entry.metrics,
   }));
 
-  const preparedImage = imageUri ? await prepareImageForAI(imageUri) : null;
+  const preparedImages = await Promise.all(
+    photos.map(async (photo) => {
+      const prepared = await prepareImageForAI(photo.uri);
+      return {
+        angle: photo.angle,
+        label: photo.label ?? ANGLE_LABELS[photo.angle],
+        base64: prepared.base64,
+        mimeType: prepared.mimeType,
+      };
+    }),
+  );
 
   if (isSupabaseConfigured && supabase) {
+    const first = preparedImages[0];
     const { data, error } = await supabase.functions.invoke<{
       result?: PlantDiagnosisResult;
+      quota?: AiQuotaStatus;
       error?: string;
     }>("plant-ai", {
       body: {
@@ -465,13 +672,17 @@ export async function diagnosePlantHealth(
         plantProfile,
         recentLogs: serializedHistory,
         userObservationNotes,
-        imageBase64: preparedImage?.base64,
-        imageMimeType: preparedImage?.mimeType,
+        imageBase64: first?.base64,
+        imageMimeType: first?.mimeType,
+        diagnosticImages: preparedImages,
       },
     });
 
     if (error) {
-      throw new Error(error.message || "Edge Function plant-ai diagnose failed.");
+      await handleEdgeFunctionError(error, "Edge Function plant-ai diagnose failed.");
+    }
+    if (data?.quota) {
+      publishQuota(data.quota);
     }
     if (data?.error || !data?.result) {
       throw new Error(
@@ -512,13 +723,16 @@ Return strict JSON conforming to the schema.
 
   const parts: Record<string, unknown>[] = [{ text: promptText }];
 
-  if (preparedImage?.base64) {
-    parts.push({
-      inlineData: {
-        mimeType: preparedImage.mimeType,
-        data: preparedImage.base64,
-      },
-    });
+  for (const img of preparedImages) {
+    if (img.base64) {
+      parts.push({ text: `[Diagnostic Photo — ${img.label}]` });
+      parts.push({
+        inlineData: {
+          mimeType: img.mimeType,
+          data: img.base64,
+        },
+      });
+    }
   }
 
   const response = await fetchGeminiWithFallback(endpoint, {
@@ -595,6 +809,14 @@ async function mockIdentifyPlant(
             "When water-propagating, change reservoir water every 5–7 days to prevent hypoxic bacterial biofilm on the taproot.",
         },
       },
+      petSafety: {
+        isToxicToCats: true,
+        isToxicToDogs: true,
+        toxicityLevel: "moderate",
+        toxicPrinciples: "Persin (pit, bark, and leaves)",
+        safetyNotes:
+          "Keep pit and foliage out of reach of pets and children; persin can cause gastrointestinal upset and cardiac stress.",
+      },
     };
   }
 
@@ -630,6 +852,23 @@ async function mockIdentifyPlant(
             "Never mist rosette leaves or allow water to pool in the crown; use bottom-soaking or soil-level drench only after total dry-back.",
         },
       },
+      petSafety: q.includes("aloe")
+        ? {
+            isToxicToCats: true,
+            isToxicToDogs: true,
+            toxicityLevel: "moderate",
+            toxicPrinciples: "Anthraquinone glycosides (aloin) & saponins",
+            safetyNotes:
+              "Latex in aloe skin can cause vomiting, diarrhea, and lethargy in cats and dogs if chewed.",
+          }
+        : {
+            isToxicToCats: false,
+            isToxicToDogs: false,
+            toxicityLevel: "safe",
+            toxicPrinciples: "None",
+            safetyNotes:
+              "Non-toxic to cats, dogs, and children. Ideal pet-friendly windowsill succulent.",
+          },
     };
   }
 
@@ -664,6 +903,14 @@ async function mockIdentifyPlant(
             "Allow top 5 cm (2 inches) of chunky mix to dry before watering thoroughly.",
         },
       },
+      petSafety: {
+        isToxicToCats: true,
+        isToxicToDogs: true,
+        toxicityLevel: "moderate",
+        toxicPrinciples: "Insoluble calcium oxalate crystals",
+        safetyNotes:
+          "Toxic to cats, dogs, and children if chewed; causes immediate oral irritation, pawing at mouth, and drooling.",
+      },
     };
   }
 
@@ -691,6 +938,14 @@ async function mockIdentifyPlant(
             "Crassulaceae Guardrail: Never mist foliage or water on a shallow daily/weekly routine. Wait until substrate is 100% bone-dry and lower leaves feel slightly pliable.",
         },
       },
+      petSafety: {
+        isToxicToCats: true,
+        isToxicToDogs: true,
+        toxicityLevel: "mild",
+        toxicPrinciples: "Unknown glycosides / saponins",
+        safetyNotes:
+          "Toxic to cats and dogs if ingested; may cause vomiting, depression, and incoordination.",
+      },
     },
     {
       commonName: "Swiss Cheese Plant",
@@ -713,6 +968,14 @@ async function mockIdentifyPlant(
           rotWarningNote:
             "Allow top 2 inches of soil to dry out between waterings to prevent root suffocation.",
         },
+      },
+      petSafety: {
+        isToxicToCats: true,
+        isToxicToDogs: true,
+        toxicityLevel: "moderate",
+        toxicPrinciples: "Insoluble calcium oxalate crystals",
+        safetyNotes:
+          "Chewing leaves or stems causes immediate oral irritation, drooling, and swelling in cats, dogs, and children.",
       },
     },
     {
@@ -737,6 +1000,14 @@ async function mockIdentifyPlant(
             "Extremely susceptible to root rot if overwatered. Keep potting substrate dry between infrequent waterings.",
         },
       },
+      petSafety: {
+        isToxicToCats: true,
+        isToxicToDogs: true,
+        toxicityLevel: "mild",
+        toxicPrinciples: "Saponins",
+        safetyNotes:
+          "Mildly toxic to cats and dogs; ingestion causes nausea, vomiting, and diarrhea.",
+      },
     },
     {
       commonName: "Fiddle Leaf Fig",
@@ -760,6 +1031,14 @@ async function mockIdentifyPlant(
             "Avoid letting the bottom sit in standing saucer drainage water to prevent fungal edema and brown leaf edges.",
         },
       },
+      petSafety: {
+        isToxicToCats: true,
+        isToxicToDogs: true,
+        toxicityLevel: "mild",
+        toxicPrinciples: "Ficin & insoluble calcium oxalates",
+        safetyNotes:
+          "Milky sap and leaves can irritate skin and cause mouth irritation, drooling, and vomiting in pets.",
+      },
     },
   ];
 
@@ -773,16 +1052,21 @@ async function mockIdentifyPlant(
 }
 
 async function mockDiagnosePlantHealth(
-  imageUri: string | undefined,
+  photos: DiagnosticPhotoInput[],
   plantProfile: UserPlant,
   recentLogs: NotebookEntry[],
   userObservationNotes?: string,
 ): Promise<PlantDiagnosisResult> {
   await simulateNetworkDelay(750);
 
-  if (imageUri) {
-    await prepareImageForAI(imageUri);
+  for (const photo of photos) {
+    await prepareImageForAI(photo.uri);
   }
+
+  const angleSummary =
+    photos.length > 1
+      ? ` (multi-angle scan: ${photos.map((p) => p.label ?? p.angle).join(", ")})`
+      : "";
 
   const notesLower = (userObservationNotes || "").toLowerCase();
   const isSucculent = isSucculentTaxon(
@@ -840,7 +1124,7 @@ async function mockDiagnosePlantHealth(
         detectedSymptoms: symptoms,
         diagnosisSummary: `Cross-referencing your ${plantProfile.species.commonName} (${
           plantProfile.species.scientificName
-        }) photo with its care log (${recentWaterings.length} watering event(s) in the last 14 days in a ${plantProfile.potMaterial.replace(
+        }) photo${angleSummary} with its care log (${recentWaterings.length} watering event(s) in the last 14 days in a ${plantProfile.potMaterial.replace(
           "_",
           " ",
         )} pot) indicates early moisture stress${
@@ -885,7 +1169,7 @@ async function mockDiagnosePlantHealth(
         "Turgid, glossy obovate leaves with healthy epidermal wax",
         "Compact internodal spacing and strong woody stem lignification",
       ],
-      diagnosisSummary: `Your ${plantProfile.species.commonName} shows excellent turgor balance and compact growth. Your current Soak-and-Dry cadence and ${plantProfile.potMaterial.replace(
+      diagnosisSummary: `Your ${plantProfile.species.commonName} shows excellent turgor balance and compact growth${angleSummary}. Your current Soak-and-Dry cadence and ${plantProfile.potMaterial.replace(
         "_",
         " ",
       )} setup with drainage are well-matched to its Crassulaceae physiology.`,
@@ -918,7 +1202,7 @@ async function mockDiagnosePlantHealth(
         "Active white primary taproot elongation with healthy lateral root primordia",
         "Apical meristem shoot emerging with bronze-green juvenile leaves",
       ],
-      diagnosisSummary: `Your ${plantProfile.nickname} (${plantProfile.species.scientificName}) propagation is progressing strongly. Timeline logs show steady taproot and stem elongation without vascular browning or biofilm accumulation.`,
+      diagnosisSummary: `Your ${plantProfile.nickname} (${plantProfile.species.scientificName}) propagation is progressing strongly${angleSummary}. Timeline logs show steady taproot and stem elongation without vascular browning or biofilm accumulation.`,
       followUpQuestions: [
         "Has the primary stem reached 15–18 cm (6–7 inches) with at least 4–6 true leaves?",
       ],
@@ -961,7 +1245,7 @@ async function mockDiagnosePlantHealth(
             "Slight laminar droop and crispy leaf tip margins indicating overdue hydration or low ambient humidity",
           ]
         : ["Vibrant chlorophyll density and upright petiole posture"],
-    diagnosisSummary: `Based on your ${plantProfile.species.commonName}'s care history in "${plantProfile.location}", the root zone is ready for a thorough top-to-bottom watering until 15% runoff exits the drainage holes.`,
+    diagnosisSummary: `Based on your ${plantProfile.species.commonName}'s care history in "${plantProfile.location}"${angleSummary}, the root zone is ready for a thorough top-to-bottom watering until 15% runoff exits the drainage holes.`,
     followUpQuestions: [
       "Is the top 5 cm (2 inches) of potting mix dry to the touch?",
     ],

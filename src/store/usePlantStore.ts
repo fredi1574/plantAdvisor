@@ -39,6 +39,7 @@ import type {
   PlantType,
   PotMaterial,
   UserPlant,
+  VacationModeConfig,
 } from '@/types/plant';
 
 export interface AddPlantPayload {
@@ -134,7 +135,9 @@ interface PlantStoreState {
   syncError: string | null;
   isSyncing: boolean;
   notificationPrefs: NotificationPreferences;
+  vacationMode: VacationModeConfig;
   setNotificationPrefs: (prefs: Partial<NotificationPreferences>) => Promise<void>;
+  setVacationMode: (config: Partial<VacationModeConfig>) => Promise<void>;
   rescheduleAllNotifications: () => Promise<void>;
   syncWithSupabase: (explicitUserId?: string) => Promise<void>;
   flushPendingSync: () => Promise<void>;
@@ -159,6 +162,20 @@ interface PlantStoreState {
 
 const DEFAULT_FALLBACK_PHOTO =
   'https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?auto=format&fit=crop&w=900&q=80';
+
+function toIsoDateOnly(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+const DEFAULT_VACATION_MODE: VacationModeConfig = {
+  enabled: false,
+  startDate: toIsoDateOnly(new Date()),
+  endDate: toIsoDateOnly(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+  snoozeNotifications: true,
+};
 
 export function getDaysUntilNextWater(plant: UserPlant): number {
   const lastWateredMs = new Date(plant.lastWateredAt).getTime();
@@ -186,6 +203,7 @@ export const usePlantStore = create<PlantStoreState>()(
       syncError: null,
       isSyncing: false,
       notificationPrefs: DEFAULT_NOTIFICATION_PREFERENCES,
+      vacationMode: DEFAULT_VACATION_MODE,
 
       setNotificationPrefs: async (prefs) => {
         const nextPrefs: NotificationPreferences = {
@@ -193,11 +211,32 @@ export const usePlantStore = create<PlantStoreState>()(
           ...prefs,
         };
         set({ notificationPrefs: nextPrefs });
-        await syncAllPlantNotifications(get().plants, nextPrefs);
+        await syncAllPlantNotifications(
+          get().plants,
+          nextPrefs,
+          get().vacationMode
+        );
+      },
+
+      setVacationMode: async (config) => {
+        const nextVacation: VacationModeConfig = {
+          ...get().vacationMode,
+          ...config,
+        };
+        set({ vacationMode: nextVacation });
+        await syncAllPlantNotifications(
+          get().plants,
+          get().notificationPrefs,
+          nextVacation
+        );
       },
 
       rescheduleAllNotifications: async () => {
-        await syncAllPlantNotifications(get().plants, get().notificationPrefs);
+        await syncAllPlantNotifications(
+          get().plants,
+          get().notificationPrefs,
+          get().vacationMode
+        );
       },
 
       clearUserGarden: async () => {
@@ -397,6 +436,7 @@ export const usePlantStore = create<PlantStoreState>()(
             family: identification.family,
             plantType: identification.plantType,
             baselineCare: identification.baselineCare,
+            petSafety: identification.petSafety,
           },
           latestHealthAssessment: {
             id: `ha-init-${Date.now()}`,

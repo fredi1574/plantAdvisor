@@ -18,7 +18,7 @@ import {
 } from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import type { UserPlant } from '@/types/plant';
+import type { UserPlant, VacationModeConfig } from '@/types/plant';
 
 export interface NotificationPreferences {
   enabled: boolean;
@@ -316,16 +316,34 @@ export async function cancelAllGardenNotifications(): Promise<void> {
   }
 }
 
+export function isDateInVacationWindow(
+  vacationMode?: VacationModeConfig,
+  referenceDate: Date = new Date()
+): boolean {
+  if (!vacationMode?.enabled) return false;
+  const y = referenceDate.getFullYear();
+  const m = String(referenceDate.getMonth() + 1).padStart(2, '0');
+  const d = String(referenceDate.getDate()).padStart(2, '0');
+  const todayKey = `${y}-${m}-${d}`;
+  return todayKey >= vacationMode.startDate && todayKey <= vacationMode.endDate;
+}
+
 /**
  * Synchronizes all plant reminders and the daily digest with current garden state & preferences.
  */
 export async function syncAllPlantNotifications(
   plants: UserPlant[],
-  prefs: NotificationPreferences = DEFAULT_NOTIFICATION_PREFERENCES
+  prefs: NotificationPreferences = DEFAULT_NOTIFICATION_PREFERENCES,
+  vacationMode?: VacationModeConfig
 ): Promise<void> {
   if (Platform.OS === 'web') return;
 
-  if (!prefs.enabled) {
+  if (
+    !prefs.enabled ||
+    (vacationMode?.enabled &&
+      vacationMode?.snoozeNotifications &&
+      isDateInVacationWindow(vacationMode))
+  ) {
     await cancelAllGardenNotifications();
     return;
   }
