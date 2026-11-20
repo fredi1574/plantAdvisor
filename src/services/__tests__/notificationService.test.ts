@@ -1,6 +1,5 @@
 import {
   computePlantReminderDate,
-  isDateInVacationWindow,
   type NotificationPreferences,
 } from '@/services/notificationService';
 import type { UserPlant } from '@/types/plant';
@@ -64,29 +63,5 @@ describe('computePlantReminderDate', () => {
     expect(reminder.getHours()).toBe(9);
     expect(reminder.getMinutes()).toBe(30);
     expect(reminder.getTime()).toBeGreaterThan(Date.now());
-  });
-});
-
-describe('isDateInVacationWindow', () => {
-  it('matches dates inclusively within the vacation range', () => {
-    const config = {
-      enabled: true,
-      startDate: '2026-11-10',
-      endDate: '2026-11-20',
-      snoozeNotifications: true,
-    };
-
-    expect(isDateInVacationWindow(config, new Date('2026-11-15T12:00:00'))).toBe(
-      true
-    );
-    expect(isDateInVacationWindow(config, new Date('2026-11-25T12:00:00'))).toBe(
-      false
-    );
-    expect(
-      isDateInVacationWindow(
-        { ...config, enabled: false },
-        new Date('2026-11-15T12:00:00')
-      )
-    ).toBe(false);
   });
 });

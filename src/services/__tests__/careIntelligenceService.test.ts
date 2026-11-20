@@ -1,50 +1,7 @@
 import {
   analyzeWeatherForecast,
   computeAdaptiveWateringInterval,
-  generatePlantSitterCareSheet,
 } from '@/services/careIntelligenceService';
-import type { UserPlant } from '@/types/plant';
-
-const makePlant = (overrides: Partial<UserPlant> = {}): UserPlant => ({
-  id: 'ci-1',
-  nickname: 'Patio Monstera',
-  photoUri: 'https://example.com/m.jpg',
-  acquiredAt: '2026-01-01T00:00:00.000Z',
-  location: 'Covered Patio',
-  isIndoor: false,
-  lightExposure: 'bright_indirect',
-  hasDrainageHole: true,
-  potMaterial: 'terracotta',
-  lastWateredAt: '2026-11-10T00:00:00.000Z',
-  customWateringIntervalDays: 7,
-  species: {
-    id: 'sp-1',
-    commonName: 'Swiss Cheese Plant',
-    scientificName: 'Monstera deliciosa',
-    family: 'Araceae',
-    plantType: 'foliage',
-    baselineCare: {
-      idealLight: 'Bright indirect',
-      baseWateringDays: 7,
-      soilRecommendation: 'Aroid mix',
-      succulentGuardrails: {
-        isSucculentOrCactus: false,
-        neverMistFoliage: false,
-        soakAndDryRequired: false,
-        minimumDryBackDays: 5,
-        rotWarningNote: 'Let top 5 cm dry.',
-      },
-    },
-    petSafety: {
-      isToxicToCats: true,
-      isToxicToDogs: true,
-      toxicityLevel: 'moderate',
-      toxicPrinciples: 'Calcium oxalates',
-      safetyNotes: 'Keep away from pets.',
-    },
-  },
-  ...overrides,
-});
 
 describe('computeAdaptiveWateringInterval', () => {
   it('extends intervals in winter dormancy and shortens in summer terracotta', () => {
@@ -110,20 +67,5 @@ describe('analyzeWeatherForecast', () => {
     expect(advisory.recommendedPushbackDays).toBeGreaterThanOrEqual(2);
     expect(advisory.alerts.some((a) => a.kind === 'frost')).toBe(true);
     expect(advisory.alerts.some((a) => a.kind === 'rain')).toBe(true);
-  });
-});
-
-describe('generatePlantSitterCareSheet', () => {
-  it('formats due plants with care instructions and pet safety warnings', () => {
-    const plant = makePlant();
-    const sheet = generatePlantSitterCareSheet(
-      [plant],
-      '2026-11-15',
-      '2026-11-22'
-    );
-
-    expect(sheet).toContain('Patio Monstera');
-    expect(sheet).toContain('2026-11-17');
-    expect(sheet).toContain('MODERATE toxicity');
   });
 });

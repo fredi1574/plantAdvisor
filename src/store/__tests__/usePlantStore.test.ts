@@ -101,15 +101,19 @@ describe('usePlantStore mutations', () => {
     expect(state.plants.length).toBe(initialCount + 1);
     expect(created.species.petSafety?.toxicityLevel).toBe('safe');
     expect(
-      state.entries.some((e) => e.plantId === created.id && e.eventType === 'ai_scan')
+      state.entries.some(
+        (e) => e.plantId === created.id && e.eventType === 'ai_scan'
+      )
     ).toBe(true);
   });
 
-  it('updates a plant interval, waters it, logs a growth metric, and deletes it', () => {
+  it('updates intervals (including clearing optional ones), waters, logs metrics, and deletes', () => {
     const targetId = usePlantStore.getState().plants[0].id;
 
     usePlantStore.getState().updatePlant(targetId, {
       customWateringIntervalDays: 21,
+      fertilizeIntervalDays: 30,
+      rotateIntervalDays: 14,
       nickname: 'Renamed Specimen',
     });
 
@@ -117,12 +121,18 @@ describe('usePlantStore mutations', () => {
       .getState()
       .plants.find((p) => p.id === targetId);
     expect(updated?.customWateringIntervalDays).toBe(21);
+    expect(updated?.fertilizeIntervalDays).toBe(30);
+    expect(updated?.rotateIntervalDays).toBe(14);
     expect(updated?.nickname).toBe('Renamed Specimen');
 
+    usePlantStore.getState().updatePlant(targetId, {
+      fertilizeIntervalDays: undefined,
+    });
+    updated = usePlantStore.getState().plants.find((p) => p.id === targetId);
+    expect(updated?.fertilizeIntervalDays).toBeUndefined();
+
     usePlantStore.getState().waterPlantNow(targetId, 'Deep soak');
-    updated = usePlantStore
-      .getState()
-      .plants.find((p) => p.id === targetId);
+    updated = usePlantStore.getState().plants.find((p) => p.id === targetId);
     expect(doesPlantNeedWatering(updated!)).toBe(false);
 
     const entry = usePlantStore.getState().logCareEvent({
@@ -138,5 +148,36 @@ describe('usePlantStore mutations', () => {
     expect(
       usePlantStore.getState().plants.some((p) => p.id === targetId)
     ).toBe(false);
+  });
+
+  it('completes scheduled fertilize and rotate tasks with matching entry types', () => {
+    const targetId = usePlantStore.getState().plants[0].id;
+
+    usePlantStore.getState().completeScheduledCareTask(targetId, 'fertilize');
+    expect(usePlantStore.getState().entries[0].eventType).toBe('fertilize');
+
+    usePlantStore.getState().completeScheduledCareTask(targetId, 'rotate');
+    expect(usePlantStore.getState().entries[0].eventType).toBe('note');
+    expect(usePlantStore.getState().entries[0].title).toContain('Rotated');
+  });
+
+  it('waters all plants in batch and persists adaptiveCarePrefs updates', () => {
+    const total = usePlantStore.getState().plants.length;
+    const watered = usePlantStore.getState().waterAllPlants();
+    expect(watered).toBe(total);
+    expect(
+      usePlantStore.getState().plants.every((p) => !doesPlantNeedWatering(p))
+    ).toBe(true);
+
+    usePlantStore.getState().setAdaptiveCarePrefs({
+      hemisphere: 'southern',
+      latitude: '-33.86',
+      longitude: '151.21',
+    });
+    expect(usePlantStore.getState().adaptiveCarePrefs).toEqual({
+      hemisphere: 'southern',
+      latitude: '-33.86',
+      longitude: '151.21',
+    });
   });
 });
