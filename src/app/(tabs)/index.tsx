@@ -14,6 +14,7 @@ import { GardenEmptyState } from '@/components/garden/garden-empty-state';
 import { PlantGridCard } from '@/components/garden/plant-grid-card';
 import { SwipeablePlantCard } from '@/components/garden/swipeable-plant-card';
 import { EditPlantModal } from '@/components/modals/edit-plant-modal';
+import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -190,18 +191,19 @@ export default function MyGardenScreen() {
     if (viewMode === 'list') {
       return (
         <View style={styles.listStack}>
-          {items.map((plant) => (
-            <SwipeablePlantCard
-              key={plant.id}
-              plant={plant}
-              onPress={() => router.push(`/plant/${plant.id}`)}
-              onWaterNow={() => {
-                waterPlantNow(plant.id);
-                showToast(`Watered "${plant.nickname}"!`);
-              }}
-              onEdit={setEditingPlant}
-              onDelete={handleDeletePlant}
-            />
+          {items.map((plant, idx) => (
+            <AnimatedEntrance key={plant.id} index={idx} animateLayout>
+              <SwipeablePlantCard
+                plant={plant}
+                onPress={() => router.push(`/plant/${plant.id}`)}
+                onWaterNow={() => {
+                  waterPlantNow(plant.id);
+                  showToast(`Watered "${plant.nickname}"!`);
+                }}
+                onEdit={setEditingPlant}
+                onDelete={handleDeletePlant}
+              />
+            </AnimatedEntrance>
           ))}
         </View>
       );
@@ -215,7 +217,11 @@ export default function MyGardenScreen() {
     return (
       <View style={styles.gridStack}>
         {rows.map((row, rowIndex) => (
-          <View key={`row-${rowIndex}`} style={styles.gridRow}>
+          <AnimatedEntrance
+            key={row.map((p) => p.id).join('-')}
+            index={rowIndex}
+            animateLayout
+            style={styles.gridRow}>
             {row.map((plant) => (
               <PlantGridCard
                 key={plant.id}
@@ -229,7 +235,7 @@ export default function MyGardenScreen() {
               />
             ))}
             {row.length === 1 && <View style={styles.gridSpacer} />}
-          </View>
+          </AnimatedEntrance>
         ))}
       </View>
     );

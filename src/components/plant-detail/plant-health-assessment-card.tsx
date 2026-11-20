@@ -1,10 +1,16 @@
 import { CheckSquare, Sparkles, Square } from 'lucide-react-native';
 import { useReducer } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  LinearTransition,
+  useReducedMotion,
+} from 'react-native-reanimated';
 
 import { AiLimitModal } from '@/components/modals/ai-limit-modal';
 import { DiagnosisFollowUpBox } from '@/components/plant-detail/diagnosis-follow-up-box';
 import { ScanHistoryDrawer } from '@/components/plant-detail/scan-history-drawer';
+import { SpringPressable } from '@/components/ui/animated-wrappers';
+import { AiScanShimmerCard } from '@/components/ui/botanical-shimmer';
 import { Chip } from '@/components/ui/chip';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import {
@@ -113,6 +119,7 @@ export function PlantHealthAssessmentCard({
   onShowToast,
 }: PlantHealthAssessmentCardProps) {
   const palette = usePalette();
+  const reducedMotion = useReducedMotion();
   const toggleRecommendedAction = usePlantStore(
     (s) => s.toggleRecommendedAction
   );
@@ -228,6 +235,10 @@ export function PlantHealthAssessmentCard({
             />
           </View>
 
+          {(isRescanning || isRefiningDiagnosis) && (
+            <AiScanShimmerCard mode="diagnose" />
+          )}
+
           {guardrailNote ? (
             <SucculentGuardrailBanner message={guardrailNote} />
           ) : null}
@@ -263,59 +274,69 @@ export function PlantHealthAssessmentCard({
             </View>
 
             {assessment.recommendedActions.map((action) => (
-              <Pressable
+              <Animated.View
                 key={action.id}
-                onPress={() => {
-                  triggerLightHaptic();
-                  toggleRecommendedAction(plant.id, action.id);
-                }}
-                style={({ pressed }) => [
-                  styles.actionCard,
-                  {
-                    backgroundColor: action.completed
-                      ? palette.primarySoft
-                      : palette.bgPrimary,
-                    borderColor: action.completed
-                      ? palette.primaryBorder
-                      : palette.borderSubtle,
-                  },
-                  pressed && { opacity: 0.85 },
-                ]}>
-                {action.completed ? (
-                  <CheckSquare size={20} color={palette.primary} />
-                ) : (
-                  <Square size={20} color={palette.textSecondary} />
-                )}
+                layout={
+                  reducedMotion
+                    ? undefined
+                    : LinearTransition.springify().damping(22).stiffness(200)
+                }>
+                <SpringPressable
+                  onPress={() => {
+                    triggerLightHaptic();
+                    toggleRecommendedAction(plant.id, action.id);
+                  }}
+                  pressedScale={0.98}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: action.completed }}
+                  accessibilityLabel={action.instruction}
+                  style={[
+                    styles.actionCard,
+                    {
+                      backgroundColor: action.completed
+                        ? palette.primarySoft
+                        : palette.bgPrimary,
+                      borderColor: action.completed
+                        ? palette.primaryBorder
+                        : palette.borderSubtle,
+                    },
+                  ]}>
+                  {action.completed ? (
+                    <CheckSquare size={20} color={palette.primary} />
+                  ) : (
+                    <Square size={20} color={palette.textSecondary} />
+                  )}
 
-                <View style={styles.actionTextCol}>
-                  <View style={styles.actionTopLine}>
-                    <UrgencyBadge urgency={action.urgency} />
-                  </View>
+                  <View style={styles.actionTextCol}>
+                    <View style={styles.actionTopLine}>
+                      <UrgencyBadge urgency={action.urgency} />
+                    </View>
 
-                  <Text
-                    style={[
-                      styles.actionInstruction,
-                      {
-                        color: action.completed
-                          ? palette.textSecondary
-                          : palette.textPrimary,
-                      },
-                      action.completed && styles.actionInstructionDone,
-                    ]}>
-                    {action.instruction}
-                  </Text>
-
-                  {Boolean(action.rationale) && (
                     <Text
                       style={[
-                        styles.actionRationale,
-                        { color: palette.textSecondary },
+                        styles.actionInstruction,
+                        {
+                          color: action.completed
+                            ? palette.textSecondary
+                            : palette.textPrimary,
+                        },
+                        action.completed && styles.actionInstructionDone,
                       ]}>
-                      Why: {action.rationale}
+                      {action.instruction}
                     </Text>
-                  )}
-                </View>
-              </Pressable>
+
+                    {Boolean(action.rationale) && (
+                      <Text
+                        style={[
+                          styles.actionRationale,
+                          { color: palette.textSecondary },
+                        ]}>
+                        Why: {action.rationale}
+                      </Text>
+                    )}
+                  </View>
+                </SpringPressable>
+              </Animated.View>
             ))}
           </View>
 

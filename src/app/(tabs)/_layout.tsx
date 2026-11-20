@@ -10,6 +10,12 @@ import {
   useState,
 } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassPill } from '@/components/ui/glass-pill';
@@ -37,11 +43,37 @@ function FloatingTabBar({
 }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
   const palette = usePalette();
+  const reducedMotion = useReducedMotion();
 
   const activeRouteKey = state.routes[state.index]?.key;
   const [blurTargetObj, setBlurTargetObj] = useState<{
     current: BlurTargetNode;
   }>({ current: null });
+  const [rowWidth, setRowWidth] = useState(0);
+
+  const routeCount = Math.max(1, state.routes.length);
+  const horizontalPad = Spacing.xs;
+  const pillSlotWidth =
+    rowWidth > 0 ? (rowWidth - horizontalPad * 2) / routeCount : 0;
+  const indicatorX = useSharedValue(0);
+
+  useEffect(() => {
+    if (pillSlotWidth <= 0) return;
+    const targetX = horizontalPad + state.index * pillSlotWidth;
+    if (reducedMotion) {
+      indicatorX.value = targetX;
+    } else {
+      indicatorX.value = withSpring(targetX, {
+        damping: 22,
+        stiffness: 240,
+        mass: 0.9,
+      });
+    }
+  }, [state.index, pillSlotWidth, horizontalPad, indicatorX, reducedMotion]);
+
+  const activePillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value }],
+  }));
 
   useEffect(() => {
     const node = activeRouteKey
@@ -76,7 +108,23 @@ function FloatingTabBar({
             borderColor: palette.glassBorder,
           },
         ]}>
-        <View style={styles.row}>
+        <View
+          style={styles.row}
+          onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
+          {pillSlotWidth > 0 && (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.activeTabPill,
+                {
+                  width: pillSlotWidth - 2,
+                  backgroundColor: palette.primarySoft,
+                  borderColor: palette.primaryBorder,
+                },
+                activePillStyle,
+              ]}
+            />
+          )}
           {state.routes.map((route, index) => {
             const { options } = descriptors[route.key];
             const isFocused = state.index === index;
@@ -230,12 +278,20 @@ const styles = StyleSheet.create({
   },
   row: {
     flex: 1,
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: Spacing.xs,
     paddingVertical: Spacing.xs,
-    gap: Spacing.xs,
+  },
+  activeTabPill: {
+    position: 'absolute',
+    left: 1,
+    top: Spacing.xs,
+    bottom: Spacing.xs,
+    borderRadius: Radius.pill - 4,
+    borderWidth: BorderWidth.hairline,
   },
   tabItem: {
     flex: 1,

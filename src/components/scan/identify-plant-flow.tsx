@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 
 import { PetSafetyBadge } from '@/components/garden/pet-safety-badge';
+import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
 import { BotanicalInput } from '@/components/ui/botanical-input';
+import { AiScanShimmerCard } from '@/components/ui/botanical-shimmer';
 import { Chip } from '@/components/ui/chip';
 import { SucculentGuardrailBanner } from '@/components/ui/status-badges';
 import { SurfaceCard } from '@/components/ui/surface-card';
@@ -213,8 +215,10 @@ export function IdentifyPlantFlow({
         </Text>
       </Pressable>
 
-      {idResult && (
-        <View
+      {isLoading && <AiScanShimmerCard mode="identify" />}
+
+      {!isLoading && idResult && (
+        <AnimatedEntrance
           style={[
             styles.resultContainer,
             { borderTopColor: palette.borderSubtle },
@@ -397,7 +401,7 @@ export function IdentifyPlantFlow({
               Add to My Garden & Open Notebook
             </Text>
           </Pressable>
-        </View>
+        </AnimatedEntrance>
       )}
     </SurfaceCard>
   );

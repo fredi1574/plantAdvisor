@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import {
   CheckCircle2,
   ChevronRight,
@@ -6,28 +5,30 @@ import {
   MapPin,
   Pencil,
   Trash2,
-} from 'lucide-react-native';
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+} from "lucide-react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import { HealthStatusBadge } from '@/components/ui/status-badges';
-import { SwipeableRow } from '@/components/ui/swipeable-row';
+import { PlantStatusPhoto } from "@/components/garden/plant-status-photo";
+import { SpringPressable } from "@/components/ui/animated-wrappers";
+import { HydrationBar } from "@/components/ui/hydration-bar";
+import { SwipeableRow } from "@/components/ui/swipeable-row";
 import {
   BorderWidth,
   CardShadow,
   Fonts,
+  getHealthBadgeTheme,
   Radius,
   Spacing,
-} from '@/constants/theme';
-import { usePalette } from '@/hooks/use-theme';
-import type { UserPlant } from '@/types/plant';
-import { getDaysUntilNextWater } from '@/utils/watering';
+} from "@/constants/theme";
+import { usePalette } from "@/hooks/use-theme";
+import type { UserPlant } from "@/types/plant";
+import { getDaysUntilNextWater } from "@/utils/watering";
 
-const PLANT_TYPE_LABELS: Record<UserPlant['species']['plantType'], string> = {
-  succulent: 'Succulent',
-  propagation: 'Propagation',
-  foliage: 'Foliage',
-  flowering: 'Flowering',
+const PLANT_TYPE_LABELS: Record<UserPlant["species"]["plantType"], string> = {
+  succulent: "Succulent",
+  propagation: "Propagation",
+  foliage: "Foliage",
+  flowering: "Flowering",
 };
 
 interface SwipeablePlantCardProps {
@@ -46,8 +47,8 @@ export function SwipeablePlantCard({
   onDelete,
 }: SwipeablePlantCardProps) {
   const palette = usePalette();
-  const healthStatus =
-    plant.latestHealthAssessment?.healthStatus ?? 'thriving';
+  const healthStatus = plant.latestHealthAssessment?.healthStatus ?? "thriving";
+  const healthTheme = getHealthBadgeTheme(palette)[healthStatus];
   const daysUntilWater = getDaysUntilNextWater(plant);
   const needsWater = daysUntilWater <= 0;
 
@@ -57,19 +58,20 @@ export function SwipeablePlantCard({
       borderRadius={Radius.lg}
       onPress={onPress}
       leftAction={{
-        label: 'Edit',
+        label: "Edit",
         icon: <Pencil size={18} color={palette.textInverse} />,
         backgroundColor: palette.primary,
         accessibilityLabel: `Edit ${plant.nickname}`,
         onTrigger: () => onEdit(plant),
       }}
       rightAction={{
-        label: 'Delete',
+        label: "Delete",
         icon: <Trash2 size={18} color={palette.textInverse} />,
         backgroundColor: palette.criticalDot,
         accessibilityLabel: `Delete ${plant.nickname}`,
         onTrigger: () => onDelete(plant),
-      }}>
+      }}
+    >
       {({ isOpen, pressed }) => (
         <View
           style={[
@@ -77,15 +79,16 @@ export function SwipeablePlantCard({
             {
               backgroundColor:
                 pressed && !isOpen ? palette.bgSubtle : palette.bgSurface,
-              borderColor: palette.borderSubtle,
+              borderColor: healthTheme.dot,
             },
-          ]}>
+          ]}
+        >
           <View style={styles.cardTopRow}>
-            <Image
-              source={{ uri: plant.photoUri }}
-              style={[styles.thumbnail, { backgroundColor: palette.bgSubtle }]}
-              contentFit="cover"
-              accessibilityLabel={`${plant.nickname} photo`}
+            <PlantStatusPhoto
+              uri={plant.photoUri}
+              alt={plant.nickname}
+              status={healthStatus}
+              variant="thumbnail"
             />
 
             <View style={styles.cardHeaderMeta}>
@@ -95,17 +98,17 @@ export function SwipeablePlantCard({
                     styles.plantNickname,
                     { color: palette.textPrimary, fontFamily: Fonts?.serif },
                   ]}
-                  numberOfLines={1}>
+                  numberOfLines={1}
+                >
                   {plant.nickname}
                 </Text>
-
-                <HealthStatusBadge status={healthStatus} />
               </View>
 
               <Text
                 style={[styles.speciesLine, { color: palette.textSecondary }]}
-                numberOfLines={1}>
-                {plant.species.commonName} •{' '}
+                numberOfLines={1}
+              >
+                {plant.species.commonName} •{" "}
                 <Text style={styles.scientificItalic}>
                   {plant.species.scientificName}
                 </Text>
@@ -116,9 +119,11 @@ export function SwipeablePlantCard({
                   style={[
                     styles.typeChip,
                     { backgroundColor: palette.bgSubtle },
-                  ]}>
+                  ]}
+                >
                   <Text
-                    style={[styles.typeChipText, { color: palette.primary }]}>
+                    style={[styles.typeChipText, { color: palette.primary }]}
+                  >
                     {PLANT_TYPE_LABELS[plant.species.plantType]}
                   </Text>
                 </View>
@@ -130,7 +135,8 @@ export function SwipeablePlantCard({
                       styles.locationText,
                       { color: palette.textSecondary },
                     ]}
-                    numberOfLines={1}>
+                    numberOfLines={1}
+                  >
                     {plant.location}
                   </Text>
                 </View>
@@ -138,35 +144,45 @@ export function SwipeablePlantCard({
             </View>
           </View>
 
-          {plant.latestHealthAssessment && (
+          {plant.latestHealthAssessment && healthStatus !== "thriving" && (
             <View
               style={[
                 styles.diagnosisSnippetBox,
                 {
-                  backgroundColor: palette.bgPrimary,
-                  borderColor: palette.borderSubtle,
+                  backgroundColor:
+                    healthStatus === "critical"
+                      ? palette.criticalBg
+                      : palette.attentionBg,
+                  borderColor:
+                    healthStatus === "critical"
+                      ? palette.criticalBorder
+                      : palette.attentionBorder,
                 },
-              ]}>
+              ]}
+            >
               <Text
                 style={[
                   styles.diagnosisSnippetText,
-                  { color: palette.textSecondary },
+                  {
+                    color:
+                      healthStatus === "critical"
+                        ? palette.criticalText
+                        : palette.attentionText,
+                  },
                 ]}
-                numberOfLines={2}>
-                <Text
-                  style={[
-                    styles.diagnosisSnippetPrefix,
-                    { color: palette.primary },
-                  ]}>
-                  AI Note:{' '}
-                </Text>
+                numberOfLines={1}
+              >
+                <Text style={styles.diagnosisSnippetPrefix}>AI Note: </Text>
                 {plant.latestHealthAssessment.diagnosisSummary}
               </Text>
             </View>
           )}
 
+          <HydrationBar plant={plant} />
+
           <View
-            style={[styles.cardFooter, { borderTopColor: palette.bgSubtle }]}>
+            style={[styles.cardFooter, { borderTopColor: palette.bgSubtle }]}
+          >
             {needsWater ? (
               <View
                 style={[
@@ -175,15 +191,17 @@ export function SwipeablePlantCard({
                     backgroundColor: palette.waterAlertBg,
                     borderColor: palette.waterAlertBorder,
                   },
-                ]}>
+                ]}
+              >
                 <Droplets size={14} color={palette.waterAlertText} />
                 <Text
                   style={[
                     styles.needsWaterBadgeText,
                     { color: palette.waterAlertText },
-                  ]}>
+                  ]}
+                >
                   {daysUntilWater === 0
-                    ? 'Needs Watering Today'
+                    ? "Needs Watering Today"
                     : `Needs Watering (${Math.abs(daysUntilWater)}d overdue)`}
                 </Text>
               </View>
@@ -194,8 +212,9 @@ export function SwipeablePlantCard({
                   style={[
                     styles.waterScheduleText,
                     { color: palette.textSecondary },
-                  ]}>
-                  Next water in {daysUntilWater}d (every{' '}
+                  ]}
+                >
+                  Next water in {daysUntilWater}d (every{" "}
                   {plant.customWateringIntervalDays}d)
                 </Text>
               </View>
@@ -203,38 +222,40 @@ export function SwipeablePlantCard({
 
             <View style={styles.cardFooterRight}>
               {needsWater && (
-                <Pressable
+                <SpringPressable
                   onPress={(e) => {
                     e.stopPropagation();
                     onWaterNow();
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={
-                    plant.species.plantType === 'propagation'
+                    plant.species.plantType === "propagation"
                       ? `Refresh water for ${plant.nickname}`
                       : `Log water for ${plant.nickname}`
                   }
-                  style={({ pressed: btnPressed }) => [
+                  style={[
                     styles.quickWaterBtn,
                     { backgroundColor: palette.waterBlue },
-                    btnPressed && { opacity: 0.8 },
-                  ]}>
+                  ]}
+                >
                   <Droplets size={13} color={palette.textInverse} />
                   <Text
                     style={[
                       styles.quickWaterBtnText,
                       { color: palette.textInverse },
-                    ]}>
-                    {plant.species.plantType === 'propagation'
-                      ? 'Refresh Water'
-                      : 'Log Water'}
+                    ]}
+                  >
+                    {plant.species.plantType === "propagation"
+                      ? "Refresh Water"
+                      : "Log Water"}
                   </Text>
-                </Pressable>
+                </SpringPressable>
               )}
 
               <View style={styles.openNotebookLink}>
                 <Text
-                  style={[styles.openNotebookText, { color: palette.primary }]}>
+                  style={[styles.openNotebookText, { color: palette.primary }]}
+                >
                   Notebook
                 </Text>
                 <ChevronRight size={15} color={palette.primary} />
@@ -250,49 +271,44 @@ export function SwipeablePlantCard({
 const styles = StyleSheet.create({
   plantCard: {
     borderRadius: Radius.lg,
-    borderWidth: BorderWidth.hairline,
+    borderWidth: 1,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.sm,
     gap: Spacing.md,
     ...CardShadow,
   },
   cardTopRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.md,
-  },
-  thumbnail: {
-    width: 78,
-    height: 78,
-    borderRadius: 14,
   },
   cardHeaderMeta: {
     flex: 1,
     gap: 5,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   titleBadgeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: 8,
   },
   plantNickname: {
     flex: 1,
     fontSize: 18,
     lineHeight: 24,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   speciesLine: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   scientificItalic: {
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   metaChipsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 8,
     marginTop: 2,
   },
@@ -303,16 +319,16 @@ const styles = StyleSheet.create({
   },
   typeChipText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   locationChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   locationText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   diagnosisSnippetBox: {
     borderRadius: Radius.md,
@@ -321,24 +337,24 @@ const styles = StyleSheet.create({
     borderWidth: BorderWidth.hairline,
   },
   diagnosisSnippetPrefix: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   diagnosisSnippetText: {
     fontSize: 13,
     lineHeight: 19,
   },
   cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
     gap: 8,
     paddingTop: 4,
     borderTopWidth: BorderWidth.hairline,
   },
   needsWaterBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     borderWidth: BorderWidth.hairline,
     paddingHorizontal: 10,
@@ -347,25 +363,25 @@ const styles = StyleSheet.create({
   },
   needsWaterBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   waterScheduleInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   waterScheduleText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   cardFooterRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   quickWaterBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 5,
     paddingHorizontal: 11,
     paddingVertical: 6,
@@ -373,15 +389,15 @@ const styles = StyleSheet.create({
   },
   quickWaterBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   openNotebookLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 2,
   },
   openNotebookText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });

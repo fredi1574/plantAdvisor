@@ -12,6 +12,7 @@ import { PlantAdaptiveCareCard } from '@/components/plant-detail/plant-adaptive-
 import { PlantHealthAssessmentCard } from '@/components/plant-detail/plant-health-assessment-card';
 import { PlantHeroCard } from '@/components/plant-detail/plant-hero-card';
 import { VisualProgressGallery } from '@/components/plant-detail/visual-progress-gallery';
+import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import {
@@ -35,6 +36,7 @@ export default function PlantDetailNotebookScreen() {
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
   const healthAssessments = usePlantStore((s) => s.healthAssessments);
+  const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
   const deletePlant = usePlantStore((s) => s.deletePlant);
   const deleteCareEntry = usePlantStore((s) => s.deleteCareEntry);
 
@@ -174,36 +176,54 @@ export default function PlantDetailNotebookScreen() {
 
           <FeedbackBanner message={feedbackMessage} />
 
-          <PlantHeroCard plant={plant} />
+          <AnimatedEntrance index={0}>
+            <PlantHeroCard
+              plant={plant}
+              onWaterNow={() => {
+                waterPlantNow(plant.id);
+                showToast(`Watered "${plant.nickname}"!`);
+              }}
+            />
+          </AnimatedEntrance>
 
-          <GrowthTrendChart
-            entries={plantEntries}
-            plantType={plant.species.plantType}
-          />
+          <AnimatedEntrance index={1}>
+            <GrowthTrendChart
+              entries={plantEntries}
+              plantType={plant.species.plantType}
+            />
+          </AnimatedEntrance>
 
-          <VisualProgressGallery
-            entries={plantEntries}
-            assessments={plantAssessments}
-            plantPhotoUri={plant.photoUri}
-            acquiredAt={plant.acquiredAt}
-          />
+          <AnimatedEntrance index={2}>
+            <VisualProgressGallery
+              entries={plantEntries}
+              assessments={plantAssessments}
+              plantPhotoUri={plant.photoUri}
+              acquiredAt={plant.acquiredAt}
+            />
+          </AnimatedEntrance>
 
-          <PlantAdaptiveCareCard plant={plant} onShowToast={showToast} />
+          <AnimatedEntrance index={3}>
+            <PlantAdaptiveCareCard plant={plant} onShowToast={showToast} />
+          </AnimatedEntrance>
 
-          <PlantHealthAssessmentCard
-            plant={plant}
-            plantEntries={plantEntries}
-            plantAssessments={plantAssessments}
-            onShowToast={showToast}
-          />
+          <AnimatedEntrance index={4}>
+            <PlantHealthAssessmentCard
+              plant={plant}
+              plantEntries={plantEntries}
+              plantAssessments={plantAssessments}
+              onShowToast={showToast}
+            />
+          </AnimatedEntrance>
 
-          <CareLogSection
-            plant={plant}
-            plantEntries={plantEntries}
-            onShowToast={showToast}
-            onEditEntry={setEditingEntry}
-            onDeleteEntry={handleDeleteLogEntry}
-          />
+          <AnimatedEntrance index={5}>
+            <CareLogSection
+              plant={plant}
+              plantEntries={plantEntries}
+              onShowToast={showToast}
+              onEditEntry={setEditingEntry}
+              onDeleteEntry={handleDeleteLogEntry}
+            />
+          </AnimatedEntrance>
 
           <View style={styles.bottomActionsRow}>
             <Pressable

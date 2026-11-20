@@ -13,7 +13,9 @@ import {
   DIAGNOSTIC_ANGLE_SLOTS,
   MultiAnglePhotoPicker,
 } from '@/components/scan/multi-angle-photo-picker';
+import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
 import { BotanicalInput } from '@/components/ui/botanical-input';
+import { AiScanShimmerCard } from '@/components/ui/botanical-shimmer';
 import { Chip } from '@/components/ui/chip';
 import { SurfaceCard } from '@/components/ui/surface-card';
 import { Radius, Spacing, Typography } from '@/constants/theme';
@@ -282,11 +284,15 @@ export function HealthDiagnosisFlow({
         </Text>
       </Pressable>
 
-      {diagnosisResult && selectedPlant && (
-        <DiagnosisResultPanel
-          diagnosis={diagnosisResult}
-          plant={selectedPlant}
-        />
+      {isLoading && <AiScanShimmerCard mode="diagnose" />}
+
+      {!isLoading && diagnosisResult && selectedPlant && (
+        <AnimatedEntrance>
+          <DiagnosisResultPanel
+            diagnosis={diagnosisResult}
+            plant={selectedPlant}
+          />
+        </AnimatedEntrance>
       )}
     </SurfaceCard>
   );
