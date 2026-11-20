@@ -64,7 +64,9 @@ plantAdvisor/
 │   │   └── haptics.ts               # Safe haptic feedback wrappers
 │   └── store/
 │       ├── syncQueue.ts             # Offline pending-op queue coalescing & Supabase replay runner
-│       ├── usePlantStore.ts         # Zustand + AsyncStorage offline-first garden & preferences store
+│       ├── plantStoreTypes.ts       # Shared Zustand store state, slice & payload types
+│       ├── slices/                  # Modular Zustand slices (plant, careLog, healthAssessment, preferences, sync)
+│       ├── usePlantStore.ts         # Composed Zustand + AsyncStorage offline-first garden store
 │       ├── useAuthStore.ts          # Supabase Auth session & Gardener Profile store
 │       └── useThemeStore.ts         # Persisted Light / Dark / System theme preference store
 ```
