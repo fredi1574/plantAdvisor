@@ -3,6 +3,15 @@ import type { AiQuotaStatus } from '@/types/plant';
 
 export const DEFAULT_FREE_DAILY_SCAN_LIMIT = 5;
 
+export class AiAuthRequiredError extends Error {
+  constructor(
+    message = 'Please sign in to your FloraLog account to use live AI plant scans.'
+  ) {
+    super(message);
+    this.name = 'AiAuthRequiredError';
+  }
+}
+
 export class AiQuotaExceededError extends Error {
   quota: AiQuotaStatus;
 
@@ -42,15 +51,11 @@ const quotaListeners = new Set<(quota: AiQuotaStatus) => void>();
 
 export function isMockAiEnabled(): boolean {
   const envFlag = process.env.EXPO_PUBLIC_USE_MOCK_AI?.trim().toLowerCase();
-  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY?.trim();
 
   if (envFlag === 'true') {
     return true;
   }
   if (isSupabaseConfigured && supabase) {
-    return false;
-  }
-  if (apiKey && apiKey.length > 0) {
     return false;
   }
   return true;
@@ -136,32 +141,82 @@ export async function fetchAiQuotaStatus(): Promise<AiQuotaStatus> {
   return fallback;
 }
 
+function mapEdgeStatusMessage(
+  status: number | undefined,
+  serverMessage: string | undefined,
+  fallbackMessage: string
+): Error {
+  if (status === 401) {
+    return new AiAuthRequiredError(
+      'Please sign in to your FloraLog account to use live AI plant scans.'
+    );
+  }
+  if (status === 413) {
+    return new Error(
+      'Photo is too large to analyze. Try taking a closer or lower-resolution photo.'
+    );
+  }
+  if (status === 429) {
+    return new Error(
+      serverMessage ||
+        'Too many AI scan requests. Please wait a minute and try again.'
+    );
+  }
+  if (status && status >= 502 && status <= 504) {
+    return new Error(
+      'The AI plant advisor is temporarily unavailable. Please try again in a moment.'
+    );
+  }
+  return new Error(serverMessage || fallbackMessage);
+}
+
 export async function handleEdgeFunctionError(
   error: { message?: string; context?: unknown } | null,
   fallbackMessage: string
 ): Promise<never> {
-  if (error?.context && typeof (error.context as Response).json === 'function') {
+  const response = error?.context as Response | undefined;
+  const status = typeof response?.status === 'number' ? response.status : undefined;
+
+  if (response && typeof response.json === 'function') {
+    let payload:
+      | {
+          code?: string;
+          error?: string;
+          quota?: AiQuotaStatus;
+        }
+      | undefined;
+
     try {
-      const payload = (await (error.context as Response).json()) as {
+      payload = (await response.json()) as {
         code?: string;
         error?: string;
         quota?: AiQuotaStatus;
       };
-      if (payload?.code === 'QUOTA_EXCEEDED' && payload.quota) {
-        publishQuota(payload.quota);
-        throw new AiQuotaExceededError(
-          payload.error || 'Daily AI scan limit reached.',
-          payload.quota
-        );
-      }
-      if (payload?.error) {
-        throw new Error(payload.error);
-      }
-    } catch (inner) {
-      if (inner instanceof AiQuotaExceededError) {
-        throw inner;
-      }
+    } catch {
+      // Non-JSON error response; fall through to status mapping
     }
+
+    if (payload?.code === 'QUOTA_EXCEEDED' && payload.quota) {
+      publishQuota(payload.quota);
+      throw new AiQuotaExceededError(
+        payload.error || 'Daily AI scan limit reached.',
+        payload.quota
+      );
+    }
+
+    throw mapEdgeStatusMessage(status, payload?.error, fallbackMessage);
   }
-  throw new Error(error?.message || fallbackMessage);
+
+  const rawMessage = error?.message || '';
+  if (
+    /failed to send a request to the edge function|network request failed|fetch failed|load failed/i.test(
+      rawMessage
+    )
+  ) {
+    throw new Error(
+      'Unable to reach FloraLog AI. Check your internet connection and try again.'
+    );
+  }
+
+  throw mapEdgeStatusMessage(status, rawMessage || undefined, fallbackMessage);
 }

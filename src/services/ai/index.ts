@@ -5,9 +5,11 @@ export {
   isSucculentTaxon,
 } from '@/services/ai/guardrails';
 export {
+  AiAuthRequiredError,
   AiQuotaExceededError,
   DEFAULT_FREE_DAILY_SCAN_LIMIT,
   fetchAiQuotaStatus,
+  handleEdgeFunctionError,
   isMockAiEnabled,
   resetMockAiQuota,
   subscribeToAiQuota,

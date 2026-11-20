@@ -1,7 +1,9 @@
 import {
+  AiAuthRequiredError,
   AiQuotaExceededError,
   enforceSucculentDiagnosisGuardrails,
   fetchAiQuotaStatus,
+  handleEdgeFunctionError,
   identifyPlant,
   isSucculentTaxon,
   resetMockAiQuota,
@@ -136,5 +138,70 @@ describe('AI scan quota enforcement (mock mode)', () => {
     await expect(identifyPlant('Aloe Vera')).rejects.toThrow(
       AiQuotaExceededError
     );
+  });
+});
+
+describe('Edge Function error handling', () => {
+  const makeMockResponse = (status: number, body: unknown) => ({
+    status,
+    json: async () => body,
+  });
+
+  it('throws AiAuthRequiredError on 401 responses', async () => {
+    await expect(
+      handleEdgeFunctionError(
+        {
+          message: 'Edge Function returned a non-2xx status code',
+          context: makeMockResponse(401, { error: 'Unauthorized' }),
+        },
+        'Fallback error'
+      )
+    ).rejects.toThrow(AiAuthRequiredError);
+  });
+
+  it('throws AiQuotaExceededError when server returns QUOTA_EXCEEDED', async () => {
+    const quota = {
+      limit: 5,
+      used: 5,
+      remaining: 0,
+      resetAt: '2026-11-21T00:00:00.000Z',
+      tier: 'free' as const,
+    };
+
+    await expect(
+      handleEdgeFunctionError(
+        {
+          context: makeMockResponse(429, {
+            code: 'QUOTA_EXCEEDED',
+            error: 'Daily limit of 5 free AI scans reached.',
+            quota,
+          }),
+        },
+        'Fallback error'
+      )
+    ).rejects.toThrow(AiQuotaExceededError);
+  });
+
+  it('maps 413, 502, and network failures to user-friendly messages', async () => {
+    await expect(
+      handleEdgeFunctionError(
+        { context: makeMockResponse(413, { error: 'Payload too large' }) },
+        'Fallback'
+      )
+    ).rejects.toThrow(/Photo is too large/i);
+
+    await expect(
+      handleEdgeFunctionError(
+        { context: makeMockResponse(502, { error: 'Gemini upstream error' }) },
+        'Fallback'
+      )
+    ).rejects.toThrow(/temporarily unavailable/i);
+
+    await expect(
+      handleEdgeFunctionError(
+        { message: 'Failed to send a request to the Edge Function' },
+        'Fallback'
+      )
+    ).rejects.toThrow(/internet connection/i);
   });
 });

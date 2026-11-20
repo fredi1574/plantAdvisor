@@ -82,8 +82,8 @@ plantAdvisor/
 
 ## 4. AI Service Layer (`src/services/ai/`)
 
-- **Mock Mode (`EXPO_PUBLIC_USE_MOCK_AI=true` or unconfigured backend)**: Deterministic botanical engine in `mockEngine.ts` with local daily quota tracking (`quota.ts`).
-- **Server-Side Proxy Mode (Default when Supabase is configured)**: Prepares `<= 1024px` images via `imageUtils.ts` and calls the `plant-ai` Supabase Edge Function, which enforces atomic per-user daily quotas (`consume_ai_scan_quota`) and keeps `GEMINI_API_KEY` server-side.
+- **Mock Mode (`EXPO_PUBLIC_USE_MOCK_AI=true` or unconfigured Supabase)**: Deterministic botanical engine in `mockEngine.ts` with local daily quota tracking (`quota.ts`).
+- **Server-Side Proxy Mode (Exclusive live AI path)**: Requires a signed-in Supabase session, prepares `<= 1024px` images via `imageUtils.ts`, and calls the `plant-ai` Supabase Edge Function, which enforces atomic per-user daily quotas (`consume_ai_scan_quota`), passes `GEMINI_API_KEY` via server-side headers (`x-goog-api-key`), and keeps all AI credentials off the client.
 - **Succulent Guardrails (`guardrails.ts`)**: Enforced post-processing for `Crassulaceae`, `Cactaceae`, `Asphodelaceae`, `Aizoaceae`, and `Agavaceae` — blocks misting/shallow watering instructions, enforces a minimum 12-day Soak-and-Dry interval, and prepends immediate warnings for pots lacking drainage holes.
 
 ---

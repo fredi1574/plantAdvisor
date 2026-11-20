@@ -10,11 +10,12 @@ const MAX_BODY_BYTES = 6 * 1024 * 1024; // 6 MB
 const MAX_IMAGE_BASE64_CHARS = 4_500_000;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
+const GEMINI_TIMEOUT_MS = 25_000;
 
 const userRequestTimestamps = new Map<string, number[]>();
 
 const SUCCULENT_SYSTEM_GUARDRAIL = `
-CRITICAL BOTANICAL GUARDRAIL FOR SUCCULENTS & CACTI (Families: Crassulaceae, Cactaceae, Asphodelaceae, Aizoaceae):
+CRITICAL BOTANICAL GUARDRAIL FOR SUCCULENTS & CACTI (Families: Crassulaceae, Cactaceae, Asphodelaceae, Aizoaceae, Agavaceae):
 1. NEVER recommend misting leaves or aerial spraying. Succulents store water in parenchyma tissue; surface moisture causes fungal leaf spot, powdery mildew, and crown rot.
 2. NEVER recommend frequent shallow sips of water or keeping soil "consistently moist".
 3. ALWAYS prescribe the "Soak and Dry" method: drench thoroughly only after 100% of the gritty substrate has been bone-dry for several days and lower leaves show subtle turgor softening.
@@ -173,9 +174,9 @@ async function callGeminiWithFallback(
     new Set(
       [
         configured,
+        'gemini-3.8-flash',
         'gemini-3.5-flash',
         'gemini-3.5-flash-lite',
-        'gemini-3.8-flash',
         'gemini-3.6-flash',
         'gemini-flash-latest',
       ].filter((m): m is string => Boolean(m))
@@ -193,19 +194,27 @@ async function callGeminiWithFallback(
 
   let lastResponse: Response | null = null;
   for (const model of candidates) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
     try {
       const resp = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
         body: requestBody,
+        signal: controller.signal,
       });
       if (resp.ok) {
         return resp;
       }
       lastResponse = resp;
     } catch {
-      // Try next fallback model
+      // Try next fallback model on timeout or transient upstream failure
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -213,6 +222,41 @@ async function callGeminiWithFallback(
     return lastResponse;
   }
   throw new Error('Unable to reach Gemini API.');
+}
+
+async function parseGeminiJsonResult(
+  resp: Response,
+  emptyMessage: string
+): Promise<{ parsed?: unknown; errorResponse?: Response }> {
+  let geminiJson: {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+  try {
+    geminiJson = await resp.json();
+  } catch {
+    return {
+      errorResponse: jsonResponse(
+        { error: 'Received an unreadable response from Gemini.' },
+        502
+      ),
+    };
+  }
+
+  const rawResult = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rawResult) {
+    return { errorResponse: jsonResponse({ error: emptyMessage }, 502) };
+  }
+
+  try {
+    return { parsed: JSON.parse(rawResult) };
+  } catch {
+    return {
+      errorResponse: jsonResponse(
+        { error: 'Gemini returned malformed JSON. Please retry the scan.' },
+        502
+      ),
+    };
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -336,7 +380,13 @@ Deno.serve(async (req: Request) => {
     const { data: quotaData, error: quotaError } = await supabase.rpc(
       'consume_ai_scan_quota'
     );
-    if (!quotaError && quotaData && quotaData.allowed === false) {
+    if (quotaError || !quotaData) {
+      return jsonResponse(
+        { error: 'Unable to verify daily AI scan quota. Please try again.' },
+        500
+      );
+    }
+    if (quotaData.allowed === false) {
       return jsonResponse(
         {
           code: 'QUOTA_EXCEEDED',
@@ -347,12 +397,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const geminiResp = await callGeminiWithFallback(
-      geminiApiKey,
-      parts,
-      PLANT_IDENTIFICATION_JSON_SCHEMA,
-      0.2
-    );
+    let geminiResp: Response;
+    try {
+      geminiResp = await callGeminiWithFallback(
+        geminiApiKey,
+        parts,
+        PLANT_IDENTIFICATION_JSON_SCHEMA,
+        0.2
+      );
+    } catch {
+      return jsonResponse(
+        { error: 'Unable to reach Gemini API. Please retry shortly.' },
+        502
+      );
+    }
 
     if (!geminiResp.ok) {
       const errText = await geminiResp.text();
@@ -362,15 +420,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const geminiJson = await geminiResp.json();
-    const rawResult = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawResult) {
-      return jsonResponse({ error: 'Empty identification response from Gemini.' }, 502);
+    const { parsed, errorResponse } = await parseGeminiJsonResult(
+      geminiResp,
+      'Empty identification response from Gemini.'
+    );
+    if (errorResponse) {
+      return errorResponse;
     }
 
     return jsonResponse({
-      result: JSON.parse(rawResult),
-      quota: quotaError ? undefined : quotaData,
+      result: parsed,
+      quota: quotaData,
     });
   }
 
@@ -448,7 +508,13 @@ Return strict JSON conforming to the schema.
     const { data: quotaData, error: quotaError } = await supabase.rpc(
       'consume_ai_scan_quota'
     );
-    if (!quotaError && quotaData && quotaData.allowed === false) {
+    if (quotaError || !quotaData) {
+      return jsonResponse(
+        { error: 'Unable to verify daily AI scan quota. Please try again.' },
+        500
+      );
+    }
+    if (quotaData.allowed === false) {
       return jsonResponse(
         {
           code: 'QUOTA_EXCEEDED',
@@ -459,12 +525,20 @@ Return strict JSON conforming to the schema.
       );
     }
 
-    const geminiResp = await callGeminiWithFallback(
-      geminiApiKey,
-      parts,
-      PLANT_DIAGNOSIS_JSON_SCHEMA,
-      0.25
-    );
+    let geminiResp: Response;
+    try {
+      geminiResp = await callGeminiWithFallback(
+        geminiApiKey,
+        parts,
+        PLANT_DIAGNOSIS_JSON_SCHEMA,
+        0.25
+      );
+    } catch {
+      return jsonResponse(
+        { error: 'Unable to reach Gemini API. Please retry shortly.' },
+        502
+      );
+    }
 
     if (!geminiResp.ok) {
       const errText = await geminiResp.text();
@@ -474,17 +548,22 @@ Return strict JSON conforming to the schema.
       );
     }
 
-    const geminiJson = await geminiResp.json();
-    const rawResult = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawResult) {
-      return jsonResponse({ error: 'Empty diagnosis response from Gemini.' }, 502);
+    const { parsed, errorResponse } = await parseGeminiJsonResult(
+      geminiResp,
+      'Empty diagnosis response from Gemini.'
+    );
+    if (errorResponse) {
+      return errorResponse;
     }
 
     return jsonResponse({
-      result: JSON.parse(rawResult),
-      quota: quotaError ? undefined : quotaData,
+      result: parsed,
+      quota: quotaData,
     });
   }
 
-  return jsonResponse({ error: 'Unsupported action. Expected "identify" or "diagnose".' }, 400);
+  return jsonResponse(
+    { error: 'Unsupported action. Expected "identify", "diagnose", or "quota".' },
+    400
+  );
 });
