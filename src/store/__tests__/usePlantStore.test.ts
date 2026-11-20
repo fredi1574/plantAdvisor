@@ -180,4 +180,63 @@ describe('usePlantStore mutations', () => {
       longitude: '151.21',
     });
   });
+
+  it('saves health assessments, toggles action completion, and updates/deletes care entries', () => {
+    const targetId = usePlantStore.getState().plants[0].id;
+
+    const assessment = usePlantStore.getState().saveHealthAssessment(
+      targetId,
+      {
+        healthStatus: 'needs_attention',
+        detectedSymptoms: ['Yellowing lower leaf'],
+        diagnosisSummary: 'Mild overwatering detected.',
+        followUpQuestions: ['Is the pot draining freely?'],
+        recommendedActions: [
+          {
+            instruction: 'Allow top 3 inches of soil to dry out.',
+            urgency: 'immediate',
+          },
+        ],
+        adjustedWateringIntervalDays: 11,
+      },
+      'https://example.com/scan.jpg'
+    );
+
+    const updatedPlant = usePlantStore
+      .getState()
+      .plants.find((p) => p.id === targetId);
+    expect(updatedPlant?.customWateringIntervalDays).toBe(11);
+    expect(updatedPlant?.latestHealthAssessment?.id).toBe(assessment.id);
+    expect(
+      updatedPlant?.latestHealthAssessment?.recommendedActions[0].completed
+    ).toBe(false);
+
+    const actionId = assessment.recommendedActions[0].id;
+    usePlantStore.getState().toggleRecommendedAction(targetId, actionId);
+    expect(
+      usePlantStore
+        .getState()
+        .plants.find((p) => p.id === targetId)
+        ?.latestHealthAssessment?.recommendedActions[0].completed
+    ).toBe(true);
+
+    const entry = usePlantStore.getState().logCareEvent({
+      plantId: targetId,
+      eventType: 'note',
+      title: 'Initial Note',
+      notes: 'Checking foliage',
+    });
+    usePlantStore.getState().updateCareEntry(entry.id, {
+      title: 'Updated Note',
+      notes: 'Foliage recovered',
+    });
+    expect(
+      usePlantStore.getState().entries.find((e) => e.id === entry.id)?.title
+    ).toBe('Updated Note');
+
+    usePlantStore.getState().deleteCareEntry(entry.id);
+    expect(
+      usePlantStore.getState().entries.some((e) => e.id === entry.id)
+    ).toBe(false);
+  });
 });

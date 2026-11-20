@@ -31,3 +31,22 @@ jest.mock('expo-notifications', () => ({
   cancelAllScheduledNotificationsAsync: jest.fn(async () => undefined),
   getAllScheduledNotificationsAsync: jest.fn(async () => []),
 }));
+
+jest.mock('lucide-react-native', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require('react');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { View } = require('react-native');
+  return new Proxy(
+    {},
+    {
+      get: (_target, prop: string) => {
+        if (prop === '__esModule') return true;
+        const IconMock = (props: Record<string, unknown>) =>
+          React.createElement(View, { testID: `icon-${prop}`, ...props });
+        IconMock.displayName = `Lucide${prop}`;
+        return IconMock;
+      },
+    }
+  );
+});
