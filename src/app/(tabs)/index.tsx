@@ -17,6 +17,7 @@ import { EditPlantModal } from '@/components/modals/edit-plant-modal';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { SyncStatusBanner } from '@/components/ui/sync-status-banner';
 import {
   BorderWidth,
   BottomTabInset,
@@ -27,6 +28,7 @@ import {
 import { usePalette } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
 import { confirmAction } from '@/services/dialogs';
+import { countLocalOnlyPhotos } from '@/store/syncQueue';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
   doesPlantNeedWatering,
@@ -48,8 +50,18 @@ export default function MyGardenScreen() {
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
   const plants = usePlantStore((s) => s.plants);
+  const entries = usePlantStore((s) => s.entries);
+  const isSyncing = usePlantStore((s) => s.isSyncing);
+  const pendingSyncCount = usePlantStore((s) => s.pendingSyncCount);
+  const syncError = usePlantStore((s) => s.syncError);
+  const syncWithSupabase = usePlantStore((s) => s.syncWithSupabase);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
   const deletePlant = usePlantStore((s) => s.deletePlant);
+
+  const localPhotoCount = useMemo(
+    () => countLocalOnlyPhotos(plants, entries),
+    [plants, entries]
+  );
 
   const [filter, setFilter] = useState<GardenFilterMode>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -294,6 +306,25 @@ export default function MyGardenScreen() {
           />
 
           <FeedbackBanner message={feedbackMessage} />
+
+          <SyncStatusBanner
+            visible={Boolean(user)}
+            isSyncing={isSyncing}
+            pendingSyncCount={pendingSyncCount}
+            localPhotoCount={localPhotoCount}
+            syncError={syncError}
+            onSyncNow={() => {
+              void (async () => {
+                await syncWithSupabase();
+                const latestError = usePlantStore.getState().syncError;
+                showToast(
+                  latestError
+                    ? latestError
+                    : 'Garden synced with Supabase cloud!'
+                );
+              })();
+            }}
+          />
 
           <GardenControlsCard
             hasPlants={plants.length > 0}

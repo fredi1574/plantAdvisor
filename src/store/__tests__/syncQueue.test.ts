@@ -1,5 +1,8 @@
 import {
+  collectLocalPhotoRecoveryOps,
+  countLocalOnlyPhotos,
   enqueueBatchSyncFallbacks,
+  isLocalPhotoUri,
   mergePendingOps,
   removePendingOp,
   type PendingSyncOp,
@@ -41,6 +44,30 @@ describe('syncQueue helpers', () => {
       'upsert_plant:p-1',
       'upsert_entry:e-1',
       'upsert_entry:e-2',
+    ]);
+  });
+
+  it('detects local-only photo URIs and collects recovery upsert ops', () => {
+    expect(isLocalPhotoUri('file:///var/mobile/photo.jpg')).toBe(true);
+    expect(isLocalPhotoUri('content://media/external/images/1')).toBe(true);
+    expect(isLocalPhotoUri('https://example.com/photo.jpg')).toBe(false);
+    expect(isLocalPhotoUri(undefined)).toBe(false);
+
+    const plants = [
+      { id: 'p-local', photoUri: 'file:///tmp/jade.jpg' },
+      { id: 'p-remote', photoUri: 'https://cdn.example.com/fern.jpg' },
+    ];
+    const entries = [
+      { id: 'e-local', photoUri: 'file:///tmp/log.jpg' },
+      { id: 'e-none', photoUri: undefined },
+    ];
+
+    expect(countLocalOnlyPhotos(plants, entries)).toBe(2);
+
+    const recovered = collectLocalPhotoRecoveryOps([], plants, entries);
+    expect(recovered).toEqual([
+      { kind: 'upsert_plant', id: 'p-local' },
+      { kind: 'upsert_entry', id: 'e-local' },
     ]);
   });
 });

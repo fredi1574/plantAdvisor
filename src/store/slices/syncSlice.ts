@@ -11,7 +11,11 @@ import {
   syncPlantsBatchToSupabase,
 } from '@/services/supabase';
 import type { PlantSliceCreator, SyncSlice } from '@/store/plantStoreTypes';
-import { executePendingSyncOps, removePendingOp } from '@/store/syncQueue';
+import {
+  collectLocalPhotoRecoveryOps,
+  executePendingSyncOps,
+  removePendingOp,
+} from '@/store/syncQueue';
 
 export const createSyncSlice: PlantSliceCreator<SyncSlice> = (set, get) => ({
   ownerUserId: null,
@@ -48,7 +52,19 @@ export const createSyncSlice: PlantSliceCreator<SyncSlice> = (set, get) => ({
       return;
     }
 
-    const ops = [...get().pendingOps];
+    const recoveredOps = collectLocalPhotoRecoveryOps(
+      get().pendingOps,
+      get().plants,
+      get().entries
+    );
+    if (recoveredOps.length !== get().pendingOps.length) {
+      set({
+        pendingOps: recoveredOps,
+        pendingSyncCount: recoveredOps.length,
+      });
+    }
+
+    const ops = [...recoveredOps];
     if (ops.length === 0) return;
 
     set({ isSyncing: true });
@@ -112,8 +128,15 @@ export const createSyncSlice: PlantSliceCreator<SyncSlice> = (set, get) => ({
         lastSyncedAt: null,
         syncError: null,
       });
-    } else if (prevOwner === userId && get().pendingOps.length > 0) {
-      await get().flushPendingSync();
+    } else if (prevOwner === userId) {
+      const recovered = collectLocalPhotoRecoveryOps(
+        get().pendingOps,
+        get().plants,
+        get().entries
+      );
+      if (recovered.length > 0) {
+        await get().flushPendingSync();
+      }
     }
 
     set({ isSyncing: true });

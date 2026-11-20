@@ -100,7 +100,10 @@ export function ProfileOverviewCard({
 
   const handleManualSync = async () => {
     await syncWithSupabase();
-    onShowToast('Garden synced with Supabase cloud!');
+    const latestError = usePlantStore.getState().syncError;
+    onShowToast(
+      latestError ? latestError : 'Garden synced with Supabase cloud!'
+    );
   };
 
   return (

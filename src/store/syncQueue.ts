@@ -13,6 +13,59 @@ export type PendingSyncOp =
   | { kind: 'delete_entry'; id: string };
 
 /**
+ * Returns true when a photo URI points to a local device file/blob/data URI
+ * that has not yet been uploaded to remote HTTPS cloud storage.
+ */
+export function isLocalPhotoUri(uri?: string | null): boolean {
+  if (!uri) return false;
+  const trimmed = uri.trim();
+  if (!trimmed) return false;
+  return !(
+    trimmed.startsWith('http://') || trimmed.startsWith('https://')
+  );
+}
+
+/**
+ * Counts plants and care log entries that still hold local-only photo URIs.
+ */
+export function countLocalOnlyPhotos(
+  plants: Pick<UserPlant, 'photoUri'>[],
+  entries: Pick<NotebookEntry, 'photoUri'>[]
+): number {
+  let count = 0;
+  for (const plant of plants) {
+    if (isLocalPhotoUri(plant.photoUri)) count += 1;
+  }
+  for (const entry of entries) {
+    if (isLocalPhotoUri(entry.photoUri)) count += 1;
+  }
+  return count;
+}
+
+/**
+ * Enqueues upsert operations for any plants or care entries still carrying
+ * local-only photo URIs so they are automatically uploaded on the next sync.
+ */
+export function collectLocalPhotoRecoveryOps(
+  existing: PendingSyncOp[],
+  plants: Pick<UserPlant, 'id' | 'photoUri'>[],
+  entries: Pick<NotebookEntry, 'id' | 'photoUri'>[]
+): PendingSyncOp[] {
+  let nextOps = existing;
+  for (const plant of plants) {
+    if (isLocalPhotoUri(plant.photoUri)) {
+      nextOps = mergePendingOps(nextOps, { kind: 'upsert_plant', id: plant.id });
+    }
+  }
+  for (const entry of entries) {
+    if (isLocalPhotoUri(entry.photoUri)) {
+      nextOps = mergePendingOps(nextOps, { kind: 'upsert_entry', id: entry.id });
+    }
+  }
+  return nextOps;
+}
+
+/**
  * Coalesces an incoming sync operation onto the pending queue so superseded
  * upserts are removed on delete and duplicate operations are deduplicated.
  */
