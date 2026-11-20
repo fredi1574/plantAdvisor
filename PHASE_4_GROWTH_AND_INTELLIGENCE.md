@@ -35,8 +35,6 @@
   - Factor in hemisphere/season (dormancy dry-back in winter vs. active growth in spring/summer), `potMaterial` (`terracotta` dries faster than `ceramic_glazed` or `plastic_nursery`), and `isIndoor` when suggesting `customWateringIntervalDays`.
 - [x] **Optional Weather-Adaptive Alerts (Open-Meteo)**:
   - For outdoor plants (`isIndoor === false`), fetch free forecast data from Open-Meteo (no API key required) to suggest pushing watering back after heavy rain or trigger urgent frost alerts when temperatures drop below 3°C / 37°F.
-- [x] **Vacation / Care Snooze Mode**:
-  - Add a Vacation Mode toggle in [src/app/(tabs)/profile.tsx](file:///c:/Users/fredi/Desktop/plantAdvisor/src/app/(tabs)/profile.tsx) to pause watering alarms for a date range or generate a shareable **"Plant Sitter Care Sheet"** summary of plants due during that window.
 
 ---
 
