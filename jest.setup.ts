@@ -50,3 +50,48 @@ jest.mock('lucide-react-native', () => {
     }
   );
 });
+
+jest.mock('react-native-reanimated', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { View, Text, ScrollView } = require('react-native');
+  const makeChainable = () => {
+    const chain: Record<string, () => unknown> = {};
+    for (const method of ['duration', 'delay', 'springify', 'damping', 'stiffness', 'mass']) {
+      chain[method] = () => chain;
+    }
+    return chain;
+  };
+  return {
+    __esModule: true,
+    default: {
+      View,
+      Text,
+      ScrollView,
+      createAnimatedComponent: <T,>(Comp: T) => Comp,
+    },
+    View,
+    Text,
+    ScrollView,
+    createAnimatedComponent: <T,>(Comp: T) => Comp,
+    useSharedValue: <T,>(initial: T) => ({
+      value: initial,
+      get: () => initial,
+      set: (next: T) => {
+        initial = next;
+      },
+    }),
+    useAnimatedStyle: (fn: () => Record<string, unknown>) => fn(),
+    useReducedMotion: () => true,
+    withTiming: <T,>(val: T) => val,
+    withSpring: <T,>(val: T) => val,
+    withRepeat: <T,>(val: T) => val,
+    Easing: {
+      ease: (t: number) => t,
+      cubic: (t: number) => t,
+      out: (fn: (t: number) => number) => fn,
+      inOut: (fn: (t: number) => number) => fn,
+    },
+    FadeInDown: makeChainable(),
+    LinearTransition: makeChainable(),
+  };
+});
