@@ -9,14 +9,12 @@ import {
   View,
 } from 'react-native';
 
-import { EXPERIENCE_LEVEL_LABELS } from '@/components/profile/profile-overview-card';
 import { BotanicalInput } from '@/components/ui/botanical-input';
-import { Chip } from '@/components/ui/chip';
 import { SurfaceCard } from '@/components/ui/surface-card';
 import { Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { ExperienceLevel, UserProfile } from '@/types/plant';
+import type { UserProfile } from '@/types/plant';
 
 interface ProfileEditorCardProps {
   user: User;
@@ -25,7 +23,7 @@ interface ProfileEditorCardProps {
 }
 
 /**
- * Editable gardener profile card encapsulating display name, experience level, and bio drafts.
+ * Editable gardener profile card for updating display name.
  */
 export function ProfileEditorCard({
   user,
@@ -37,28 +35,17 @@ export function ProfileEditorCard({
   const updateProfile = useAuthStore((s) => s.updateProfile);
 
   const [draftName, setDraftName] = useState<string | null>(null);
-  const [draftLevel, setDraftLevel] = useState<ExperienceLevel | null>(null);
-  const [draftBio, setDraftBio] = useState<string | null>(null);
 
   const displayName =
     draftName ??
     profile?.displayName ??
     user.email?.split('@')[0] ??
     'Gardener';
-  const experienceLevel: ExperienceLevel =
-    draftLevel ?? profile?.experienceLevel ?? 'enthusiast';
-  const bio = draftBio ?? profile?.bio ?? '';
 
   const handleSaveProfile = async () => {
-    const res = await updateProfile({
-      displayName,
-      experienceLevel,
-      bio,
-    });
+    const res = await updateProfile({ displayName });
     if (res.ok) {
       setDraftName(null);
-      setDraftLevel(null);
-      setDraftBio(null);
       onShowToast('Gardener profile saved to Supabase! 🌿');
     } else if (res.error) {
       onShowToast(res.error);
@@ -88,44 +75,11 @@ export function ProfileEditorCard({
         />
       </View>
 
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: palette.textPrimary }]}>
-          Botanical Experience
-        </Text>
-        <View style={styles.chipsRow}>
-          {(Object.keys(EXPERIENCE_LEVEL_LABELS) as ExperienceLevel[]).map(
-            (lvl) => (
-              <Chip
-                key={lvl}
-                label={EXPERIENCE_LEVEL_LABELS[lvl]}
-                size="md"
-                selected={experienceLevel === lvl}
-                onPress={() => setDraftLevel(lvl)}
-              />
-            )
-          )}
-        </View>
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: palette.textPrimary }]}>
-          Growing Environment / Notes
-        </Text>
-        <BotanicalInput
-          surface="primary"
-          compact={false}
-          value={bio}
-          onChangeText={setDraftBio}
-          placeholder="e.g. South-facing apartment balcony, Zone 9b succulents"
-          multiline
-          numberOfLines={3}
-          style={[styles.input, styles.textArea]}
-        />
-      </View>
-
       <Pressable
         onPress={() => void handleSaveProfile()}
         disabled={isLoading}
+        accessibilityRole="button"
+        accessibilityLabel="Save profile"
         style={({ pressed }) => [
           styles.primaryBtn,
           { backgroundColor: palette.primary },
@@ -169,15 +123,6 @@ const styles = StyleSheet.create({
   },
   input: {
     fontSize: 15,
-  },
-  textArea: {
-    minHeight: 74,
-    textAlignVertical: 'top',
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
   },
   primaryBtn: {
     flexDirection: 'row',

@@ -8,10 +8,6 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   display_name text not null default 'Gardener',
-  experience_level text not null default 'enthusiast' check (
-    experience_level in ('beginner', 'enthusiast', 'master_gardener')
-  ),
-  bio text not null default '',
   avatar_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -51,19 +47,14 @@ security definer
 set search_path = ''
 as $$
 begin
-  insert into public.profiles (id, email, display_name, experience_level)
+  insert into public.profiles (id, email, display_name)
   values (
     new.id,
     new.email,
     coalesce(
       nullif(trim(new.raw_user_meta_data->>'display_name'), ''),
       split_part(coalesce(new.email, 'Gardener'), '@', 1)
-    ),
-    case
-      when new.raw_user_meta_data->>'experience_level' in ('beginner', 'enthusiast', 'master_gardener')
-        then new.raw_user_meta_data->>'experience_level'
-      else 'enthusiast'
-    end
+    )
   )
   on conflict (id) do nothing;
   return new;

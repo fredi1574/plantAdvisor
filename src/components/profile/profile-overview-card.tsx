@@ -6,7 +6,6 @@ import {
   Cloud,
   CloudOff,
   RefreshCw,
-  Sprout,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -25,13 +24,7 @@ import { pickPlantImage } from '@/services/imagePicker';
 import { uploadPlantPhotoIfNeeded } from '@/services/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePlantStore } from '@/store/usePlantStore';
-import type { ExperienceLevel, UserProfile } from '@/types/plant';
-
-export const EXPERIENCE_LEVEL_LABELS: Record<ExperienceLevel, string> = {
-  beginner: 'Beginner Sprout',
-  enthusiast: 'Plant Enthusiast',
-  master_gardener: 'Master Botanist',
-};
+import type { UserProfile } from '@/types/plant';
 
 interface ProfileOverviewCardProps {
   user: User;
@@ -157,17 +150,6 @@ export function ProfileOverviewCard({
             {user.email}
           </Text>
           <View style={styles.badgeRow}>
-            <View
-              style={[
-                styles.levelBadge,
-                { backgroundColor: palette.primarySoft },
-              ]}>
-              <Sprout size={12} color={palette.primary} />
-              <Text style={[styles.levelBadgeText, { color: palette.primary }]}>
-                {EXPERIENCE_LEVEL_LABELS[profile?.experienceLevel ?? 'enthusiast']}
-              </Text>
-            </View>
-
             <View
               style={[
                 styles.levelBadge,

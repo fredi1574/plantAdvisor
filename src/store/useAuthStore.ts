@@ -20,13 +20,12 @@ import {
   updateUserProfileInSupabase,
 } from '@/services/supabase';
 import { usePlantStore } from '@/store/usePlantStore';
-import type { ExperienceLevel, UserProfile } from '@/types/plant';
+import type { UserProfile } from '@/types/plant';
 
 export interface SignUpPayload {
   email: string;
   password: string;
   displayName: string;
-  experienceLevel: ExperienceLevel;
 }
 
 interface AuthStoreState {
@@ -48,8 +47,6 @@ interface AuthStoreState {
   }>;
   updateProfile: (updates: {
     displayName?: string;
-    experienceLevel?: ExperienceLevel;
-    bio?: string;
     avatarUrl?: string;
   }) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
@@ -185,12 +182,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     }
   },
 
-  signUpWithEmail: async ({
-    email,
-    password,
-    displayName,
-    experienceLevel,
-  }) => {
+  signUpWithEmail: async ({ email, password, displayName }) => {
     const normalizedEmail = email.trim().toLowerCase();
     const cleanName =
       displayName.trim() || normalizedEmail.split('@')[0] || 'Gardener';
@@ -202,7 +194,6 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
           normalizedEmail,
           password,
           cleanName,
-          experienceLevel,
         });
         set({
           session: localSession.session,
@@ -229,7 +220,6 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
         options: {
           data: {
             display_name: cleanName,
-            experience_level: experienceLevel,
           },
         },
       });

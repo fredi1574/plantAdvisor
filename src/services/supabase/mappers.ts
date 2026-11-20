@@ -1,5 +1,4 @@
 import type {
-  ExperienceLevel,
   HealthAssessment,
   NotebookEntry,
   SpeciesCatalog,
@@ -30,8 +29,6 @@ export interface DbProfileRow {
   id: string;
   email: string | null;
   display_name: string;
-  experience_level: ExperienceLevel;
-  bio: string;
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
@@ -89,8 +86,6 @@ export function mapRowToProfile(row: DbProfileRow): UserProfile {
     id: row.id,
     email: row.email ?? '',
     displayName: row.display_name,
-    experienceLevel: row.experience_level,
-    bio: row.bio ?? '',
     avatarUrl: row.avatar_url ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

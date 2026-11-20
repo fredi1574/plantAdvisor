@@ -6,7 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session, User } from '@supabase/supabase-js';
 
-import type { ExperienceLevel, UserProfile } from '@/types/plant';
+import type { UserProfile } from '@/types/plant';
 import { createEntityId } from '@/utils/ids';
 
 const LOCAL_SESSION_STORAGE_KEY = 'floralog-auth-session-v1';
@@ -32,7 +32,6 @@ function buildLocalUserAndSession(profile: UserProfile): LocalStoredSession {
     app_metadata: { provider: 'email', providers: ['email'] },
     user_metadata: {
       display_name: profile.displayName,
-      experience_level: profile.experienceLevel,
     },
     aud: 'authenticated',
     created_at: profile.createdAt || nowIso,
@@ -112,8 +111,6 @@ export async function signInLocally(
         id: createEntityId('local-user'),
         email: normalizedEmail,
         displayName: normalizedEmail.split('@')[0] || 'Gardener',
-        experienceLevel: 'enthusiast',
-        bio: '',
         createdAt: nowIso,
         updatedAt: nowIso,
       };
@@ -140,7 +137,6 @@ export async function signUpLocally(params: {
   normalizedEmail: string;
   password: string;
   cleanName: string;
-  experienceLevel: ExperienceLevel;
 }): Promise<LocalStoredSession> {
   const accounts = await readLocalAccounts();
   const nowIso = new Date().toISOString();
@@ -150,8 +146,6 @@ export async function signUpLocally(params: {
     id: existing?.id ?? createEntityId('local-user'),
     email: params.normalizedEmail,
     displayName: params.cleanName,
-    experienceLevel: params.experienceLevel,
-    bio: existing?.profile.bio ?? '',
     createdAt: existing?.profile.createdAt ?? nowIso,
     updatedAt: nowIso,
   };
@@ -177,8 +171,6 @@ export async function updateLocalProfile(
   prevProfile: UserProfile | null,
   updates: {
     displayName?: string;
-    experienceLevel?: ExperienceLevel;
-    bio?: string;
     avatarUrl?: string;
   }
 ): Promise<LocalStoredSession> {
@@ -190,12 +182,6 @@ export async function updateLocalProfile(
       updates.displayName !== undefined
         ? updates.displayName.trim() || 'Gardener'
         : (prevProfile?.displayName ?? 'Gardener'),
-    experienceLevel:
-      updates.experienceLevel ?? prevProfile?.experienceLevel ?? 'enthusiast',
-    bio:
-      updates.bio !== undefined
-        ? updates.bio.trim()
-        : (prevProfile?.bio ?? ''),
     avatarUrl: updates.avatarUrl ?? prevProfile?.avatarUrl,
     createdAt: prevProfile?.createdAt ?? nowIso,
     updatedAt: nowIso,

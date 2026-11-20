@@ -186,8 +186,6 @@ export interface PlantDiagnosisResult {
   succulentGuardrailApplied?: string;
 }
 
-export type ExperienceLevel = 'beginner' | 'enthusiast' | 'master_gardener';
-
 /**
  * User profile synchronized with `public.profiles` (`auth.users` 1:1)
  */
@@ -195,8 +193,6 @@ export interface UserProfile {
   id: string;
   email: string;
   displayName: string;
-  experienceLevel: ExperienceLevel;
-  bio: string;
   avatarUrl?: string;
   createdAt: string;
   updatedAt: string;
