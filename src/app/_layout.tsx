@@ -1,3 +1,14 @@
+import {
+  Fraunces_600SemiBold,
+  Fraunces_700Bold,
+} from '@expo-google-fonts/fraunces';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import { useFonts } from 'expo-font';
 import { addNotificationResponseReceivedListener } from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -26,8 +37,17 @@ export default function RootLayout() {
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const session = useAuthStore((s) => s.session);
   const user = useAuthStore((s) => s.user);
+  const [fontsLoaded, fontError] = useFonts({
+    Fraunces_600SemiBold,
+    Fraunces_700Bold,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+  });
   const [showSplashOverlay, setShowSplashOverlay] = useState(true);
 
+  const isAppReady = isInitialized && (fontsLoaded || Boolean(fontError));
   const isAuthenticated = Boolean(session && user);
 
   useEffect(() => {
@@ -107,7 +127,7 @@ export default function RootLayout() {
 
       {showSplashOverlay && (
         <BotanicalSplashScreen
-          readyToDismiss={isInitialized}
+          readyToDismiss={isAppReady}
           onFinish={() => setShowSplashOverlay(false)}
         />
       )}

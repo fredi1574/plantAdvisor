@@ -17,7 +17,7 @@ export function toLocalDateKey(date: Date): string {
  * Values <= 0 indicate due today (0) or overdue (< 0).
  */
 export function getDaysUntilNextWater(
-  plant: UserPlant,
+  plant: Pick<UserPlant, 'lastWateredAt' | 'customWateringIntervalDays'>,
   nowMs: number = Date.now()
 ): number {
   const lastWateredMs = new Date(plant.lastWateredAt).getTime();
@@ -29,7 +29,7 @@ export function getDaysUntilNextWater(
  * Returns true if the plant is due for watering today or overdue.
  */
 export function doesPlantNeedWatering(
-  plant: UserPlant,
+  plant: Pick<UserPlant, 'lastWateredAt' | 'customWateringIntervalDays'>,
   nowMs: number = Date.now()
 ): boolean {
   return getDaysUntilNextWater(plant, nowMs) <= 0;

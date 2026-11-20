@@ -31,6 +31,7 @@ export const LightPalette = {
   accentTerracottaSoft: '#F9EBE6',
   waterBlue: '#2E7D9B',
   waterBlueSoft: '#E4F2F7',
+  waterFill: '#38BDF8',
 
   // Typography
   textPrimary: '#1C2820',
@@ -83,6 +84,7 @@ export const DarkPalette: Record<keyof typeof LightPalette, string> = {
   accentTerracottaSoft: '#35221C',
   waterBlue: '#56B4D3',
   waterBlueSoft: '#162E38',
+  waterFill: '#38BDF8',
 
   // Typography
   textPrimary: '#E8EFE9',
@@ -175,53 +177,61 @@ export const HealthBadgeTheme = getHealthBadgeTheme(LightPalette);
 export const UrgencyBadgeTheme = getUrgencyBadgeTheme(LightPalette);
 
 export const Fonts = Platform.select({
-  ios: {
-    sans: 'system-ui',
-    serif: 'ui-serif',
-    rounded: 'ui-rounded',
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
   web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
+    sans: 'PlusJakartaSans_400Regular, var(--font-display)',
+    sansMedium: 'PlusJakartaSans_500Medium, var(--font-display)',
+    sansSemiBold: 'PlusJakartaSans_600SemiBold, var(--font-display)',
+    sansBold: 'PlusJakartaSans_700Bold, var(--font-display)',
+    serif: 'Fraunces_700Bold, var(--font-serif)',
+    serifSemiBold: 'Fraunces_600SemiBold, var(--font-serif)',
     rounded: 'var(--font-rounded)',
     mono: 'var(--font-mono)',
+  },
+  default: {
+    sans: 'PlusJakartaSans_400Regular',
+    sansMedium: 'PlusJakartaSans_500Medium',
+    sansSemiBold: 'PlusJakartaSans_600SemiBold',
+    sansBold: 'PlusJakartaSans_700Bold',
+    serif: 'Fraunces_700Bold',
+    serifSemiBold: 'Fraunces_600SemiBold',
+    rounded: Platform.OS === 'ios' ? 'ui-rounded' : 'PlusJakartaSans_600SemiBold',
+    mono: Platform.OS === 'ios' ? 'ui-monospace' : 'monospace',
   },
 });
 
 export const Typography = {
   eyebrow: {
     fontSize: 11,
+    fontFamily: Fonts.sansBold,
     fontWeight: '700' as const,
     letterSpacing: 0.9,
   },
   caption: {
     fontSize: 12,
     lineHeight: 16,
+    fontFamily: Fonts.sansMedium,
   },
   body: {
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: Fonts.sans,
   },
   cardTitle: {
     fontSize: 16,
-    lineHeight: 21,
+    lineHeight: 22,
+    fontFamily: Fonts.serif,
     fontWeight: '700' as const,
   },
   sectionTitle: {
     fontSize: 18,
     lineHeight: 24,
+    fontFamily: Fonts.serifSemiBold,
     fontWeight: '700' as const,
   },
   pageTitle: {
     fontSize: 30,
     lineHeight: 36,
+    fontFamily: Fonts.serif,
     fontWeight: '700' as const,
   },
 } as const;
