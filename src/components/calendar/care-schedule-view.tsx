@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { CareMonthCalendar } from '@/components/calendar/care-month-calendar';
 import { DayAgendaCard } from '@/components/calendar/day-agenda-card';
 import { UpcomingTimelineCard } from '@/components/calendar/upcoming-timeline-card';
+import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
 import { Spacing } from '@/constants/theme';
 import {
   buildCalendarMonthGrid,
@@ -118,29 +119,38 @@ export function CareScheduleView({
   return (
     <View style={styles.container}>
       {selectedDaySchedule && (
-        <DayAgendaCard
-          schedule={selectedDaySchedule}
-          plantLookup={plantLookup}
-          onCompleteTask={onCompleteTask}
-          onWaterAllDueToday={onWaterAllDueToday}
-        />
+        <AnimatedEntrance
+          key={selectedDaySchedule.dateKey}
+          index={0}
+          animateLayout>
+          <DayAgendaCard
+            schedule={selectedDaySchedule}
+            plantLookup={plantLookup}
+            onCompleteTask={onCompleteTask}
+            onWaterAllDueToday={onWaterAllDueToday}
+          />
+        </AnimatedEntrance>
       )}
 
-      <UpcomingTimelineCard
-        upcomingDays={upcomingTimelineDays}
-        totalTaskCount={upcomingTaskCount}
-        onSelectDate={setSelectedDateKey}
-        onCompleteTask={onCompleteTask}
-      />
+      <AnimatedEntrance index={1} animateLayout>
+        <UpcomingTimelineCard
+          upcomingDays={upcomingTimelineDays}
+          totalTaskCount={upcomingTaskCount}
+          onSelectDate={setSelectedDateKey}
+          onCompleteTask={onCompleteTask}
+        />
+      </AnimatedEntrance>
 
-      <CareMonthCalendar
-        calendarMonth={calendarMonth}
-        monthlySummary={monthlySummary}
-        selectedDateKey={selectedDaySchedule?.dateKey}
-        onPrevMonth={() => setMonthOffset((m) => m - 1)}
-        onNextMonth={() => setMonthOffset((m) => m + 1)}
-        onSelectDate={setSelectedDateKey}
-      />
+      <AnimatedEntrance index={2}>
+        <CareMonthCalendar
+          calendarMonth={calendarMonth}
+          monthlySummary={monthlySummary}
+          selectedDateKey={selectedDaySchedule?.dateKey}
+          onPrevMonth={() => setMonthOffset((m) => m - 1)}
+          onNextMonth={() => setMonthOffset((m) => m + 1)}
+          onSelectDate={setSelectedDateKey}
+        />
+      </AnimatedEntrance>
     </View>
   );
 }

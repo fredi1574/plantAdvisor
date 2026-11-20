@@ -11,6 +11,7 @@ import {
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SpringPressable } from '@/components/ui/animated-wrappers';
 import { GlassCard } from '@/components/ui/glass-card';
 import {
   BorderWidth,
@@ -126,6 +127,8 @@ export function UpcomingTimelineCard({
                   ]}>
                   <Pressable
                     onPress={() => onSelectDate(day.dateKey)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View care agenda for ${day.fullLabel}`}
                     style={styles.dayHeader}>
                     <Text
                       style={[
@@ -196,7 +199,10 @@ export function UpcomingTimelineCard({
                               <Text
                                 style={[
                                   styles.compactNickname,
-                                  { color: palette.textPrimary },
+                                  {
+                                    color: palette.textPrimary,
+                                    fontFamily: Fonts?.serif,
+                                  },
                                 ]}
                                 numberOfLines={1}>
                                 {task.plant.nickname}
@@ -212,12 +218,11 @@ export function UpcomingTimelineCard({
                             </View>
                           </Pressable>
 
-                          <Pressable
+                          <SpringPressable
                             onPress={() => onCompleteTask(task)}
-                            style={({ pressed }) => [
+                            style={[
                               styles.compactActionBtn,
                               { backgroundColor: quickBtnBg },
-                              pressed && { opacity: 0.8 },
                             ]}
                             accessibilityRole="button"
                             accessibilityLabel={`Complete ${task.taskKind} for ${task.plant.nickname}`}>
@@ -237,7 +242,7 @@ export function UpcomingTimelineCard({
                                 color={palette.textInverse}
                               />
                             )}
-                          </Pressable>
+                          </SpringPressable>
                         </View>
                       );
                     })}

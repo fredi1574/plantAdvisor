@@ -11,8 +11,12 @@ import {
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import {
+  AnimatedEntrance,
+  SpringPressable,
+} from '@/components/ui/animated-wrappers';
 import { GlassCard } from '@/components/ui/glass-card';
-import { BorderWidth, Radius, Spacing } from '@/constants/theme';
+import { BorderWidth, Fonts, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import {
   getCareEventTypeLabel,
@@ -46,7 +50,11 @@ export function DayAgendaCard({
     <GlassCard>
       <View style={styles.dayAgendaHeader}>
         <View style={styles.flex}>
-          <Text style={[styles.dayAgendaTitle, { color: palette.textPrimary }]}>
+          <Text
+            style={[
+              styles.dayAgendaTitle,
+              { color: palette.textPrimary, fontFamily: Fonts?.serif },
+            ]}>
             {schedule.fullLabel}
           </Text>
           <Text style={[styles.dayAgendaSub, { color: palette.textSecondary }]}>
@@ -63,12 +71,13 @@ export function DayAgendaCard({
         {schedule.isToday &&
           waterTasksDueToday.length > 1 &&
           onWaterAllDueToday && (
-            <Pressable
+            <SpringPressable
               onPress={onWaterAllDueToday}
-              style={({ pressed }) => [
+              accessibilityRole="button"
+              accessibilityLabel={`Water all ${waterTasksDueToday.length} due plants`}
+              style={[
                 styles.waterAllInlineBtn,
                 { backgroundColor: palette.waterBlue },
-                pressed && { opacity: 0.85 },
               ]}>
               <Droplets size={14} color={palette.textInverse} />
               <Text
@@ -78,7 +87,7 @@ export function DayAgendaCard({
                 ]}>
                 Water All
               </Text>
-            </Pressable>
+            </SpringPressable>
           )}
       </View>
 
@@ -96,12 +105,16 @@ export function DayAgendaCard({
         </View>
       ) : (
         <View style={styles.taskListCol}>
-          {schedule.projectedTasks.map((task) => (
-            <AgendaTaskItem
+          {schedule.projectedTasks.map((task, idx) => (
+            <AnimatedEntrance
               key={`${task.dateKey}-${task.plant.id}-${task.taskKind}-${task.cycleIndex}`}
-              task={task}
-              onComplete={() => onCompleteTask(task)}
-            />
+              index={idx}
+              animateLayout>
+              <AgendaTaskItem
+                task={task}
+                onComplete={() => onCompleteTask(task)}
+              />
+            </AnimatedEntrance>
           ))}
 
           {schedule.completedEntries.map((entry) => {
@@ -211,7 +224,10 @@ function AgendaTaskItem({
         <View style={styles.taskInfoCol}>
           <View style={styles.taskTitleRow}>
             <Text
-              style={[styles.taskNickname, { color: palette.textPrimary }]}
+              style={[
+                styles.taskNickname,
+                { color: palette.textPrimary, fontFamily: Fonts?.serif },
+              ]}
               numberOfLines={1}>
               {plant.nickname}
             </Text>
@@ -250,12 +266,11 @@ function AgendaTaskItem({
         </View>
       </Pressable>
 
-      <Pressable
+      <SpringPressable
         onPress={onComplete}
-        style={({ pressed }) => [
+        style={[
           styles.markActionBtn,
           { backgroundColor: buttonBg },
-          pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
         ]}
         accessibilityRole="button"
         accessibilityLabel={`${buttonLabel} for ${plant.nickname}`}>
@@ -269,7 +284,7 @@ function AgendaTaskItem({
         <Text style={[styles.markActionBtnText, { color: palette.textInverse }]}>
           {buttonLabel}
         </Text>
-      </Pressable>
+      </SpringPressable>
     </GlassCard>
   );
 }

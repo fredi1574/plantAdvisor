@@ -8,6 +8,8 @@ import {
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AdherenceRing } from '@/components/ui/adherence-ring';
+import { SpringPressable } from '@/components/ui/animated-wrappers';
 import { GlassCard } from '@/components/ui/glass-card';
 import {
   BorderWidth,
@@ -49,7 +51,7 @@ export function CareMonthCalendar({
   return (
     <GlassCard>
       <View style={styles.headerTop}>
-        <Pressable
+        <SpringPressable
           onPress={() => {
             triggerLightHaptic();
             onPrevMonth();
@@ -64,7 +66,7 @@ export function CareMonthCalendar({
           accessibilityRole="button"
           accessibilityLabel="Previous month">
           <ChevronLeft size={18} color={palette.textPrimary} />
-        </Pressable>
+        </SpringPressable>
 
         <View style={styles.monthTitleCenter}>
           <Text
@@ -79,7 +81,7 @@ export function CareMonthCalendar({
           </Text>
         </View>
 
-        <Pressable
+        <SpringPressable
           onPress={() => {
             triggerLightHaptic();
             onNextMonth();
@@ -94,7 +96,7 @@ export function CareMonthCalendar({
           accessibilityRole="button"
           accessibilityLabel="Next month">
           <ChevronRight size={18} color={palette.textPrimary} />
-        </Pressable>
+        </SpringPressable>
       </View>
 
       <View
@@ -105,13 +107,22 @@ export function CareMonthCalendar({
             borderColor: palette.primaryBorder,
           },
         ]}>
-        <Text style={[styles.summaryText, { color: palette.primary }]}>
-          {monthlySummary.totalCompleted} care logs · {monthlySummary.activeDays}{' '}
-          active days
-        </Text>
-        <Text style={[styles.summaryStreak, { color: palette.primary }]}>
-          {monthlySummary.consistencyPercent}% streak
-        </Text>
+        <AdherenceRing percent={monthlySummary.consistencyPercent} />
+        <View style={styles.summaryTextCol}>
+          <Text
+            style={[
+              styles.summaryTitle,
+              { color: palette.primary, fontFamily: Fonts?.serif },
+            ]}>
+            Monthly Care Adherence
+          </Text>
+          <Text style={[styles.summaryText, { color: palette.textSecondary }]}>
+            {monthlySummary.totalCompleted} care{' '}
+            {monthlySummary.totalCompleted === 1 ? 'log' : 'logs'} across{' '}
+            {monthlySummary.activeDays}{' '}
+            {monthlySummary.activeDays === 1 ? 'active day' : 'active days'}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.weekdayRow}>
@@ -166,6 +177,9 @@ export function CareMonthCalendar({
                     triggerLightHaptic();
                     onSelectDate(cell.dateKey);
                   }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`${calendarMonth.monthName} ${cell.dayNum}, ${count} tasks due`}
                   style={[
                     styles.heatCell,
                     {
@@ -323,20 +337,24 @@ const styles = StyleSheet.create({
   },
   summaryBanner: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: Spacing.md,
     borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.sm + 2,
+  },
+  summaryTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  summaryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
   },
   summaryText: {
     fontSize: 12,
-    fontWeight: '700',
-  },
-  summaryStreak: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   weekdayRow: {
     flexDirection: 'row',
