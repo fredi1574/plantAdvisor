@@ -1,11 +1,10 @@
 import { router } from 'expo-router';
-import { CheckCircle2, ShieldAlert, Sparkles } from 'lucide-react-native';
+import { CheckCircle2, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -13,7 +12,9 @@ import {
 import { PetSafetyBadge } from '@/components/garden/pet-safety-badge';
 import { BotanicalInput } from '@/components/ui/botanical-input';
 import { Chip } from '@/components/ui/chip';
+import { SucculentGuardrailBanner } from '@/components/ui/status-badges';
 import { SurfaceCard } from '@/components/ui/surface-card';
+import { SwitchRow } from '@/components/ui/switch-row';
 import {
   LIGHT_EXPOSURE_OPTIONS,
   POT_MATERIAL_OPTIONS,
@@ -283,23 +284,9 @@ export function IdentifyPlantFlow({
           </SurfaceCard>
 
           {idResult.baselineCare.succulentGuardrails.isSucculentOrCactus && (
-            <View
-              style={[
-                styles.guardrailBox,
-                {
-                  backgroundColor: palette.attentionBg,
-                  borderColor: palette.attentionBorder,
-                },
-              ]}>
-              <ShieldAlert size={16} color={palette.attentionText} />
-              <Text
-                style={[
-                  styles.guardrailText,
-                  { color: palette.attentionText },
-                ]}>
-                {idResult.baselineCare.succulentGuardrails.rotWarningNote}
-              </Text>
-            </View>
+            <SucculentGuardrailBanner
+              message={idResult.baselineCare.succulentGuardrails.rotWarningNote}
+            />
           )}
 
           <View
@@ -359,25 +346,13 @@ export function IdentifyPlantFlow({
             </View>
           </View>
 
-          <View style={styles.switchRow}>
-            <View style={styles.flex}>
-              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                Indoor Specimen
-              </Text>
-              <Text
-                style={[styles.switchSub, { color: palette.textSecondary }]}>
-                Toggle off if grown outdoors on a patio or garden bed
-              </Text>
-            </View>
-            <Switch
-              value={form.isIndoor}
-              onValueChange={(val) => updateForm('isIndoor', val)}
-              trackColor={{
-                false: palette.borderSubtle,
-                true: palette.primary,
-              }}
-            />
-          </View>
+          <SwitchRow
+            label="Indoor Specimen"
+            description="Toggle off if grown outdoors on a patio or garden bed"
+            value={form.isIndoor}
+            onValueChange={(val) => updateForm('isIndoor', val)}
+            contained={false}
+          />
 
           <View style={styles.fieldGroup}>
             <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
@@ -398,25 +373,13 @@ export function IdentifyPlantFlow({
             </View>
           </View>
 
-          <View style={styles.switchRow}>
-            <View style={styles.flex}>
-              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                Container Has Bottom Drainage Hole
-              </Text>
-              <Text
-                style={[styles.switchSub, { color: palette.textSecondary }]}>
-                Critical for preventing anaerobic root rot in succulents
-              </Text>
-            </View>
-            <Switch
-              value={form.hasDrainageHole}
-              onValueChange={(val) => updateForm('hasDrainageHole', val)}
-              trackColor={{
-                false: palette.borderSubtle,
-                true: palette.primary,
-              }}
-            />
-          </View>
+          <SwitchRow
+            label="Container Has Bottom Drainage Hole"
+            description="Critical for preventing anaerobic root rot in succulents"
+            value={form.hasDrainageHole}
+            onValueChange={(val) => updateForm('hasDrainageHole', val)}
+            contained={false}
+          />
 
           <Pressable
             onPress={handleSaveIdentifiedPlant}
@@ -515,20 +478,6 @@ const styles = StyleSheet.create({
   careSpecLabel: {
     fontWeight: '700',
   },
-  guardrailBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-    borderWidth: BorderWidth.hairline,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-  },
-  guardrailText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '600',
-  },
   formDivider: {
     height: BorderWidth.hairline,
     marginVertical: Spacing.xs,
@@ -544,15 +493,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.md,
-    paddingVertical: Spacing.xs,
-  },
-  switchSub: {
-    ...Typography.caption,
   },
 });

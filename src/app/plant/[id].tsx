@@ -1,41 +1,22 @@
-import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import {
-  ArrowLeft,
-  Calendar,
-  Droplets,
-  Layers,
-  MapPin,
-  Pencil,
-  Stethoscope,
-  Sun,
-  Trash2,
-} from 'lucide-react-native';
+import { ArrowLeft, Pencil, Stethoscope, Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PetSafetyBadge } from '@/components/garden/pet-safety-badge';
 import { EditLogModal } from '@/components/modals/edit-log-modal';
 import { EditPlantModal } from '@/components/modals/edit-plant-modal';
 import { CareLogSection } from '@/components/plant-detail/care-log-section';
 import { GrowthTrendChart } from '@/components/plant-detail/growth-trend-chart';
 import { PlantAdaptiveCareCard } from '@/components/plant-detail/plant-adaptive-care-card';
 import { PlantHealthAssessmentCard } from '@/components/plant-detail/plant-health-assessment-card';
+import { PlantHeroCard } from '@/components/plant-detail/plant-hero-card';
 import { VisualProgressGallery } from '@/components/plant-detail/visual-progress-gallery';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
-import { SurfaceCard } from '@/components/ui/surface-card';
 import {
   BorderWidth,
   CardShadow,
-  getHealthBadgeTheme,
   MaxContentWidth,
   Radius,
   Spacing,
@@ -44,18 +25,11 @@ import {
 import { usePalette } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
 import { confirmAction } from '@/services/dialogs';
-import {
-  getDaysUntilNextWater,
-  usePlantStore,
-} from '@/store/usePlantStore';
+import { usePlantStore } from '@/store/usePlantStore';
 import type { NotebookEntry } from '@/types/plant';
 
 export default function PlantDetailNotebookScreen() {
   const palette = usePalette();
-  const healthBadgeTheme = useMemo(
-    () => getHealthBadgeTheme(palette),
-    [palette]
-  );
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const plants = usePlantStore((s) => s.plants);
@@ -115,13 +89,6 @@ export default function PlantDetailNotebookScreen() {
     );
   }
 
-  const daysUntilWater = getDaysUntilNextWater(plant);
-  const needsWater = daysUntilWater <= 0;
-  const healthStatus = plant.latestHealthAssessment?.healthStatus ?? 'thriving';
-  const healthTheme = healthBadgeTheme[healthStatus];
-  const showDrainageWarning =
-    !plant.hasDrainageHole && plant.species.plantType === 'succulent';
-
   const handleDeleteCurrentPlant = () => {
     confirmAction({
       title: 'Delete Plant',
@@ -162,7 +129,6 @@ export default function PlantDetailNotebookScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         <View style={styles.maxContainer}>
-          {/* Top Navigation Bar */}
           <View style={styles.topNavRow}>
             <Pressable
               onPress={() => {
@@ -177,7 +143,8 @@ export default function PlantDetailNotebookScreen() {
                 pressed && { opacity: 0.75 },
               ]}>
               <ArrowLeft size={18} color={palette.textPrimary} />
-              <Text style={[styles.navBackText, { color: palette.textPrimary }]}>
+              <Text
+                style={[styles.navBackText, { color: palette.textPrimary }]}>
                 My Garden
               </Text>
             </Pressable>
@@ -196,7 +163,10 @@ export default function PlantDetailNotebookScreen() {
               ]}>
               <Stethoscope size={15} color={palette.textInverse} />
               <Text
-                style={[styles.scanShortcutText, { color: palette.textInverse }]}>
+                style={[
+                  styles.scanShortcutText,
+                  { color: palette.textInverse },
+                ]}>
                 Photo Health Scan
               </Text>
             </Pressable>
@@ -204,210 +174,7 @@ export default function PlantDetailNotebookScreen() {
 
           <FeedbackBanner message={feedbackMessage} />
 
-          {/* 1. SPECIMEN HEADER CARD */}
-          <SurfaceCard>
-            <View style={styles.heroTopRow}>
-              <Image
-                source={{ uri: plant.photoUri }}
-                style={[styles.heroPhoto, { backgroundColor: palette.bgSubtle }]}
-                contentFit="cover"
-              />
-
-              <View style={styles.heroTitleCol}>
-                <View style={styles.badgeLine}>
-                  <View
-                    style={[
-                      styles.healthBadge,
-                      {
-                        backgroundColor: healthTheme.bg,
-                        borderColor: healthTheme.border,
-                      },
-                    ]}>
-                    <View
-                      style={[
-                        styles.statusDot,
-                        { backgroundColor: healthTheme.dot },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.healthBadgeText,
-                        { color: healthTheme.text },
-                      ]}>
-                      {healthTheme.label}
-                    </Text>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.familyChip,
-                      { backgroundColor: palette.bgSubtle },
-                    ]}>
-                    <Text
-                      style={[styles.familyChipText, { color: palette.primary }]}>
-                      {plant.species.family}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text
-                  style={[styles.heroNickname, { color: palette.textPrimary }]}>
-                  {plant.nickname}
-                </Text>
-                <Text
-                  style={[styles.heroSpecies, { color: palette.textSecondary }]}>
-                  {plant.species.commonName} •{' '}
-                  <Text style={styles.italicScientific}>
-                    {plant.species.scientificName}
-                  </Text>
-                </Text>
-
-                <View style={styles.locationRow}>
-                  <MapPin size={13} color={palette.textSecondary} />
-                  <Text
-                    style={[
-                      styles.locationLabel,
-                      { color: palette.textSecondary },
-                    ]}>
-                    {plant.location} • {plant.isIndoor ? 'Indoor' : 'Outdoor'}
-                  </Text>
-                </View>
-
-                <View style={styles.locationRow}>
-                  <Calendar size={12} color={palette.textMuted} />
-                  <Text
-                    style={[styles.acquiredLabel, { color: palette.textMuted }]}>
-                    Acquired{' '}
-                    {new Date(plant.acquiredAt).toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Environment, Pot Drainage Badge & Next Water Countdown Strip */}
-            <View style={styles.specsGrid}>
-              <View
-                style={[
-                  styles.specBadge,
-                  {
-                    backgroundColor: showDrainageWarning
-                      ? palette.attentionBg
-                      : palette.bgPrimary,
-                    borderColor: showDrainageWarning
-                      ? palette.attentionBorder
-                      : palette.borderSubtle,
-                  },
-                ]}>
-                <Text style={[styles.specBadgeLabel, { color: palette.textMuted }]}>
-                  CONTAINER & DRAINAGE
-                </Text>
-                <Text
-                  style={[styles.specBadgeValue, { color: palette.textPrimary }]}>
-                  {plant.potMaterial.replace('_', ' ')} •{' '}
-                  {plant.hasDrainageHole ? 'Drainage Hole ✓' : 'No Drainage Hole'}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.specBadge,
-                  {
-                    backgroundColor: palette.bgPrimary,
-                    borderColor: palette.borderSubtle,
-                  },
-                ]}>
-                <Text style={[styles.specBadgeLabel, { color: palette.textMuted }]}>
-                  CURRENT EXPOSURE
-                </Text>
-                <Text
-                  style={[styles.specBadgeValue, { color: palette.textPrimary }]}>
-                  {plant.lightExposure.replace('_', ' ')} •{' '}
-                  {plant.isIndoor ? 'Indoor' : 'Outdoor'}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.specBadge,
-                  {
-                    backgroundColor: needsWater
-                      ? palette.waterAlertBg
-                      : palette.bgPrimary,
-                    borderColor: needsWater
-                      ? palette.waterAlertBorder
-                      : palette.borderSubtle,
-                  },
-                ]}>
-                <Text style={[styles.specBadgeLabel, { color: palette.textMuted }]}>
-                  NEXT WATER COUNTDOWN
-                </Text>
-                <View style={styles.waterCountdownRow}>
-                  <Droplets
-                    size={15}
-                    color={
-                      needsWater ? palette.waterAlertText : palette.waterBlue
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.specBadgeValue,
-                      {
-                        color: needsWater
-                          ? palette.waterAlertText
-                          : palette.textPrimary,
-                      },
-                    ]}>
-                    {daysUntilWater === 0
-                      ? 'Due Today'
-                      : daysUntilWater < 0
-                        ? `Overdue by ${Math.abs(daysUntilWater)}d`
-                        : `In ${daysUntilWater} days (every ${plant.customWateringIntervalDays}d)`}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Baseline Species Light & Soil bars */}
-            <View style={styles.baselineStack}>
-              <View
-                style={[
-                  styles.baselineStrip,
-                  { backgroundColor: palette.primarySoft },
-                ]}>
-                <Sun size={14} color={palette.primary} />
-                <Text
-                  style={[styles.baselineStripText, { color: palette.primary }]}>
-                  <Text style={styles.boldText}>Ideal Light: </Text>
-                  {plant.species.baselineCare.idealLight}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.baselineStrip,
-                  { backgroundColor: palette.primarySoft },
-                ]}>
-                <Layers size={14} color={palette.primary} />
-                <Text
-                  style={[styles.baselineStripText, { color: palette.primary }]}>
-                  <Text style={styles.boldText}>Recommended Soil: </Text>
-                  {plant.species.baselineCare.soilRecommendation}
-                </Text>
-              </View>
-            </View>
-
-            {plant.species.petSafety ? (
-              <View style={styles.petSafetyWrap}>
-                <PetSafetyBadge
-                  petSafety={plant.species.petSafety}
-                  showDetails
-                />
-              </View>
-            ) : null}
-          </SurfaceCard>
+          <PlantHeroCard plant={plant} />
 
           <GrowthTrendChart
             entries={plantEntries}
@@ -434,11 +201,10 @@ export default function PlantDetailNotebookScreen() {
             plant={plant}
             plantEntries={plantEntries}
             onShowToast={showToast}
-            onEditEntry={(target) => setEditingEntry(target)}
+            onEditEntry={setEditingEntry}
             onDeleteEntry={handleDeleteLogEntry}
           />
 
-          {/* Bottom Specimen Management Actions */}
           <View style={styles.bottomActionsRow}>
             <Pressable
               onPress={() => setIsEditModalOpen(true)}
@@ -572,129 +338,6 @@ const styles = StyleSheet.create({
   scanShortcutText: {
     ...Typography.caption,
     fontWeight: '700',
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  heroPhoto: {
-    width: 92,
-    height: 92,
-    borderRadius: Radius.md,
-  },
-  heroTitleCol: {
-    flex: 1,
-    gap: Spacing.xs,
-    justifyContent: 'center',
-  },
-  badgeLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  healthBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-    borderWidth: BorderWidth.hairline,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  healthBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  familyChip: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: Radius.sm,
-  },
-  familyChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  heroNickname: {
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '700',
-  },
-  heroSpecies: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  italicScientific: {
-    fontStyle: 'italic',
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.half,
-  },
-  locationLabel: {
-    ...Typography.caption,
-    fontWeight: '600',
-  },
-  acquiredLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  specsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  specBadge: {
-    flex: 1,
-    minWidth: 150,
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.md,
-    padding: 10,
-    gap: 3,
-  },
-  specBadgeLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  specBadgeValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  waterCountdownRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  baselineStack: {
-    gap: 6,
-  },
-  baselineStrip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
-  },
-  baselineStripText: {
-    flex: 1,
-    ...Typography.caption,
-  },
-  boldText: {
-    fontWeight: '700',
-  },
-  petSafetyWrap: {
-    marginTop: Spacing.sm,
   },
   bottomActionsRow: {
     flexDirection: 'row',

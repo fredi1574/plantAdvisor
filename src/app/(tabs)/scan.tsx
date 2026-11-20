@@ -1,10 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import {
-  AlertCircle,
-  Sparkles,
-  Sprout,
-  Stethoscope,
-} from 'lucide-react-native';
+import { Sparkles, Sprout, Stethoscope } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
   Pressable,
@@ -20,6 +15,7 @@ import { HealthDiagnosisFlow } from '@/components/scan/health-diagnosis-flow';
 import { IdentifyPlantFlow } from '@/components/scan/identify-plant-flow';
 import { PhotoCaptureCard } from '@/components/scan/photo-capture-card';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
+import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import {
   BorderWidth,
   BottomTabInset,
@@ -234,25 +230,7 @@ export default function ScanScreen() {
             onError={setErrorMessage}
           />
 
-          {errorMessage && (
-            <View
-              style={[
-                styles.errorBanner,
-                {
-                  backgroundColor: palette.criticalBg,
-                  borderColor: palette.criticalBorder,
-                },
-              ]}>
-              <AlertCircle size={16} color={palette.criticalText} />
-              <Text
-                style={[
-                  styles.errorBannerText,
-                  { color: palette.criticalText },
-                ]}>
-                {errorMessage}
-              </Text>
-            </View>
-          )}
+          <FeedbackBanner message={errorMessage} variant="error" />
 
           {mode === 'identify' ? (
             <IdentifyPlantFlow
@@ -342,19 +320,6 @@ const styles = StyleSheet.create({
   segmentBtnText: {
     fontSize: 13,
     fontWeight: '700',
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    borderWidth: BorderWidth.hairline,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-  },
-  errorBannerText: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
   },
   quotaPill: {
     flexDirection: 'row',

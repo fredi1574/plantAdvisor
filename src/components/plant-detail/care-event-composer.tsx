@@ -1,0 +1,326 @@
+import { Image } from 'expo-image';
+import { Camera, Image as ImageIcon, X } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import {
+  CareMetricsFields,
+  EMPTY_CARE_METRICS_DRAFT,
+  parseCareMetricsDraft,
+  type CareMetricsDraft,
+} from '@/components/modals/care-metrics-fields';
+import { BotanicalInput } from '@/components/ui/botanical-input';
+import { Chip } from '@/components/ui/chip';
+import { CareEventIcon } from '@/components/ui/status-badges';
+import { SurfaceCard } from '@/components/ui/surface-card';
+import { BorderWidth, Spacing, type ThemePalette } from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
+import { pickPlantImage } from '@/services/imagePicker';
+import { usePlantStore } from '@/store/usePlantStore';
+import type { CareEventType, UserPlant } from '@/types/plant';
+
+const getQuickActions = (
+  palette: ThemePalette
+): {
+  type: CareEventType;
+  label: string;
+  defaultTitle: string;
+  defaultNotes: string;
+  color: string;
+}[] => [
+  {
+    type: 'water',
+    label: 'Log Water',
+    defaultTitle: 'Thorough Watering',
+    defaultNotes: 'Watered after checking substrate dryness.',
+    color: palette.waterBlue,
+  },
+  {
+    type: 'propagation',
+    label: 'Prop Milestone',
+    defaultTitle: 'Propagation Growth Check',
+    defaultNotes: 'Logged new root/shoot elongation milestone.',
+    color: palette.accentTerracotta,
+  },
+  {
+    type: 'fertilize',
+    label: 'Fertilize',
+    defaultTitle: 'Diluted Nutrient Feed',
+    defaultNotes: 'Applied balanced liquid fertilizer at 1/2 strength.',
+    color: palette.primary,
+  },
+  {
+    type: 'prune',
+    label: 'Prune',
+    defaultTitle: 'Canopy & Leaf Pruning',
+    defaultNotes: 'Removed spent lower foliage and pinched apical tip.',
+    color: palette.primaryMuted,
+  },
+  {
+    type: 'repot',
+    label: 'Repot',
+    defaultTitle: 'Substrate & Pot Refresh',
+    defaultNotes: 'Checked root health and refreshed gritty aerated substrate.',
+    color: palette.accentTerracotta,
+  },
+  {
+    type: 'note',
+    label: 'Add Note',
+    defaultTitle: 'Botanical Observation Note',
+    defaultNotes:
+      'Leaves looking turgid and well-oriented toward window light.',
+    color: palette.textSecondary,
+  },
+];
+
+interface CareEventComposerProps {
+  plant: UserPlant;
+  onShowToast: (message: string) => void;
+}
+
+/**
+ * Quick-action care event composer with collapsible photo attachment and growth metrics drawer.
+ */
+export function CareEventComposer({
+  plant,
+  onShowToast,
+}: CareEventComposerProps) {
+  const palette = usePalette();
+  const quickActions = useMemo(() => getQuickActions(palette), [palette]);
+
+  const logCareEvent = usePlantStore((s) => s.logCareEvent);
+  const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
+
+  const [selectedQuickType, setSelectedQuickType] =
+    useState<CareEventType>('water');
+  const [showDetailedLog, setShowDetailedLog] = useState(false);
+  const [customNote, setCustomNote] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
+  const [metricsDraft, setMetricsDraft] = useState<CareMetricsDraft>(
+    EMPTY_CARE_METRICS_DRAFT
+  );
+
+  const handlePickLogPhoto = async (source: 'camera' | 'library') => {
+    const result = await pickPlantImage(source, { quality: 0.75 });
+    if (result.ok) {
+      setPhotoUri(result.uri);
+    } else if (result.reason !== 'canceled' && result.message) {
+      onShowToast(result.message);
+    }
+  };
+
+  const handleQuickLog = (actionType: CareEventType) => {
+    setSelectedQuickType(actionType);
+    triggerLightHaptic();
+
+    const metrics = parseCareMetricsDraft(metricsDraft, true);
+
+    if (
+      actionType === 'water' &&
+      !customNote.trim() &&
+      !photoUri &&
+      !metrics
+    ) {
+      waterPlantNow(plant.id);
+      return;
+    }
+
+    const template =
+      quickActions.find((a) => a.type === actionType) ?? quickActions[0];
+
+    logCareEvent({
+      plantId: plant.id,
+      eventType: actionType,
+      title: template.defaultTitle,
+      notes: customNote.trim() || template.defaultNotes,
+      photoUri,
+      metrics,
+    });
+
+    setCustomNote('');
+    setPhotoUri(undefined);
+    setMetricsDraft(EMPTY_CARE_METRICS_DRAFT);
+    onShowToast(`Logged ${template.label} for "${plant.nickname}".`);
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <Text
+          style={[styles.sectionHeaderTitle, { color: palette.textPrimary }]}>
+          Quick-Log Care or Propagation Milestone
+        </Text>
+        <Chip
+          label={showDetailedLog ? 'Hide Details' : 'Photo & Metrics'}
+          selected={showDetailedLog}
+          icon={
+            <Camera
+              size={12}
+              color={showDetailedLog ? palette.primary : palette.textSecondary}
+            />
+          }
+          onPress={() => {
+            triggerLightHaptic();
+            setShowDetailedLog((prev) => !prev);
+          }}
+        />
+      </View>
+
+      <BotanicalInput
+        surface="primary"
+        compact={false}
+        value={customNote}
+        onChangeText={setCustomNote}
+        placeholder="Optional note (e.g., 'Root reached 10.5cm' or 'Bottom-soaked for 15m')..."
+      />
+
+      {showDetailedLog && (
+        <SurfaceCard variant="nested" style={styles.detailedDrawer}>
+          <View style={styles.photoPickerRow}>
+            <Pressable
+              onPress={() => void handlePickLogPhoto('camera')}
+              style={[
+                styles.photoPickerBtn,
+                {
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                },
+              ]}>
+              <Camera size={14} color={palette.primary} />
+              <Text
+                style={[
+                  styles.photoPickerBtnText,
+                  { color: palette.textPrimary },
+                ]}>
+                Camera
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void handlePickLogPhoto('library')}
+              style={[
+                styles.photoPickerBtn,
+                {
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                },
+              ]}>
+              <ImageIcon size={14} color={palette.primary} />
+              <Text
+                style={[
+                  styles.photoPickerBtnText,
+                  { color: palette.textPrimary },
+                ]}>
+                Library
+              </Text>
+            </Pressable>
+          </View>
+
+          {Boolean(photoUri) && (
+            <View style={styles.photoPreviewRow}>
+              <Image
+                source={{ uri: photoUri }}
+                style={styles.photoPreview}
+                contentFit="cover"
+              />
+              <Chip
+                label="Remove Photo"
+                icon={<X size={12} color={palette.textSecondary} />}
+                onPress={() => setPhotoUri(undefined)}
+              />
+            </View>
+          )}
+
+          <CareMetricsFields
+            value={metricsDraft}
+            onChange={setMetricsDraft}
+            compact
+            showFieldLabels={false}
+          />
+        </SurfaceCard>
+      )}
+
+      <View style={styles.quickActionsGrid}>
+        {quickActions.map((qa) => {
+          const isSelected = selectedQuickType === qa.type;
+          return (
+            <Chip
+              key={qa.type}
+              label={`+ ${qa.label}`}
+              variant="subtle"
+              size="md"
+              onPress={() => handleQuickLog(qa.type)}
+              icon={
+                <CareEventIcon eventType={qa.type} size={15} color={qa.color} />
+              }
+              style={
+                isSelected
+                  ? {
+                      borderColor: qa.color,
+                      backgroundColor: palette.bgPrimary,
+                    }
+                  : undefined
+              }
+              textStyle={{ color: palette.textPrimary }}
+            />
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    gap: Spacing.md,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  sectionHeaderTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  detailedDrawer: {
+    borderRadius: 14,
+    gap: 10,
+  },
+  photoPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  photoPickerBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: Spacing.sm,
+    borderRadius: 10,
+    borderWidth: BorderWidth.hairline,
+  },
+  photoPickerBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  photoPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  photoPreview: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+});

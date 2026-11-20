@@ -1,7 +1,6 @@
 import { Sprout, TrendingUp } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -17,11 +16,9 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 
-import {
-  BorderWidth,
-  Radius,
-  Spacing,
-} from '@/constants/theme';
+import { Chip } from '@/components/ui/chip';
+import { SurfaceCard } from '@/components/ui/surface-card';
+import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import type { NotebookEntry, PlantType } from '@/types/plant';
 
@@ -159,7 +156,9 @@ export function GrowthTrendChart({
   });
 
   const linePath = coords
-    .map((c, idx) => `${idx === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`)
+    .map(
+      (c, idx) => `${idx === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`
+    )
     .join(' ');
 
   const areaPath =
@@ -185,15 +184,7 @@ export function GrowthTrendChart({
         : `Taproot ${rootCm.toFixed(1)} / ${SOIL_TRANSITION_TARGET_CM} cm — developing root system`;
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: palette.glassSurface,
-          borderColor: palette.glassBorder,
-        },
-      ]}
-    >
+    <SurfaceCard variant="glass">
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
           <TrendingUp size={16} color={palette.primary} strokeWidth={2.2} />
@@ -208,8 +199,7 @@ export function GrowthTrendChart({
               backgroundColor: palette.primarySoft,
               borderColor: palette.primaryBorder,
             },
-          ]}
-        >
+          ]}>
           <Text style={[styles.statBadgeText, { color: palette.primary }]}>
             {latestVal} {activeMetric.unit}
             {activePoints.length > 1 && deltaVal !== 0
@@ -221,39 +211,16 @@ export function GrowthTrendChart({
 
       {availableMetrics.length > 1 && (
         <View style={styles.pillRow}>
-          {availableMetrics.map((metric) => {
-            const isActive = metric.key === activeMetric.key;
-            return (
-              <Pressable
-                key={metric.key}
-                onPress={() => setSelectedKey(metric.key)}
-                style={[
-                  styles.pill,
-                  {
-                    backgroundColor: isActive
-                      ? palette.primary
-                      : palette.bgSubtle,
-                    borderColor: isActive
-                      ? palette.primary
-                      : palette.borderSubtle,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.pillText,
-                    {
-                      color: isActive
-                        ? palette.textInverse
-                        : palette.textSecondary,
-                    },
-                  ]}
-                >
-                  {metric.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {availableMetrics.map((metric) => (
+            <Chip
+              key={metric.key}
+              label={metric.label}
+              variant="subtle"
+              selected={metric.key === activeMetric.key}
+              selectedStyle="solid"
+              onPress={() => setSelectedKey(metric.key)}
+            />
+          ))}
         </View>
       )}
 
@@ -274,7 +241,6 @@ export function GrowthTrendChart({
             </LinearGradient>
           </Defs>
 
-          {/* Horizontal reference gridlines */}
           {[0, 0.5, 1].map((frac) => {
             const y = padTop + plotH * (1 - frac);
             const labelVal = minVal + valRange * frac;
@@ -294,8 +260,7 @@ export function GrowthTrendChart({
                   y={y + 4}
                   fontSize={10}
                   fill={palette.textMuted}
-                  textAnchor="end"
-                >
+                  textAnchor="end">
                   {Number(labelVal.toFixed(1))}
                 </SvgText>
               </React.Fragment>
@@ -333,8 +298,7 @@ export function GrowthTrendChart({
                   y={chartHeight - 6}
                   fontSize={10}
                   fill={palette.textMuted}
-                  textAnchor="middle"
-                >
+                  textAnchor="middle">
                   {pt.dateLabel}
                 </SvgText>
               )}
@@ -351,11 +315,11 @@ export function GrowthTrendChart({
               backgroundColor: palette.bgSubtle,
               borderColor: palette.borderSubtle,
             },
-          ]}
-        >
+          ]}>
           <View style={styles.milestoneHeader}>
             <Sprout size={14} color={palette.primary} strokeWidth={2.2} />
-            <Text style={[styles.milestoneText, { color: palette.textPrimary }]}>
+            <Text
+              style={[styles.milestoneText, { color: palette.textPrimary }]}>
               {rootReadinessText}
             </Text>
           </View>
@@ -363,8 +327,7 @@ export function GrowthTrendChart({
             style={[
               styles.progressTrack,
               { backgroundColor: palette.borderSubtle },
-            ]}
-          >
+            ]}>
             <View
               style={[
                 styles.progressFill,
@@ -377,17 +340,11 @@ export function GrowthTrendChart({
           </View>
         </View>
       )}
-    </View>
+    </SurfaceCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.xl,
-    borderWidth: BorderWidth.hairline,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -416,16 +373,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.xs,
-  },
-  pill: {
-    borderRadius: Radius.full,
-    borderWidth: BorderWidth.hairline,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 5,
-  },
-  pillText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   svgContainer: {
     width: '100%',

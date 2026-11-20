@@ -1,26 +1,15 @@
 import { CloudRain, SlidersHorizontal, Snowflake } from 'lucide-react-native';
-import { useReducer, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useReducer } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BotanicalInput } from '@/components/ui/botanical-input';
 import { Chip } from '@/components/ui/chip';
 import { SurfaceCard } from '@/components/ui/surface-card';
-import {
-  BorderWidth,
-  Radius,
-  Spacing,
-  Typography,
-} from '@/constants/theme';
+import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import {
   computeAdaptiveWateringInterval,
   fetchOutdoorWeatherAdvisory,
-  type Hemisphere,
   type WeatherCareAdvisory,
 } from '@/services/careIntelligenceService';
 import {
@@ -35,43 +24,32 @@ interface PlantAdaptiveCareCardProps {
   onShowToast: (message: string) => void;
 }
 
-interface WeatherState {
-  latitudeInput: string;
-  longitudeInput: string;
+interface WeatherFetchState {
   isLoading: boolean;
   error: string | null;
   advisory: WeatherCareAdvisory | null;
 }
 
-type WeatherAction =
-  | { type: 'SET_LATITUDE'; value: string }
-  | { type: 'SET_LONGITUDE'; value: string }
+type WeatherFetchAction =
   | { type: 'FETCH_START' }
   | { type: 'FETCH_SUCCESS'; advisory: WeatherCareAdvisory }
   | { type: 'FETCH_ERROR'; error: string };
 
-const INITIAL_WEATHER_STATE: WeatherState = {
-  latitudeInput: '40.71',
-  longitudeInput: '-74.01',
+const INITIAL_WEATHER_FETCH_STATE: WeatherFetchState = {
   isLoading: false,
   error: null,
   advisory: null,
 };
 
-function weatherReducer(
-  state: WeatherState,
-  action: WeatherAction
-): WeatherState {
+function weatherFetchReducer(
+  state: WeatherFetchState,
+  action: WeatherFetchAction
+): WeatherFetchState {
   switch (action.type) {
-    case 'SET_LATITUDE':
-      return { ...state, latitudeInput: action.value };
-    case 'SET_LONGITUDE':
-      return { ...state, longitudeInput: action.value };
     case 'FETCH_START':
       return { ...state, isLoading: true, error: null };
     case 'FETCH_SUCCESS':
       return {
-        ...state,
         isLoading: false,
         error: null,
         advisory: action.advisory,
@@ -84,6 +62,7 @@ function weatherReducer(
 /**
  * Displays seasonal/container adaptive watering recommendations and, for
  * outdoor specimens, an Open-Meteo weather forecast advisory card.
+ * Persists hemisphere and outdoor coordinates in `usePlantStore`.
  */
 export function PlantAdaptiveCareCard({
   plant,
@@ -91,11 +70,12 @@ export function PlantAdaptiveCareCard({
 }: PlantAdaptiveCareCardProps) {
   const palette = usePalette();
   const updatePlant = usePlantStore((s) => s.updatePlant);
+  const adaptiveCarePrefs = usePlantStore((s) => s.adaptiveCarePrefs);
+  const setAdaptiveCarePrefs = usePlantStore((s) => s.setAdaptiveCarePrefs);
 
-  const [hemisphere, setHemisphere] = useState<Hemisphere>('northern');
   const [weather, dispatchWeather] = useReducer(
-    weatherReducer,
-    INITIAL_WEATHER_STATE
+    weatherFetchReducer,
+    INITIAL_WEATHER_FETCH_STATE
   );
 
   const adaptiveInterval = computeAdaptiveWateringInterval(
@@ -109,7 +89,7 @@ export function PlantAdaptiveCareCard({
       minimumDryBackDays:
         plant.species.baselineCare.succulentGuardrails.minimumDryBackDays,
     },
-    { hemisphere }
+    { hemisphere: adaptiveCarePrefs.hemisphere }
   );
 
   const handleApplyAdaptiveInterval = () => {
@@ -123,8 +103,8 @@ export function PlantAdaptiveCareCard({
   };
 
   const handleFetchWeather = async () => {
-    const lat = Number(weather.latitudeInput);
-    const lon = Number(weather.longitudeInput);
+    const lat = Number(adaptiveCarePrefs.latitude);
+    const lon = Number(adaptiveCarePrefs.longitude);
     if (
       Number.isNaN(lat) ||
       Number.isNaN(lon) ||
@@ -166,10 +146,19 @@ export function PlantAdaptiveCareCard({
           </Text>
         </View>
         <Chip
-          label={hemisphere === 'northern' ? 'N. Hemisphere' : 'S. Hemisphere'}
+          label={
+            adaptiveCarePrefs.hemisphere === 'northern'
+              ? 'N. Hemisphere'
+              : 'S. Hemisphere'
+          }
           variant="subtle"
           onPress={() =>
-            setHemisphere((h) => (h === 'northern' ? 'southern' : 'northern'))
+            setAdaptiveCarePrefs({
+              hemisphere:
+                adaptiveCarePrefs.hemisphere === 'northern'
+                  ? 'southern'
+                  : 'northern',
+            })
           }
           textStyle={{ fontWeight: '600', color: palette.textSecondary }}
         />
@@ -218,26 +207,24 @@ export function PlantAdaptiveCareCard({
               label={weather.advisory ? 'Refresh' : 'Check Weather'}
               variant="primarySoft"
               loading={weather.isLoading}
-              onPress={handleFetchWeather}
+              onPress={() => void handleFetchWeather()}
             />
           </View>
 
           <View style={styles.coordRow}>
             <BotanicalInput
               surface="subtle"
-              value={weather.latitudeInput}
-              onChangeText={(value) =>
-                dispatchWeather({ type: 'SET_LATITUDE', value })
-              }
+              value={adaptiveCarePrefs.latitude}
+              onChangeText={(value) => setAdaptiveCarePrefs({ latitude: value })}
               placeholder="Lat"
               keyboardType="numeric"
               style={styles.coordInput}
             />
             <BotanicalInput
               surface="subtle"
-              value={weather.longitudeInput}
+              value={adaptiveCarePrefs.longitude}
               onChangeText={(value) =>
-                dispatchWeather({ type: 'SET_LONGITUDE', value })
+                setAdaptiveCarePrefs({ longitude: value })
               }
               placeholder="Lon"
               keyboardType="numeric"
@@ -292,10 +279,7 @@ export function PlantAdaptiveCareCard({
                   </Text>
                 </View>
                 <Text
-                  style={[
-                    styles.factorText,
-                    { color: palette.textSecondary },
-                  ]}>
+                  style={[styles.factorText, { color: palette.textSecondary }]}>
                   {alert.message}
                 </Text>
               </View>

@@ -1,13 +1,4 @@
-import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import {
-  Camera,
-  CheckCircle2,
-  Image as ImageIcon,
-  ShieldAlert,
-  Stethoscope,
-  X,
-} from 'lucide-react-native';
+import { Stethoscope } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,17 +8,15 @@ import {
   View,
 } from 'react-native';
 
+import { DiagnosisResultPanel } from '@/components/scan/diagnosis-result-panel';
+import {
+  DIAGNOSTIC_ANGLE_SLOTS,
+  MultiAnglePhotoPicker,
+} from '@/components/scan/multi-angle-photo-picker';
 import { BotanicalInput } from '@/components/ui/botanical-input';
 import { Chip } from '@/components/ui/chip';
 import { SurfaceCard } from '@/components/ui/surface-card';
-import {
-  BorderWidth,
-  getHealthBadgeTheme,
-  getUrgencyBadgeTheme,
-  Radius,
-  Spacing,
-  Typography,
-} from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import {
   AiQuotaExceededError,
@@ -50,28 +39,6 @@ const SYMPTOM_CHIPS = [
   'Brown crispy leaf tips',
 ] as const;
 
-const DIAGNOSTIC_ANGLE_SLOTS: {
-  angle: DiagnosticPhotoAngle;
-  label: string;
-  hint: string;
-}[] = [
-  {
-    angle: 'canopy',
-    label: 'Whole Plant / Canopy',
-    hint: 'Overall shape & light',
-  },
-  {
-    angle: 'closeup',
-    label: 'Leaf / Stem Close-Up',
-    hint: 'Spots, pests, edema',
-  },
-  {
-    angle: 'soil',
-    label: 'Soil Surface & Pot Base',
-    hint: 'Moisture & drainage',
-  },
-];
-
 interface HealthDiagnosisFlowProps {
   imageUri: string;
   initialPlantId?: string;
@@ -91,15 +58,6 @@ export function HealthDiagnosisFlow({
   onError,
 }: HealthDiagnosisFlowProps) {
   const palette = usePalette();
-  const healthBadgeTheme = useMemo(
-    () => getHealthBadgeTheme(palette),
-    [palette]
-  );
-  const urgencyBadgeTheme = useMemo(
-    () => getUrgencyBadgeTheme(palette),
-    [palette]
-  );
-
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
   const saveHealthAssessment = usePlantStore((s) => s.saveHealthAssessment);
@@ -152,6 +110,14 @@ export function HealthDiagnosisFlow({
     } else if (result.reason !== 'canceled' && result.message) {
       onError(result.message);
     }
+  };
+
+  const handleClearDiagnosticPhoto = (angle: DiagnosticPhotoAngle) => {
+    setDiagnosticPhotos((prev) => {
+      const next = { ...prev };
+      delete next[angle];
+      return next;
+    });
   };
 
   const handleRunHealthDiagnosis = async () => {
@@ -254,119 +220,13 @@ export function HealthDiagnosisFlow({
         </SurfaceCard>
       )}
 
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          Multi-Angle Diagnostic Photos (Up to 3)
-        </Text>
-        <View style={styles.angleGrid}>
-          {DIAGNOSTIC_ANGLE_SLOTS.map((slot) => {
-            const uri = diagnosticPhotos[slot.angle];
-            return (
-              <View
-                key={slot.angle}
-                style={[
-                  styles.angleSlot,
-                  {
-                    backgroundColor: palette.bgSubtle,
-                    borderColor: palette.borderSubtle,
-                  },
-                ]}>
-                <View style={styles.angleSlotHeader}>
-                  <View style={styles.flex}>
-                    <Text
-                      style={[
-                        styles.angleSlotTitle,
-                        { color: palette.textPrimary },
-                      ]}>
-                      {slot.label}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.angleSlotHint,
-                        { color: palette.textMuted },
-                      ]}>
-                      {slot.hint}
-                    </Text>
-                  </View>
-                  {uri ? (
-                    <Pressable
-                      onPress={() =>
-                        setDiagnosticPhotos((prev) => {
-                          const next = { ...prev };
-                          delete next[slot.angle];
-                          return next;
-                        })
-                      }
-                      style={[
-                        styles.angleClearBtn,
-                        { backgroundColor: palette.bgSurface },
-                      ]}>
-                      <X size={14} color={palette.textSecondary} />
-                    </Pressable>
-                  ) : null}
-                </View>
-
-                {uri ? (
-                  <Image
-                    source={{ uri }}
-                    style={styles.anglePreview}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View style={styles.angleActionsRow}>
-                    <Pressable
-                      onPress={() =>
-                        void handlePickDiagnosticAnglePhoto(
-                          slot.angle,
-                          'camera'
-                        )
-                      }
-                      style={[
-                        styles.anglePickBtn,
-                        {
-                          backgroundColor: palette.bgSurface,
-                          borderColor: palette.borderSubtle,
-                        },
-                      ]}>
-                      <Camera size={14} color={palette.primary} />
-                      <Text
-                        style={[
-                          styles.anglePickBtnText,
-                          { color: palette.primary },
-                        ]}>
-                        Camera
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() =>
-                        void handlePickDiagnosticAnglePhoto(
-                          slot.angle,
-                          'library'
-                        )
-                      }
-                      style={[
-                        styles.anglePickBtn,
-                        {
-                          backgroundColor: palette.bgSurface,
-                          borderColor: palette.borderSubtle,
-                        },
-                      ]}>
-                      <ImageIcon size={14} color={palette.primary} />
-                      <Text
-                        style={[
-                          styles.anglePickBtnText,
-                          { color: palette.primary },
-                        ]}>
-                        Library
-                      </Text>
-                    </Pressable>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-      </View>
+      <MultiAnglePhotoPicker
+        photos={diagnosticPhotos}
+        onPickPhoto={(angle, source) =>
+          void handlePickDiagnosticAnglePhoto(angle, source)
+        }
+        onClearPhoto={handleClearDiagnosticPhoto}
+      />
 
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
@@ -423,125 +283,16 @@ export function HealthDiagnosisFlow({
       </Pressable>
 
       {diagnosisResult && selectedPlant && (
-        <View
-          style={[
-            styles.resultContainer,
-            { borderTopColor: palette.borderSubtle },
-          ]}>
-          <View style={styles.resultHeaderRow}>
-            <Text
-              style={[styles.resultCommonName, { color: palette.textPrimary }]}>
-              AI Diagnosis Complete
-            </Text>
-            <View
-              style={[
-                styles.statusPill,
-                {
-                  backgroundColor:
-                    healthBadgeTheme[diagnosisResult.healthStatus].bg,
-                  borderColor:
-                    healthBadgeTheme[diagnosisResult.healthStatus].border,
-                },
-              ]}>
-              <Text
-                style={[
-                  styles.statusPillText,
-                  {
-                    color: healthBadgeTheme[diagnosisResult.healthStatus].text,
-                  },
-                ]}>
-                {healthBadgeTheme[diagnosisResult.healthStatus].label}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={[styles.resultNotes, { color: palette.textSecondary }]}>
-            {diagnosisResult.diagnosisSummary}
-          </Text>
-
-          {diagnosisResult.succulentGuardrailApplied && (
-            <View
-              style={[
-                styles.guardrailBox,
-                {
-                  backgroundColor: palette.attentionBg,
-                  borderColor: palette.attentionBorder,
-                },
-              ]}>
-              <ShieldAlert size={16} color={palette.attentionText} />
-              <Text
-                style={[
-                  styles.guardrailText,
-                  { color: palette.attentionText },
-                ]}>
-                {diagnosisResult.succulentGuardrailApplied}
-              </Text>
-            </View>
-          )}
-
-          <Text style={[styles.subHeader, { color: palette.textPrimary }]}>
-            Recommended Next Steps:
-          </Text>
-          {diagnosisResult.recommendedActions.map((act, idx) => {
-            const urg = urgencyBadgeTheme[act.urgency];
-            return (
-              <View
-                key={idx}
-                style={[
-                  styles.actionRowItem,
-                  {
-                    backgroundColor: palette.bgPrimary,
-                    borderColor: palette.borderSubtle,
-                  },
-                ]}>
-                <View
-                  style={[
-                    styles.urgencyPill,
-                    { backgroundColor: urg.bg, borderColor: urg.border },
-                  ]}>
-                  <Text style={[styles.urgencyText, { color: urg.text }]}>
-                    {urg.label}
-                  </Text>
-                </View>
-                <Text
-                  style={[styles.actionRowText, { color: palette.textPrimary }]}>
-                  {act.instruction}
-                </Text>
-              </View>
-            );
-          })}
-
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: '/plant/[id]',
-                params: { id: selectedPlant.id },
-              })
-            }
-            style={({ pressed }) => [
-              styles.terracottaBtn,
-              { backgroundColor: palette.accentTerracotta },
-              pressed && { opacity: 0.85 },
-            ]}>
-            <CheckCircle2 size={16} color={palette.textInverse} />
-            <Text
-              style={[
-                styles.primaryActionBtnText,
-                { color: palette.textInverse },
-              ]}>
-              View in {selectedPlant.nickname} Notebook
-            </Text>
-          </Pressable>
-        </View>
+        <DiagnosisResultPanel
+          diagnosis={diagnosisResult}
+          plant={selectedPlant}
+        />
       )}
     </SurfaceCard>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   sectionTitle: {
     ...Typography.cardTitle,
   },
@@ -565,55 +316,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  angleGrid: {
-    gap: Spacing.xs,
-  },
-  angleSlot: {
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
-    gap: Spacing.xs,
-  },
-  angleSlotHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.xs,
-  },
-  angleSlotTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  angleSlotHint: {
-    fontSize: 11,
-  },
-  angleClearBtn: {
-    padding: Spacing.xs,
-    borderRadius: Radius.full,
-  },
-  anglePreview: {
-    width: '100%',
-    height: 110,
-    borderRadius: Radius.md,
-  },
-  angleActionsRow: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-  },
-  anglePickBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.sm,
-  },
-  anglePickBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
   observationInput: {
     paddingHorizontal: 14,
     paddingVertical: 11,
@@ -629,88 +331,8 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: Radius.md,
   },
-  terracottaBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 13,
-    borderRadius: Radius.md,
-    marginTop: Spacing.xs,
-  },
   primaryActionBtnText: {
     fontSize: 14,
     fontWeight: '700',
-  },
-  resultContainer: {
-    marginTop: Spacing.sm,
-    paddingTop: 14,
-    borderTopWidth: BorderWidth.hairline,
-    gap: Spacing.md,
-  },
-  resultHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  resultCommonName: {
-    ...Typography.sectionTitle,
-  },
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
-    borderWidth: BorderWidth.hairline,
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  resultNotes: {
-    ...Typography.body,
-  },
-  guardrailBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-    borderWidth: BorderWidth.hairline,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-  },
-  guardrailText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '600',
-  },
-  subHeader: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  actionRowItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-    padding: 10,
-    borderRadius: Radius.md,
-    borderWidth: BorderWidth.hairline,
-  },
-  urgencyPill: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: Radius.sm,
-    borderWidth: BorderWidth.hairline,
-  },
-  urgencyText: {
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  actionRowText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 19,
   },
 });

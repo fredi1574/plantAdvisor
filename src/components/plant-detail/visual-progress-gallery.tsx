@@ -1,19 +1,12 @@
 import { Image } from 'expo-image';
 import { Columns2, Images } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import {
-  BorderWidth,
-  Radius,
-  Spacing,
-} from '@/constants/theme';
+import { Chip } from '@/components/ui/chip';
+import { PhotoLightboxModal } from '@/components/ui/photo-lightbox-modal';
+import { SurfaceCard } from '@/components/ui/surface-card';
+import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import type { HealthAssessment, NotebookEntry } from '@/types/plant';
 
@@ -49,6 +42,9 @@ export function VisualProgressGallery({
 }: VisualProgressGalleryProps) {
   const palette = usePalette();
   const [compareMode, setCompareMode] = useState(false);
+  const [previewItem, setPreviewItem] = useState<ProgressPhotoItem | null>(
+    null
+  );
 
   const photos = useMemo<ProgressPhotoItem[]>(() => {
     const collected: ProgressPhotoItem[] = [];
@@ -105,15 +101,7 @@ export function VisualProgressGallery({
   const latest = photos[photos.length - 1];
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: palette.glassSurface,
-          borderColor: palette.glassBorder,
-        },
-      ]}
-    >
+    <SurfaceCard variant="glass">
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
           <Images size={16} color={palette.primary} strokeWidth={2.2} />
@@ -123,43 +111,27 @@ export function VisualProgressGallery({
         </View>
 
         {canCompare && (
-          <Pressable
+          <Chip
+            label={compareMode ? 'Timeline' : 'Before & After'}
+            variant="subtle"
+            selected={compareMode}
+            selectedStyle="solid"
+            icon={
+              <Columns2
+                size={13}
+                color={compareMode ? palette.textInverse : palette.textSecondary}
+              />
+            }
             onPress={() => setCompareMode((prev) => !prev)}
-            style={[
-              styles.compareBtn,
-              {
-                backgroundColor: compareMode
-                  ? palette.primary
-                  : palette.bgSubtle,
-                borderColor: compareMode
-                  ? palette.primary
-                  : palette.borderSubtle,
-              },
-            ]}
-          >
-            <Columns2
-              size={13}
-              color={compareMode ? palette.textInverse : palette.textSecondary}
-            />
-            <Text
-              style={[
-                styles.compareBtnText,
-                {
-                  color: compareMode
-                    ? palette.textInverse
-                    : palette.textSecondary,
-                },
-              ]}
-            >
-              {compareMode ? 'Timeline' : 'Before & After'}
-            </Text>
-          </Pressable>
+          />
         )}
       </View>
 
       {compareMode && canCompare ? (
         <View style={styles.compareRow}>
-          <View style={styles.compareCol}>
+          <Pressable
+            onPress={() => setPreviewItem(earliest)}
+            style={styles.compareCol}>
             <Image
               source={{ uri: earliest.uri }}
               style={styles.compareImage}
@@ -167,19 +139,19 @@ export function VisualProgressGallery({
             />
             <Text
               style={[styles.compareTag, { color: palette.textPrimary }]}
-              numberOfLines={1}
-            >
+              numberOfLines={1}>
               Before · {formatPhotoDate(earliest.timestamp)}
             </Text>
             <Text
               style={[styles.compareSub, { color: palette.textMuted }]}
-              numberOfLines={1}
-            >
+              numberOfLines={1}>
               {earliest.label}
             </Text>
-          </View>
+          </Pressable>
 
-          <View style={styles.compareCol}>
+          <Pressable
+            onPress={() => setPreviewItem(latest)}
+            style={styles.compareCol}>
             <Image
               source={{ uri: latest.uri }}
               style={styles.compareImage}
@@ -187,68 +159,67 @@ export function VisualProgressGallery({
             />
             <Text
               style={[styles.compareTag, { color: palette.primary }]}
-              numberOfLines={1}
-            >
+              numberOfLines={1}>
               Latest · {formatPhotoDate(latest.timestamp)}
             </Text>
             <Text
               style={[styles.compareSub, { color: palette.textMuted }]}
-              numberOfLines={1}
-            >
+              numberOfLines={1}>
               {latest.label}
             </Text>
-          </View>
+          </Pressable>
         </View>
       ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.stripContent}
-        >
+          contentContainerStyle={styles.stripContent}>
           {photos.map((photo) => (
-            <View
+            <Pressable
               key={photo.id}
+              onPress={() => setPreviewItem(photo)}
               style={[
                 styles.thumbCard,
                 {
                   backgroundColor: palette.bgSubtle,
                   borderColor: palette.borderSubtle,
                 },
-              ]}
-            >
+              ]}>
               <Image
                 source={{ uri: photo.uri }}
                 style={styles.thumbImage}
                 contentFit="cover"
               />
               <View style={styles.thumbMeta}>
-                <Text
-                  style={[styles.thumbDate, { color: palette.primary }]}
-                >
+                <Text style={[styles.thumbDate, { color: palette.primary }]}>
                   {formatPhotoDate(photo.timestamp)}
                 </Text>
                 <Text
                   style={[styles.thumbLabel, { color: palette.textSecondary }]}
-                  numberOfLines={1}
-                >
+                  numberOfLines={1}>
                   {photo.label}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           ))}
         </ScrollView>
       )}
-    </View>
+
+      <PhotoLightboxModal
+        visible={Boolean(previewItem)}
+        uri={previewItem?.uri}
+        caption={
+          previewItem
+            ? `${formatPhotoDate(previewItem.timestamp)} · ${previewItem.label}`
+            : undefined
+        }
+        onClose={() => setPreviewItem(null)}
+      />
+    </SurfaceCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.xl,
-    borderWidth: BorderWidth.hairline,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -263,19 +234,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '700',
-  },
-  compareBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderRadius: Radius.full,
-    borderWidth: BorderWidth.hairline,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 5,
-  },
-  compareBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   stripContent: {
     gap: Spacing.sm,
