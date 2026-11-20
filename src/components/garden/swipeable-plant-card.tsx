@@ -1,7 +1,5 @@
 import {
-  CheckCircle2,
   ChevronRight,
-  Droplets,
   MapPin,
   Pencil,
   Trash2,
@@ -9,8 +7,7 @@ import {
 import { StyleSheet, Text, View } from "react-native";
 
 import { PlantStatusPhoto } from "@/components/garden/plant-status-photo";
-import { SpringPressable } from "@/components/ui/animated-wrappers";
-import { HydrationBar } from "@/components/ui/hydration-bar";
+import { WateringProgressPill } from "@/components/ui/hydration-bar";
 import { SwipeableRow } from "@/components/ui/swipeable-row";
 import {
   BorderWidth,
@@ -22,7 +19,6 @@ import {
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
 import type { UserPlant } from "@/types/plant";
-import { getDaysUntilNextWater } from "@/utils/watering";
 
 const PLANT_TYPE_LABELS: Record<UserPlant["species"]["plantType"], string> = {
   succulent: "Succulent",
@@ -49,8 +45,6 @@ export function SwipeablePlantCard({
   const palette = usePalette();
   const healthStatus = plant.latestHealthAssessment?.healthStatus ?? "thriving";
   const healthTheme = getHealthBadgeTheme(palette)[healthStatus];
-  const daysUntilWater = getDaysUntilNextWater(plant);
-  const needsWater = daysUntilWater <= 0;
 
   return (
     <SwipeableRow
@@ -178,88 +172,24 @@ export function SwipeablePlantCard({
             </View>
           )}
 
-          <HydrationBar plant={plant} />
-
           <View
             style={[styles.cardFooter, { borderTopColor: palette.bgSubtle }]}
           >
-            {needsWater ? (
-              <View
-                style={[
-                  styles.needsWaterBadge,
-                  {
-                    backgroundColor: palette.waterAlertBg,
-                    borderColor: palette.waterAlertBorder,
-                  },
-                ]}
+            <View style={styles.wateringPillWrap}>
+              <WateringProgressPill
+                plant={plant}
+                onWaterNow={onWaterNow}
+                showInterval
+              />
+            </View>
+
+            <View style={styles.openNotebookLink}>
+              <Text
+                style={[styles.openNotebookText, { color: palette.primary }]}
               >
-                <Droplets size={14} color={palette.waterAlertText} />
-                <Text
-                  style={[
-                    styles.needsWaterBadgeText,
-                    { color: palette.waterAlertText },
-                  ]}
-                >
-                  {daysUntilWater === 0
-                    ? "Needs Watering Today"
-                    : `Needs Watering (${Math.abs(daysUntilWater)}d overdue)`}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.waterScheduleInfo}>
-                <CheckCircle2 size={14} color={palette.primaryMuted} />
-                <Text
-                  style={[
-                    styles.waterScheduleText,
-                    { color: palette.textSecondary },
-                  ]}
-                >
-                  Next water in {daysUntilWater}d (every{" "}
-                  {plant.customWateringIntervalDays}d)
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.cardFooterRight}>
-              {needsWater && (
-                <SpringPressable
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onWaterNow();
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    plant.species.plantType === "propagation"
-                      ? `Refresh water for ${plant.nickname}`
-                      : `Log water for ${plant.nickname}`
-                  }
-                  style={[
-                    styles.quickWaterBtn,
-                    { backgroundColor: palette.waterBlue },
-                  ]}
-                >
-                  <Droplets size={13} color={palette.textInverse} />
-                  <Text
-                    style={[
-                      styles.quickWaterBtnText,
-                      { color: palette.textInverse },
-                    ]}
-                  >
-                    {plant.species.plantType === "propagation"
-                      ? "Refresh Water"
-                      : "Log Water"}
-                  </Text>
-                </SpringPressable>
-              )}
-
-              <View style={styles.openNotebookLink}>
-                <Text
-                  style={[styles.openNotebookText, { color: palette.primary }]}
-                >
-                  Notebook
-                </Text>
-                <ChevronRight size={15} color={palette.primary} />
-              </View>
+                Notebook
+              </Text>
+              <ChevronRight size={15} color={palette.primary} />
             </View>
           </View>
         </View>
@@ -347,49 +277,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingTop: 4,
+    gap: Spacing.sm,
+    paddingTop: Spacing.sm,
     borderTopWidth: BorderWidth.hairline,
   },
-  needsWaterBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: BorderWidth.hairline,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: Radius.full,
-  },
-  needsWaterBadgeText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  waterScheduleInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  waterScheduleText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  cardFooterRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  quickWaterBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-  },
-  quickWaterBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
+  wateringPillWrap: {
+    flex: 1,
   },
   openNotebookLink: {
     flexDirection: "row",

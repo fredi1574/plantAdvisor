@@ -42,7 +42,7 @@ export function PlantHeroCard({ plant, onWaterNow }: PlantHeroCardProps) {
         styles.heroCard,
         {
           borderColor: healthTheme.dot,
-          borderWidth: 2,
+          borderWidth: 1,
         },
       ]}>
       <View style={[styles.bannerWrap, { backgroundColor: palette.bgSubtle }]}>
