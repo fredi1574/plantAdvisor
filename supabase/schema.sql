@@ -443,5 +443,7 @@ begin
 end;
 $$;
 
+revoke execute on function public.get_ai_scan_quota() from public, anon;
+revoke execute on function public.consume_ai_scan_quota() from public, anon;
 grant execute on function public.get_ai_scan_quota() to authenticated;
 grant execute on function public.consume_ai_scan_quota() to authenticated;
