@@ -1,9 +1,5 @@
 import { CalendarDays } from 'lucide-react-native';
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CareScheduleView } from '@/components/calendar/care-schedule-view';
@@ -17,6 +13,7 @@ import {
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
+import type { ProjectedPlantCareTask } from '@/services/calendarUtils';
 import { confirmAction } from '@/services/dialogs';
 import {
   doesPlantNeedWatering,
@@ -27,13 +24,26 @@ export default function CalendarScreen() {
   const palette = usePalette();
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
-  const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
+  const completeScheduledCareTask = usePlantStore(
+    (s) => s.completeScheduledCareTask
+  );
   const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
 
   const { message: feedbackMessage, showToast } = useToast();
 
+  const handleCompleteTask = (task: ProjectedPlantCareTask) => {
+    completeScheduledCareTask(task.plant.id, task.taskKind);
+    if (task.taskKind === 'fertilize') {
+      showToast(`Logged fertilizer feed for "${task.plant.nickname}"!`);
+    } else if (task.taskKind === 'rotate') {
+      showToast(`Logged pot rotation for "${task.plant.nickname}"!`);
+    } else {
+      showToast(`Marked "${task.plant.nickname}" as watered!`);
+    }
+  };
+
   const handleWaterAllDueToday = () => {
-    const needsWaterCount = plants.filter(doesPlantNeedWatering).length;
+    const needsWaterCount = plants.filter((p) => doesPlantNeedWatering(p)).length;
     if (needsWaterCount === 0) return;
 
     confirmAction({
@@ -75,10 +85,7 @@ export default function CalendarScreen() {
           <CareScheduleView
             plants={plants}
             entries={entries}
-            onWaterPlantNow={(plantId, nickname) => {
-              waterPlantNow(plantId);
-              showToast(`Marked "${nickname}" as watered!`);
-            }}
+            onCompleteTask={handleCompleteTask}
             onWaterAllDueToday={handleWaterAllDueToday}
           />
         </View>

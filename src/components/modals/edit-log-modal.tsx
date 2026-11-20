@@ -1,39 +1,18 @@
-import {
-  CheckCircle2,
-  Droplets,
-  FileText,
-  FlaskConical,
-  Pencil,
-  Scissors,
-  Sparkles,
-  Sprout,
-  Trash2,
-  X,
-} from 'lucide-react-native';
+import { Pencil } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import {
-  SOIL_MOISTURE_OPTIONS,
-  type SoilMoistureLevel,
-} from '@/constants/plantOptions';
-import {
-  CardShadow,
-  MaxContentWidth,
-  Radius,
-  Spacing,
-  type ThemePalette,
-} from '@/constants/theme';
+  CareMetricsFields,
+  createMetricsDraftFromEntry,
+  parseCareMetricsDraft,
+  type CareMetricsDraft,
+} from '@/components/modals/care-metrics-fields';
+import { BotanicalInput } from '@/components/ui/botanical-input';
+import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
+import { Chip } from '@/components/ui/chip';
+import { CareEventIcon } from '@/components/ui/status-badges';
+import type { ThemePalette } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { usePlantStore } from '@/store/usePlantStore';
 import type { CareEventType, NotebookEntry } from '@/types/plant';
@@ -68,24 +47,20 @@ export function EditLogModal({
   if (!entry) return null;
 
   return (
-    <Modal
+    <EditLogFormSheet
+      key={entry.id}
+      entry={entry}
       visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}>
-      <EditLogFormSheet
-        key={entry.id}
-        entry={entry}
-        onClose={onClose}
-        onSaved={onSaved}
-        onRequestDelete={onRequestDelete}
-      />
-    </Modal>
+      onClose={onClose}
+      onSaved={onSaved}
+      onRequestDelete={onRequestDelete}
+    />
   );
 }
 
 interface EditLogFormSheetProps {
   entry: NotebookEntry;
+  visible: boolean;
   onClose: () => void;
   onSaved?: (title: string) => void;
   onRequestDelete?: (entry: NotebookEntry) => void;
@@ -93,76 +68,32 @@ interface EditLogFormSheetProps {
 
 function EditLogFormSheet({
   entry,
+  visible,
   onClose,
   onSaved,
   onRequestDelete,
 }: EditLogFormSheetProps) {
   const palette = usePalette();
-  const styles = useMemo(() => createStyles(palette), [palette]);
   const eventTypes = useMemo(() => getEventTypes(palette), [palette]);
   const updateCareEntry = usePlantStore((s) => s.updateCareEntry);
 
   const [eventType, setEventType] = useState<CareEventType>(entry.eventType);
   const [title, setTitle] = useState(entry.title);
   const [notes, setNotes] = useState(entry.notes);
-
-  const [rootLengthCm, setRootLengthCm] = useState(
-    entry.metrics?.rootLengthCm !== undefined
-      ? String(entry.metrics.rootLengthCm)
-      : ''
+  const [metricsDraft, setMetricsDraft] = useState<CareMetricsDraft>(() =>
+    createMetricsDraftFromEntry(entry.metrics)
   );
-  const [stemHeightCm, setStemHeightCm] = useState(
-    entry.metrics?.stemHeightCm !== undefined
-      ? String(entry.metrics.stemHeightCm)
-      : ''
-  );
-  const [leafCount, setLeafCount] = useState(
-    entry.metrics?.leafCount !== undefined
-      ? String(entry.metrics.leafCount)
-      : ''
-  );
-  const [waterAmountMl, setWaterAmountMl] = useState(
-    entry.metrics?.waterAmountMl !== undefined
-      ? String(entry.metrics.waterAmountMl)
-      : ''
-  );
-  const [soilMoisture, setSoilMoisture] = useState<
-    SoilMoistureLevel | undefined
-  >(entry.metrics?.soilMoisture);
 
   const handleSave = () => {
     const finalTitle = title.trim() || entry.title;
     const finalNotes = notes.trim() || entry.notes;
-
-    const parsedRoot = parseFloat(rootLengthCm);
-    const parsedStem = parseFloat(stemHeightCm);
-    const parsedLeaf = parseInt(leafCount, 10);
-    const parsedWater = parseInt(waterAmountMl, 10);
-
-    const nextMetrics: NonNullable<NotebookEntry['metrics']> = {};
-    if (!Number.isNaN(parsedRoot) && rootLengthCm.trim() !== '') {
-      nextMetrics.rootLengthCm = parsedRoot;
-    }
-    if (!Number.isNaN(parsedStem) && stemHeightCm.trim() !== '') {
-      nextMetrics.stemHeightCm = parsedStem;
-    }
-    if (!Number.isNaN(parsedLeaf) && leafCount.trim() !== '') {
-      nextMetrics.leafCount = parsedLeaf;
-    }
-    if (!Number.isNaN(parsedWater) && waterAmountMl.trim() !== '') {
-      nextMetrics.waterAmountMl = parsedWater;
-    }
-    if (soilMoisture) {
-      nextMetrics.soilMoisture = soilMoisture;
-    }
-
-    const hasAnyMetric = Object.keys(nextMetrics).length > 0;
+    const nextMetrics = parseCareMetricsDraft(metricsDraft);
 
     updateCareEntry(entry.id, {
       eventType,
       title: finalTitle,
       notes: finalNotes,
-      metrics: hasAnyMetric ? nextMetrics : undefined,
+      metrics: nextMetrics,
     });
 
     onSaved?.(finalTitle);
@@ -170,417 +101,102 @@ function EditLogFormSheet({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.backdrop}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Pressable style={styles.backdropDismiss} onPress={onClose} />
-
-      <View style={styles.sheetContainer}>
-        {/* Header */}
-        <View style={styles.sheetHeader}>
-          <View style={styles.headerTitleGroup}>
-            <View style={styles.headerIconPill}>
-              <Pencil size={16} color={palette.primary} />
-            </View>
-            <View>
-              <Text style={styles.sheetEyebrow}>CARE TIMELINE LOG</Text>
-              <Text style={styles.sheetTitle}>Edit Notebook Entry</Text>
-            </View>
-          </View>
-
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.closeIconBtn,
-              pressed && { opacity: 0.7 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Close edit log modal">
-            <X size={20} color={palette.textSecondary} />
-          </Pressable>
-        </View>
-
-        <ScrollView
-          style={styles.formScroll}
-          contentContainerStyle={styles.formContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled">
-          {/* Event Type */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Event Category</Text>
-            <View style={styles.chipRow}>
-              {eventTypes.map((et) => {
-                const active = eventType === et.key;
-                const iconColor = active ? palette.textInverse : et.color;
-                return (
-                  <Pressable
-                    key={et.key}
-                    onPress={() => setEventType(et.key)}
-                    style={[styles.chip, active && styles.chipActive]}>
-                    {et.key === 'water' && (
-                      <Droplets size={13} color={iconColor} />
-                    )}
-                    {(et.key === 'propagation' || et.key === 'repot') && (
-                      <Sprout size={13} color={iconColor} />
-                    )}
-                    {et.key === 'fertilize' && (
-                      <FlaskConical size={13} color={iconColor} />
-                    )}
-                    {et.key === 'prune' && (
-                      <Scissors size={13} color={iconColor} />
-                    )}
-                    {et.key === 'note' && (
-                      <FileText size={13} color={iconColor} />
-                    )}
-                    {et.key === 'ai_scan' && (
-                      <Sparkles size={13} color={iconColor} />
-                    )}
-                    <Text
-                      style={[
-                        styles.chipText,
-                        active && styles.chipTextActive,
-                      ]}>
-                      {et.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Log Title */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Entry Title</Text>
-            <TextInput
-              value={title}
-              onChangeText={setTitle}
-              placeholder="e.g., Deep Soak & Dry Watering"
-              placeholderTextColor={palette.textMuted}
-              style={styles.textInput}
-            />
-          </View>
-
-          {/* Log Notes */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Observation & Care Notes</Text>
-            <TextInput
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-              numberOfLines={3}
-              placeholder="Describe watering details, root growth, or observations..."
-              placeholderTextColor={palette.textMuted}
-              style={[styles.textInput, styles.multilineInput]}
-            />
-          </View>
-
-          {/* Optional Metrics Grid */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>
-              Optional Growth & Watering Metrics
-            </Text>
-            <View style={styles.twoColRow}>
-              <View style={[styles.subField, { flex: 1 }]}>
-                <Text style={styles.subFieldLabel}>Root Length (cm)</Text>
-                <TextInput
-                  value={rootLengthCm}
-                  onChangeText={setRootLengthCm}
-                  keyboardType="decimal-pad"
-                  placeholder="e.g., 8.5"
-                  placeholderTextColor={palette.textMuted}
-                  style={styles.textInput}
-                />
-              </View>
-              <View style={[styles.subField, { flex: 1 }]}>
-                <Text style={styles.subFieldLabel}>Stem Height (cm)</Text>
-                <TextInput
-                  value={stemHeightCm}
-                  onChangeText={setStemHeightCm}
-                  keyboardType="decimal-pad"
-                  placeholder="e.g., 14.0"
-                  placeholderTextColor={palette.textMuted}
-                  style={styles.textInput}
-                />
-              </View>
-            </View>
-
-            <View style={styles.twoColRow}>
-              <View style={[styles.subField, { flex: 1 }]}>
-                <Text style={styles.subFieldLabel}>Leaf Count</Text>
-                <TextInput
-                  value={leafCount}
-                  onChangeText={setLeafCount}
-                  keyboardType="number-pad"
-                  placeholder="e.g., 6"
-                  placeholderTextColor={palette.textMuted}
-                  style={styles.textInput}
-                />
-              </View>
-              <View style={[styles.subField, { flex: 1 }]}>
-                <Text style={styles.subFieldLabel}>Water Volume (ml)</Text>
-                <TextInput
-                  value={waterAmountMl}
-                  onChangeText={setWaterAmountMl}
-                  keyboardType="number-pad"
-                  placeholder="e.g., 250"
-                  placeholderTextColor={palette.textMuted}
-                  style={styles.textInput}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Prior Soil Moisture */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Prior Soil Moisture (Optional)</Text>
-            <View style={styles.chipRow}>
-              {SOIL_MOISTURE_OPTIONS.map((opt) => {
-                const active = soilMoisture === opt.key;
-                return (
-                  <Pressable
-                    key={opt.key}
-                    onPress={() =>
-                      setSoilMoisture(active ? undefined : opt.key)
-                    }
-                    style={[styles.chip, active && styles.chipActive]}>
-                    <Text
-                      style={[
-                        styles.chipText,
-                        active && styles.chipTextActive,
-                      ]}>
-                      {opt.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        </ScrollView>
-
-        {/* Footer Buttons */}
-        <View style={styles.sheetFooter}>
-          {onRequestDelete && (
-            <Pressable
-              onPress={() => {
-                onClose();
-                onRequestDelete(entry);
-              }}
-              style={({ pressed }) => [
-                styles.deleteOutlineBtn,
-                pressed && { opacity: 0.75 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Delete log ${entry.title}`}>
-              <Trash2 size={16} color={palette.criticalText} />
-            </Pressable>
-          )}
-
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.cancelBtn,
-              pressed && { opacity: 0.75 },
-            ]}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={handleSave}
-            style={({ pressed }) => [
-              styles.saveBtn,
-              pressed && { opacity: 0.85 },
-            ]}>
-            <CheckCircle2 size={16} color={palette.textInverse} />
-            <Text style={styles.saveBtnText}>Save Log</Text>
-          </Pressable>
+    <BottomSheetModal
+      visible={visible}
+      eyebrow="CARE TIMELINE LOG"
+      title="Edit Notebook Entry"
+      headerIcon={<Pencil size={16} color={palette.primary} />}
+      saveLabel="Save Log"
+      closeAccessibilityLabel="Close edit log modal"
+      deleteAccessibilityLabel={`Delete log ${entry.title}`}
+      onClose={onClose}
+      onSave={handleSave}
+      onDelete={
+        onRequestDelete
+          ? () => {
+              onClose();
+              onRequestDelete(entry);
+            }
+          : undefined
+      }>
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+          Event Category
+        </Text>
+        <View style={styles.chipRow}>
+          {eventTypes.map((et) => {
+            const active = eventType === et.key;
+            const iconColor = active ? palette.textInverse : et.color;
+            return (
+              <Chip
+                key={et.key}
+                label={et.label}
+                variant="subtle"
+                selected={active}
+                selectedStyle="solid"
+                icon={
+                  <CareEventIcon
+                    eventType={et.key}
+                    size={13}
+                    color={iconColor}
+                  />
+                }
+                onPress={() => setEventType(et.key)}
+              />
+            );
+          })}
         </View>
       </View>
-    </KeyboardAvoidingView>
+
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+          Entry Title
+        </Text>
+        <BotanicalInput
+          surface="primary"
+          compact={false}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="e.g., Deep Soak & Dry Watering"
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+          Observation & Care Notes
+        </Text>
+        <BotanicalInput
+          surface="primary"
+          compact={false}
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+          numberOfLines={3}
+          placeholder="Describe watering details, root growth, or observations..."
+          style={styles.multilineInput}
+        />
+      </View>
+
+      <CareMetricsFields value={metricsDraft} onChange={setMetricsDraft} />
+    </BottomSheetModal>
   );
 }
 
-const createStyles = (palette: ThemePalette) =>
-  StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: palette.scrimDark,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  backdropDismiss: {
-    ...StyleSheet.absoluteFill,
-  },
-  sheetContainer: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    maxHeight: '90%',
-    backgroundColor: palette.bgSurface,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-    overflow: 'hidden',
-    ...CardShadow,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.bgSubtle,
-    backgroundColor: palette.bgPrimary,
-  },
-  headerTitleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  headerIconPill: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: palette.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetEyebrow: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: palette.primary,
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.textPrimary,
-  },
-  closeIconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: palette.bgSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  formScroll: {
-    maxHeight: 480,
-  },
-  formContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
-  },
+const styles = StyleSheet.create({
   fieldGroup: {
     gap: 6,
   },
   fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: palette.textPrimary,
-  },
-  subField: {
-    gap: 4,
-  },
-  subFieldLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: palette.textSecondary,
-  },
-  textInput: {
-    backgroundColor: palette.bgPrimary,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-    borderRadius: Radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 14,
-    color: palette.textPrimary,
   },
   multilineInput: {
     minHeight: 78,
     textAlignVertical: 'top',
-  },
-  twoColRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    backgroundColor: palette.bgSubtle,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-  },
-  chipActive: {
-    backgroundColor: palette.primary,
-    borderColor: palette.primary,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.textSecondary,
-  },
-  chipTextActive: {
-    color: palette.textInverse,
-  },
-  sheetFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: palette.bgSubtle,
-    backgroundColor: palette.bgPrimary,
-  },
-  deleteOutlineBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
-    backgroundColor: palette.criticalBg,
-    borderWidth: 1,
-    borderColor: palette.criticalBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 'auto',
-  },
-  cancelBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: Radius.full,
-    backgroundColor: palette.bgSubtle,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-  },
-  cancelBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.textSecondary,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: Radius.full,
-    backgroundColor: palette.primary,
-  },
-  saveBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.textInverse,
-  },
 });
-

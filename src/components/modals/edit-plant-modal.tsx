@@ -1,40 +1,24 @@
 import { Image } from 'expo-image';
 import {
   Camera,
-  CheckCircle2,
   Image as ImageIcon,
   Minus,
   Pencil,
   Plus,
-  Trash2,
-  X,
 } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { BotanicalInput } from '@/components/ui/botanical-input';
+import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
+import { Chip } from '@/components/ui/chip';
+import { SwitchRow } from '@/components/ui/switch-row';
 import {
   LIGHT_EXPOSURE_OPTIONS,
   PLANT_TYPE_OPTIONS,
   POT_MATERIAL_OPTIONS,
 } from '@/constants/plantOptions';
-import {
-  CardShadow,
-  MaxContentWidth,
-  Radius,
-  Spacing,
-  type ThemePalette,
-} from '@/constants/theme';
+import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { pickPlantImage } from '@/services/imagePicker';
 import { usePlantStore } from '@/store/usePlantStore';
@@ -63,24 +47,20 @@ export function EditPlantModal({
   if (!plant) return null;
 
   return (
-    <Modal
+    <EditPlantFormSheet
+      key={plant.id}
+      plant={plant}
       visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}>
-      <EditPlantFormSheet
-        key={plant.id}
-        plant={plant}
-        onClose={onClose}
-        onSaved={onSaved}
-        onRequestDelete={onRequestDelete}
-      />
-    </Modal>
+      onClose={onClose}
+      onSaved={onSaved}
+      onRequestDelete={onRequestDelete}
+    />
   );
 }
 
 interface EditPlantFormSheetProps {
   plant: UserPlant;
+  visible: boolean;
   onClose: () => void;
   onSaved?: (nickname: string) => void;
   onRequestDelete?: (plant: UserPlant) => void;
@@ -88,12 +68,12 @@ interface EditPlantFormSheetProps {
 
 function EditPlantFormSheet({
   plant,
+  visible,
   onClose,
   onSaved,
   onRequestDelete,
 }: EditPlantFormSheetProps) {
   const palette = usePalette();
-  const styles = useMemo(() => createStyles(palette), [palette]);
   const updatePlant = usePlantStore((s) => s.updatePlant);
 
   const [nickname, setNickname] = useState(plant.nickname);
@@ -123,19 +103,8 @@ function EditPlantFormSheet({
   const [hasDrainageHole, setHasDrainageHole] = useState(plant.hasDrainageHole);
   const [photoUri, setPhotoUri] = useState(plant.photoUri);
 
-  const handlePickPhoto = async () => {
-    const result = await pickPlantImage('library', {
-      allowsEditing: true,
-      quality: 0.9,
-      prepareForAI: true,
-    });
-    if (result.ok) {
-      setPhotoUri(result.uri);
-    }
-  };
-
-  const handleTakePhoto = async () => {
-    const result = await pickPlantImage('camera', {
+  const handleSelectPhoto = async (source: 'camera' | 'library') => {
+    const result = await pickPlantImage(source, {
       allowsEditing: true,
       quality: 0.9,
       prepareForAI: true,
@@ -195,404 +164,288 @@ function EditPlantFormSheet({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.backdrop}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Pressable style={styles.backdropDismiss} onPress={onClose} />
-
-      <View style={styles.sheetContainer}>
-        {/* Header */}
-        <View style={styles.sheetHeader}>
-          <View style={styles.headerTitleGroup}>
-            <View style={styles.headerIconPill}>
-              <Pencil size={16} color={palette.primary} />
-            </View>
-            <View>
-              <Text style={styles.sheetEyebrow}>BOTANICAL SPECIMEN</Text>
-              <Text style={styles.sheetTitle}>Edit Plant Details</Text>
-            </View>
-          </View>
-
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.closeIconBtn,
-              pressed && { opacity: 0.7 },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Close edit plant modal">
-            <X size={20} color={palette.textSecondary} />
-          </Pressable>
-        </View>
-
-        <ScrollView
-          style={styles.formScroll}
-          contentContainerStyle={styles.formContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled">
-          {/* Photo Row */}
-          <View style={styles.photoRow}>
-            <Image
-              source={{ uri: photoUri || plant.photoUri }}
-              style={styles.photoPreview}
-              contentFit="cover"
-            />
-            <View style={styles.photoActionsCol}>
-              <Text style={styles.fieldLabel}>Specimen Photo</Text>
-              <View style={styles.photoButtonsRow}>
-                <Pressable
-                  onPress={handleTakePhoto}
-                  style={({ pressed }) => [
-                    styles.photoBtn,
-                    pressed && { opacity: 0.8 },
-                  ]}>
-                  <Camera size={14} color={palette.primary} />
-                  <Text style={styles.photoBtnText}>Camera</Text>
-                </Pressable>
-                <Pressable
-                  onPress={handlePickPhoto}
-                  style={({ pressed }) => [
-                    styles.photoBtn,
-                    pressed && { opacity: 0.8 },
-                  ]}>
-                  <ImageIcon size={14} color={palette.primary} />
-                  <Text style={styles.photoBtnText}>Library</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          {/* Nickname */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Plant Nickname</Text>
-            <TextInput
-              value={nickname}
-              onChangeText={setNickname}
-              placeholder="e.g., Sunny Window Jade"
-              placeholderTextColor={palette.textMuted}
-              style={styles.textInput}
-            />
-          </View>
-
-          {/* Common & Scientific Name */}
-          <View style={styles.twoColRow}>
-            <View style={[styles.fieldGroup, { flex: 1 }]}>
-              <Text style={styles.fieldLabel}>Common Name</Text>
-              <TextInput
-                value={commonName}
-                onChangeText={setCommonName}
-                placeholder="e.g., Jade Plant"
-                placeholderTextColor={palette.textMuted}
-                style={styles.textInput}
-              />
-            </View>
-
-            <View style={[styles.fieldGroup, { flex: 1 }]}>
-              <Text style={styles.fieldLabel}>Scientific Name</Text>
-              <TextInput
-                value={scientificName}
-                onChangeText={setScientificName}
-                placeholder="e.g., Crassula ovata"
-                placeholderTextColor={palette.textMuted}
-                style={[styles.textInput, styles.italicInput]}
-              />
-            </View>
-          </View>
-
-          {/* Location & Watering Interval */}
-          <View style={styles.twoColRow}>
-            <View style={[styles.fieldGroup, { flex: 1.3 }]}>
-              <Text style={styles.fieldLabel}>Location in Home / Garden</Text>
-              <TextInput
-                value={location}
-                onChangeText={setLocation}
-                placeholder="e.g., South Sill"
-                placeholderTextColor={palette.textMuted}
-                style={styles.textInput}
-              />
-            </View>
-
-            <View style={[styles.fieldGroup, { flex: 1 }]}>
-              <Text style={styles.fieldLabel}>Water Every (Days)</Text>
-              <View style={styles.stepperRow}>
-                <Pressable
-                  onPress={() => adjustWateringDays(-1)}
-                  style={({ pressed }) => [
-                    styles.stepperBtn,
-                    pressed && { opacity: 0.7 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Decrease watering interval">
-                  <Minus size={15} color={palette.textPrimary} />
-                </Pressable>
-                <TextInput
-                  value={wateringDays}
-                  onChangeText={setWateringDays}
-                  keyboardType="number-pad"
-                  style={styles.stepperInput}
-                />
-                <Pressable
-                  onPress={() => adjustWateringDays(1)}
-                  style={({ pressed }) => [
-                    styles.stepperBtn,
-                    pressed && { opacity: 0.7 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Increase watering interval">
-                  <Plus size={15} color={palette.textPrimary} />
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          {/* Optional Fertilize & Rotate Intervals */}
-          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <View style={[styles.fieldGroup, { flex: 1 }]}>
-              <Text style={styles.fieldLabel}>Fertilize Every (days)</Text>
-              <TextInput
-                value={fertilizeDays}
-                onChangeText={setFertilizeDays}
-                keyboardType="number-pad"
-                placeholder="e.g. 30"
-                placeholderTextColor={palette.textMuted}
-                style={styles.textInput}
-              />
-            </View>
-            <View style={[styles.fieldGroup, { flex: 1 }]}>
-              <Text style={styles.fieldLabel}>Rotate Every (days)</Text>
-              <TextInput
-                value={rotateDays}
-                onChangeText={setRotateDays}
-                keyboardType="number-pad"
-                placeholder="e.g. 14"
-                placeholderTextColor={palette.textMuted}
-                style={styles.textInput}
-              />
-            </View>
-          </View>
-
-          {/* Plant Category */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Botanical Category</Text>
-            <View style={styles.chipRow}>
-              {PLANT_TYPE_OPTIONS.map((pt) => {
-                const active = plantType === pt.key;
-                return (
-                  <Pressable
-                    key={pt.key}
-                    onPress={() => setPlantType(pt.key)}
-                    style={[styles.chip, active && styles.chipActive]}>
-                    <Text
-                      style={[
-                        styles.chipText,
-                        active && styles.chipTextActive,
-                      ]}>
-                      {pt.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Light Exposure */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Light Exposure</Text>
-            <View style={styles.chipRow}>
-              {LIGHT_EXPOSURE_OPTIONS.map((le) => {
-                const active = lightExposure === le.key;
-                return (
-                  <Pressable
-                    key={le.key}
-                    onPress={() => setLightExposure(le.key)}
-                    style={[styles.chip, active && styles.chipActive]}>
-                    <Text
-                      style={[
-                        styles.chipText,
-                        active && styles.chipTextActive,
-                      ]}>
-                      {le.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Pot Material */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>Pot / Vessel Material</Text>
-            <View style={styles.chipRow}>
-              {POT_MATERIAL_OPTIONS.map((pm) => {
-                const active = potMaterial === pm.key;
-                return (
-                  <Pressable
-                    key={pm.key}
-                    onPress={() => setPotMaterial(pm.key)}
-                    style={[styles.chip, active && styles.chipActive]}>
-                    <Text
-                      style={[
-                        styles.chipText,
-                        active && styles.chipTextActive,
-                      ]}>
-                      {pm.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Drainage Hole Switch */}
-          <View style={styles.switchRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fieldLabel}>
-                Container Has Bottom Drainage Hole
-              </Text>
-              <Text style={styles.switchSub}>
-                Recommended for healthy root aeration and preventing rot
-              </Text>
-            </View>
-            <Switch
-              value={hasDrainageHole}
-              onValueChange={setHasDrainageHole}
-              trackColor={{
-                false: palette.borderSubtle,
-                true: palette.primary,
-              }}
-            />
-          </View>
-        </ScrollView>
-
-        {/* Footer Buttons */}
-        <View style={styles.sheetFooter}>
-          {onRequestDelete && (
+    <BottomSheetModal
+      visible={visible}
+      eyebrow="BOTANICAL SPECIMEN"
+      title="Edit Plant Details"
+      headerIcon={<Pencil size={16} color={palette.primary} />}
+      saveLabel="Save Changes"
+      closeAccessibilityLabel="Close edit plant modal"
+      deleteAccessibilityLabel={`Delete ${plant.nickname}`}
+      onClose={onClose}
+      onSave={handleSave}
+      onDelete={
+        onRequestDelete
+          ? () => {
+              onClose();
+              onRequestDelete(plant);
+            }
+          : undefined
+      }>
+      <View
+        style={[
+          styles.photoRow,
+          {
+            backgroundColor: palette.bgPrimary,
+            borderColor: palette.borderSubtle,
+          },
+        ]}>
+        <Image
+          source={{ uri: photoUri || plant.photoUri }}
+          style={[styles.photoPreview, { backgroundColor: palette.bgSubtle }]}
+          contentFit="cover"
+        />
+        <View style={styles.photoActionsCol}>
+          <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+            Specimen Photo
+          </Text>
+          <View style={styles.photoButtonsRow}>
             <Pressable
-              onPress={() => {
-                onClose();
-                onRequestDelete(plant);
-              }}
+              onPress={() => void handleSelectPhoto('camera')}
               style={({ pressed }) => [
-                styles.deleteOutlineBtn,
-                pressed && { opacity: 0.75 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Delete ${plant.nickname}`}>
-              <Trash2 size={16} color={palette.criticalText} />
+                styles.photoBtn,
+                {
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                },
+                pressed && { opacity: 0.8 },
+              ]}>
+              <Camera size={14} color={palette.primary} />
+              <Text style={[styles.photoBtnText, { color: palette.primary }]}>
+                Camera
+              </Text>
             </Pressable>
-          )}
-
-          <Pressable
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.cancelBtn,
-              pressed && { opacity: 0.75 },
-            ]}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={handleSave}
-            style={({ pressed }) => [
-              styles.saveBtn,
-              pressed && { opacity: 0.85 },
-            ]}>
-            <CheckCircle2 size={16} color={palette.textInverse} />
-            <Text style={styles.saveBtnText}>Save Changes</Text>
-          </Pressable>
+            <Pressable
+              onPress={() => void handleSelectPhoto('library')}
+              style={({ pressed }) => [
+                styles.photoBtn,
+                {
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                },
+                pressed && { opacity: 0.8 },
+              ]}>
+              <ImageIcon size={14} color={palette.primary} />
+              <Text style={[styles.photoBtnText, { color: palette.primary }]}>
+                Library
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
-    </KeyboardAvoidingView>
+
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+          Plant Nickname
+        </Text>
+        <BotanicalInput
+          surface="primary"
+          compact={false}
+          value={nickname}
+          onChangeText={setNickname}
+          placeholder="e.g., Sunny Window Jade"
+        />
+      </View>
+
+      <View style={styles.twoColRow}>
+        <View style={[styles.fieldGroup, styles.flex]}>
+          <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+            Common Name
+          </Text>
+          <BotanicalInput
+            surface="primary"
+            compact={false}
+            value={commonName}
+            onChangeText={setCommonName}
+            placeholder="e.g., Jade Plant"
+          />
+        </View>
+
+        <View style={[styles.fieldGroup, styles.flex]}>
+          <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+            Scientific Name
+          </Text>
+          <BotanicalInput
+            surface="primary"
+            compact={false}
+            value={scientificName}
+            onChangeText={setScientificName}
+            placeholder="e.g., Crassula ovata"
+            style={styles.italicInput}
+          />
+        </View>
+      </View>
+
+      <View style={styles.twoColRow}>
+        <View style={[styles.fieldGroup, styles.locationCol]}>
+          <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+            Location in Home / Garden
+          </Text>
+          <BotanicalInput
+            surface="primary"
+            compact={false}
+            value={location}
+            onChangeText={setLocation}
+            placeholder="e.g., South Sill"
+          />
+        </View>
+
+        <View style={[styles.fieldGroup, styles.flex]}>
+          <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+            Water Every (Days)
+          </Text>
+          <View
+            style={[
+              styles.stepperRow,
+              {
+                backgroundColor: palette.bgPrimary,
+                borderColor: palette.borderSubtle,
+              },
+            ]}>
+            <Pressable
+              onPress={() => adjustWateringDays(-1)}
+              style={({ pressed }) => [
+                styles.stepperBtn,
+                { backgroundColor: palette.bgSubtle },
+                pressed && { opacity: 0.7 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease watering interval">
+              <Minus size={15} color={palette.textPrimary} />
+            </Pressable>
+            <TextInput
+              value={wateringDays}
+              onChangeText={setWateringDays}
+              keyboardType="number-pad"
+              style={[styles.stepperInput, { color: palette.textPrimary }]}
+            />
+            <Pressable
+              onPress={() => adjustWateringDays(1)}
+              style={({ pressed }) => [
+                styles.stepperBtn,
+                { backgroundColor: palette.bgSubtle },
+                pressed && { opacity: 0.7 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Increase watering interval">
+              <Plus size={15} color={palette.textPrimary} />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.twoColRow}>
+        <View style={[styles.fieldGroup, styles.flex]}>
+          <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+            Fertilize Every (days)
+          </Text>
+          <BotanicalInput
+            surface="primary"
+            compact={false}
+            value={fertilizeDays}
+            onChangeText={setFertilizeDays}
+            keyboardType="number-pad"
+            placeholder="e.g. 30"
+          />
+        </View>
+        <View style={[styles.fieldGroup, styles.flex]}>
+          <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+            Rotate Every (days)
+          </Text>
+          <BotanicalInput
+            surface="primary"
+            compact={false}
+            value={rotateDays}
+            onChangeText={setRotateDays}
+            keyboardType="number-pad"
+            placeholder="e.g. 14"
+          />
+        </View>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+          Botanical Category
+        </Text>
+        <View style={styles.chipRow}>
+          {PLANT_TYPE_OPTIONS.map((pt) => (
+            <Chip
+              key={pt.key}
+              label={pt.label}
+              variant="subtle"
+              selected={plantType === pt.key}
+              selectedStyle="solid"
+              onPress={() => setPlantType(pt.key)}
+            />
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+          Light Exposure
+        </Text>
+        <View style={styles.chipRow}>
+          {LIGHT_EXPOSURE_OPTIONS.map((le) => (
+            <Chip
+              key={le.key}
+              label={le.label}
+              variant="subtle"
+              selected={lightExposure === le.key}
+              selectedStyle="solid"
+              onPress={() => setLightExposure(le.key)}
+            />
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+          Pot / Vessel Material
+        </Text>
+        <View style={styles.chipRow}>
+          {POT_MATERIAL_OPTIONS.map((pm) => (
+            <Chip
+              key={pm.key}
+              label={pm.label}
+              variant="subtle"
+              selected={potMaterial === pm.key}
+              selectedStyle="solid"
+              onPress={() => setPotMaterial(pm.key)}
+            />
+          ))}
+        </View>
+      </View>
+
+      <SwitchRow
+        label="Container Has Bottom Drainage Hole"
+        description="Recommended for healthy root aeration and preventing rot"
+        value={hasDrainageHole}
+        onValueChange={setHasDrainageHole}
+      />
+    </BottomSheetModal>
   );
 }
 
-const createStyles = (palette: ThemePalette) =>
-  StyleSheet.create({
-  backdrop: {
+const styles = StyleSheet.create({
+  flex: {
     flex: 1,
-    backgroundColor: palette.scrimDark,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
   },
-  backdropDismiss: {
-    ...StyleSheet.absoluteFill,
-  },
-  sheetContainer: {
-    width: '100%',
-    maxWidth: MaxContentWidth,
-    maxHeight: '90%',
-    backgroundColor: palette.bgSurface,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-    overflow: 'hidden',
-    ...CardShadow,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.bgSubtle,
-    backgroundColor: palette.bgPrimary,
-  },
-  headerTitleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  headerIconPill: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: palette.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetEyebrow: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    color: palette.primary,
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: palette.textPrimary,
-  },
-  closeIconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: palette.bgSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  formScroll: {
-    maxHeight: 500,
-  },
-  formContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+  locationCol: {
+    flex: 1.3,
   },
   photoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: palette.bgPrimary,
     padding: Spacing.sm,
     borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
+    borderWidth: BorderWidth.hairline,
   },
   photoPreview: {
     width: 64,
     height: 64,
     borderRadius: Radius.sm,
-    backgroundColor: palette.bgSubtle,
   },
   photoActionsCol: {
     flex: 1,
@@ -606,9 +459,7 @@ const createStyles = (palette: ThemePalette) =>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: palette.bgSurface,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
+    borderWidth: BorderWidth.hairline,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: Radius.sm,
@@ -616,7 +467,6 @@ const createStyles = (palette: ThemePalette) =>
   photoBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: palette.primary,
   },
   fieldGroup: {
     gap: 6,
@@ -624,17 +474,6 @@ const createStyles = (palette: ThemePalette) =>
   fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: palette.textPrimary,
-  },
-  textInput: {
-    backgroundColor: palette.bgPrimary,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-    borderRadius: Radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 14,
-    color: palette.textPrimary,
   },
   italicInput: {
     fontStyle: 'italic',
@@ -646,16 +485,13 @@ const createStyles = (palette: ThemePalette) =>
   stepperRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: palette.bgPrimary,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
+    borderWidth: BorderWidth.hairline,
     borderRadius: Radius.md,
     overflow: 'hidden',
   },
   stepperBtn: {
     paddingHorizontal: 10,
     paddingVertical: 9,
-    backgroundColor: palette.bgSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -664,97 +500,11 @@ const createStyles = (palette: ThemePalette) =>
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '700',
-    color: palette.textPrimary,
     paddingVertical: 6,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-  },
-  chip: {
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    backgroundColor: palette.bgSubtle,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-  },
-  chipActive: {
-    backgroundColor: palette.primary,
-    borderColor: palette.primary,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: palette.textSecondary,
-  },
-  chipTextActive: {
-    color: palette.textInverse,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.md,
-    backgroundColor: palette.bgPrimary,
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-  },
-  switchSub: {
-    fontSize: 11,
-    color: palette.textSecondary,
-    marginTop: 2,
-  },
-  sheetFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: palette.bgSubtle,
-    backgroundColor: palette.bgPrimary,
-  },
-  deleteOutlineBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
-    backgroundColor: palette.criticalBg,
-    borderWidth: 1,
-    borderColor: palette.criticalBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 'auto',
-  },
-  cancelBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: Radius.full,
-    backgroundColor: palette.bgSubtle,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
-  },
-  cancelBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.textSecondary,
-  },
-  saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: Radius.full,
-    backgroundColor: palette.primary,
-  },
-  saveBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: palette.textInverse,
   },
 });

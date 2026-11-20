@@ -7,36 +7,21 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react-native';
-import React, { useMemo, useRef, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import {
-  GestureDetector,
-  usePanGesture,
-} from 'react-native-gesture-handler';
-import Animated, {
-  Extrapolation,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { HealthStatusBadge } from '@/components/ui/status-badges';
+import { SwipeableRow } from '@/components/ui/swipeable-row';
 import {
+  BorderWidth,
   CardShadow,
   Fonts,
-  getHealthBadgeTheme,
   Radius,
   Spacing,
-  type ThemePalette,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
-import { getDaysUntilNextWater } from '@/store/usePlantStore';
 import type { UserPlant } from '@/types/plant';
+import { getDaysUntilNextWater } from '@/utils/watering';
 
 const PLANT_TYPE_LABELS: Record<UserPlant['species']['plantType'], string> = {
   succulent: 'Succulent',
@@ -44,32 +29,6 @@ const PLANT_TYPE_LABELS: Record<UserPlant['species']['plantType'], string> = {
   foliage: 'Foliage',
   flowering: 'Flowering',
 };
-
-const RIGHT_OPEN_WIDTH = 96; // Swiping right reveals Edit on left
-const LEFT_OPEN_WIDTH = -96; // Swiping left reveals Delete on right
-const MAX_ELASTIC_STRETCH = 148; // Extra elastic "give" past the open action width
-const SNAP_OPEN_THRESHOLD = 32; // Forgiving threshold to snap open
-const FULL_SWIPE_THRESHOLD = 182; // Deep elastic pull required to trigger action immediately
-
-const SPRING_CONFIG = {
-  damping: 17,
-  stiffness: 155,
-  mass: 0.85,
-  overshootClamping: false,
-};
-
-function applyRubberBandGive(rawX: number): number {
-  const absX = Math.abs(rawX);
-  if (absX <= RIGHT_OPEN_WIDTH) {
-    return rawX;
-  }
-  const sign = rawX < 0 ? -1 : 1;
-  const extra = absX - RIGHT_OPEN_WIDTH;
-  const dampedExtra =
-    (extra * 0.72 * MAX_ELASTIC_STRETCH) /
-    (MAX_ELASTIC_STRETCH + extra * 0.72);
-  return sign * (RIGHT_OPEN_WIDTH + dampedExtra);
-}
 
 interface SwipeablePlantCardProps {
   plant: UserPlant;
@@ -87,263 +46,40 @@ export function SwipeablePlantCard({
   onDelete,
 }: SwipeablePlantCardProps) {
   const palette = usePalette();
-  const styles = useMemo(() => createStyles(palette), [palette]);
-  const translateX = useSharedValue(0);
-  const [isOpen, setIsOpen] = useState(false);
-
-  const gestureRef = useRef({
-    startOffset: 0,
-    currentOffset: 0,
-    lastTranslationX: 0,
-    lastVelocityX: 0,
-    isSwiping: false,
-  });
-
-  const snapTo = (toValue: number, velocityX = 0) => {
-    gestureRef.current.currentOffset = toValue;
-    setIsOpen(toValue !== 0);
-    const clampedVelocity = Math.max(-900, Math.min(900, velocityX));
-    translateX.value = withSpring(toValue, {
-      ...SPRING_CONFIG,
-      velocity: clampedVelocity,
-    });
-  };
-
-  const closeSwipe = (afterClose?: () => void) => {
-    snapTo(0);
-    if (afterClose) {
-      setTimeout(afterClose, 150);
-    }
-  };
-
-  const settleSwipe = (translationX: number, velocityX: number) => {
-    const startOffset = gestureRef.current.startOffset;
-    const rawX = startOffset + translationX;
-    const elasticX = applyRubberBandGive(rawX);
-
-    setTimeout(() => {
-      gestureRef.current.isSwiping = false;
-    }, 80);
-
-    // Deep full swipe right -> trigger Edit immediately
-    if (
-      elasticX > FULL_SWIPE_THRESHOLD ||
-      (elasticX > RIGHT_OPEN_WIDTH + 44 && velocityX > 1350)
-    ) {
-      snapTo(0, velocityX * 0.35);
-      setTimeout(() => onEdit(plant), 130);
-      return;
-    }
-
-    // Deep full swipe left -> trigger Delete confirmation immediately
-    if (
-      elasticX < -FULL_SWIPE_THRESHOLD ||
-      (elasticX < LEFT_OPEN_WIDTH - 44 && velocityX < -1350)
-    ) {
-      snapTo(0, velocityX * 0.35);
-      setTimeout(() => onDelete(plant), 130);
-      return;
-    }
-
-    // If starting from an already-open right state and user nudges back left, close smoothly
-    if (startOffset > 0 && (rawX < RIGHT_OPEN_WIDTH - 20 || velocityX < -220)) {
-      if (rawX < -SNAP_OPEN_THRESHOLD * 1.8 && velocityX < -500) {
-        snapTo(LEFT_OPEN_WIDTH, velocityX);
-      } else {
-        snapTo(0, velocityX);
-      }
-      return;
-    }
-
-    // If starting from an already-open left state and user nudges back right, close smoothly
-    if (startOffset < 0 && (rawX > LEFT_OPEN_WIDTH + 20 || velocityX > 220)) {
-      if (rawX > SNAP_OPEN_THRESHOLD * 1.8 && velocityX > 500) {
-        snapTo(RIGHT_OPEN_WIDTH, velocityX);
-      } else {
-        snapTo(0, velocityX);
-      }
-      return;
-    }
-
-    // Snap open right (revealing Edit on left side)
-    if (
-      elasticX > SNAP_OPEN_THRESHOLD ||
-      (elasticX > 14 && velocityX > 260)
-    ) {
-      snapTo(RIGHT_OPEN_WIDTH, velocityX);
-      return;
-    }
-
-    // Snap open left (revealing Delete on right side)
-    if (
-      elasticX < -SNAP_OPEN_THRESHOLD ||
-      (elasticX < -14 && velocityX < -260)
-    ) {
-      snapTo(LEFT_OPEN_WIDTH, velocityX);
-      return;
-    }
-
-    snapTo(0, velocityX);
-  };
-
-  const panGesture = usePanGesture({
-    activeOffsetX: [-8, 8],
-    failOffsetY: [-20, 20],
-    runOnJS: true,
-    onActivate: () => {
-      gestureRef.current.startOffset = gestureRef.current.currentOffset;
-      gestureRef.current.lastTranslationX = 0;
-      gestureRef.current.lastVelocityX = 0;
-      gestureRef.current.isSwiping = true;
-    },
-    onUpdate: (e) => {
-      gestureRef.current.lastTranslationX = e.translationX;
-      gestureRef.current.lastVelocityX = e.velocityX;
-      const rawX = gestureRef.current.startOffset + e.translationX;
-      translateX.value = applyRubberBandGive(rawX);
-    },
-    onDeactivate: (e) => {
-      const tx = e.translationX ?? gestureRef.current.lastTranslationX;
-      const vx = e.velocityX ?? gestureRef.current.lastVelocityX;
-      settleSwipe(tx, vx);
-    },
-  });
-
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
-
-  const leftActionAnimatedStyle = useAnimatedStyle(() => {
-    const pull = Math.max(0, translateX.value);
-    return {
-      width: Math.max(RIGHT_OPEN_WIDTH, pull + 14),
-      opacity: interpolate(
-        pull,
-        [0, 12, RIGHT_OPEN_WIDTH * 0.65],
-        [0, 0.75, 1],
-        Extrapolation.CLAMP
-      ),
-    };
-  });
-
-  const rightActionAnimatedStyle = useAnimatedStyle(() => {
-    const pull = Math.max(0, -translateX.value);
-    return {
-      width: Math.max(Math.abs(LEFT_OPEN_WIDTH), pull + 14),
-      opacity: interpolate(
-        pull,
-        [0, 12, Math.abs(LEFT_OPEN_WIDTH) * 0.65],
-        [0, 0.75, 1],
-        Extrapolation.CLAMP
-      ),
-    };
-  });
-
-  const leftActionContentStyle = useAnimatedStyle(() => {
-    const pull = Math.max(0, translateX.value);
-    return {
-      transform: [
-        {
-          scale: interpolate(
-            pull,
-            [0, RIGHT_OPEN_WIDTH, FULL_SWIPE_THRESHOLD],
-            [0.86, 1, 1.15],
-            Extrapolation.CLAMP
-          ),
-        },
-      ],
-    };
-  });
-
-  const rightActionContentStyle = useAnimatedStyle(() => {
-    const pull = Math.max(0, -translateX.value);
-    return {
-      transform: [
-        {
-          scale: interpolate(
-            pull,
-            [0, Math.abs(LEFT_OPEN_WIDTH), FULL_SWIPE_THRESHOLD],
-            [0.86, 1, 1.15],
-            Extrapolation.CLAMP
-          ),
-        },
-      ],
-    };
-  });
-
   const healthStatus =
     plant.latestHealthAssessment?.healthStatus ?? 'thriving';
-  const badge = getHealthBadgeTheme(palette)[healthStatus];
   const daysUntilWater = getDaysUntilNextWater(plant);
   const needsWater = daysUntilWater <= 0;
 
-  const handleCardPress = () => {
-    if (gestureRef.current.isSwiping) return;
-    if (gestureRef.current.currentOffset !== 0) {
-      closeSwipe();
-      return;
-    }
-    onPress();
-  };
-
   return (
-    <View style={styles.swipeContainer}>
-      {/* Background Underlay Actions */}
-      <View
-        style={styles.actionsBackdrop}
-        pointerEvents={isOpen ? 'auto' : 'none'}>
-        {/* Left Side Action (Revealed when swiping right) */}
-        <Animated.View style={[styles.leftActionSlot, leftActionAnimatedStyle]}>
-          <Pressable
-            onPress={() => closeSwipe(() => onEdit(plant))}
-            style={({ pressed }) => [
-              styles.actionBtn,
-              styles.editActionBtn,
-              pressed && styles.actionBtnPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={`Edit ${plant.nickname}`}>
-            <Animated.View style={[styles.actionBtnContent, leftActionContentStyle]}>
-              <Pencil size={18} color={palette.textInverse} />
-              <Text style={styles.actionBtnLabel}>Edit</Text>
-            </Animated.View>
-          </Pressable>
-        </Animated.View>
-
-        {/* Right Side Action (Revealed when swiping left) */}
-        <Animated.View
-          style={[styles.rightActionSlot, rightActionAnimatedStyle]}>
-          <Pressable
-            onPress={() => closeSwipe(() => onDelete(plant))}
-            style={({ pressed }) => [
-              styles.actionBtn,
-              styles.deleteActionBtn,
-              pressed && styles.actionBtnPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={`Delete ${plant.nickname}`}>
-            <Animated.View style={[styles.actionBtnContent, rightActionContentStyle]}>
-              <Trash2 size={18} color={palette.textInverse} />
-              <Text style={styles.actionBtnLabel}>Delete</Text>
-            </Animated.View>
-          </Pressable>
-        </Animated.View>
-      </View>
-
-      {/* Foreground Animated Plant Card */}
-      <GestureDetector gesture={panGesture} touchAction="pan-y">
-        <Animated.View style={[styles.animatedCardWrap, cardAnimatedStyle]}>
-          <Pressable
-            onPress={handleCardPress}
-            style={({ pressed }) => [
-              styles.plantCard,
-              {
-                backgroundColor: palette.bgSurface,
-                borderColor: palette.borderSubtle,
-              },
-              pressed && !isOpen && { backgroundColor: palette.bgSubtle },
-            ]}>
-          {/* Top Row: Thumbnail + Title + Health Status Badge */}
+    <SwipeableRow
+      openWidth={96}
+      borderRadius={Radius.lg}
+      onPress={onPress}
+      leftAction={{
+        label: 'Edit',
+        icon: <Pencil size={18} color={palette.textInverse} />,
+        backgroundColor: palette.primary,
+        accessibilityLabel: `Edit ${plant.nickname}`,
+        onTrigger: () => onEdit(plant),
+      }}
+      rightAction={{
+        label: 'Delete',
+        icon: <Trash2 size={18} color={palette.textInverse} />,
+        backgroundColor: palette.criticalDot,
+        accessibilityLabel: `Delete ${plant.nickname}`,
+        onTrigger: () => onDelete(plant),
+      }}>
+      {({ isOpen, pressed }) => (
+        <View
+          style={[
+            styles.plantCard,
+            {
+              backgroundColor:
+                pressed && !isOpen ? palette.bgSubtle : palette.bgSurface,
+              borderColor: palette.borderSubtle,
+            },
+          ]}>
           <View style={styles.cardTopRow}>
             <Image
               source={{ uri: plant.photoUri }}
@@ -362,28 +98,7 @@ export function SwipeablePlantCard({
                   {plant.nickname}
                 </Text>
 
-                <View
-                  style={[
-                    styles.healthBadge,
-                    {
-                      backgroundColor: badge.bg,
-                      borderColor: badge.border,
-                    },
-                  ]}>
-                  <View
-                    style={[
-                      styles.statusDot,
-                      { backgroundColor: badge.dot },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.healthBadgeText,
-                      { color: badge.text },
-                    ]}>
-                    {badge.label}
-                  </Text>
-                </View>
+                <HealthStatusBadge status={healthStatus} />
               </View>
 
               <Text
@@ -422,7 +137,6 @@ export function SwipeablePlantCard({
             </View>
           </View>
 
-          {/* Latest AI Health Summary Snippet */}
           {plant.latestHealthAssessment && (
             <View
               style={[
@@ -450,12 +164,8 @@ export function SwipeablePlantCard({
             </View>
           )}
 
-          {/* Footer Strip: Watering Indicator + Quick Water Action */}
           <View
-            style={[
-              styles.cardFooter,
-              { borderTopColor: palette.bgSubtle },
-            ]}>
+            style={[styles.cardFooter, { borderTopColor: palette.bgSubtle }]}>
             {needsWater ? (
               <View
                 style={[
@@ -497,10 +207,10 @@ export function SwipeablePlantCard({
                     e.stopPropagation();
                     onWaterNow();
                   }}
-                  style={({ pressed }) => [
+                  style={({ pressed: btnPressed }) => [
                     styles.quickWaterBtn,
                     { backgroundColor: palette.waterBlue },
-                    pressed && { opacity: 0.8 },
+                    btnPressed && { opacity: 0.8 },
                   ]}>
                   <Droplets size={13} color={palette.textInverse} />
                   <Text
@@ -516,85 +226,28 @@ export function SwipeablePlantCard({
               )}
 
               <View style={styles.openNotebookLink}>
-                <Text style={styles.openNotebookText}>Notebook</Text>
+                <Text
+                  style={[styles.openNotebookText, { color: palette.primary }]}>
+                  Notebook
+                </Text>
                 <ChevronRight size={15} color={palette.primary} />
               </View>
             </View>
           </View>
-          </Pressable>
-        </Animated.View>
-      </GestureDetector>
-    </View>
+        </View>
+      )}
+    </SwipeableRow>
   );
 }
 
-const createStyles = (palette: ThemePalette) =>
-  StyleSheet.create({
-  swipeContainer: {
-    position: 'relative',
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-  },
-  actionsBackdrop: {
-    ...StyleSheet.absoluteFill,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'stretch',
-    backgroundColor: palette.bgSubtle,
-    borderRadius: Radius.lg,
-  },
-  leftActionSlot: {
-    width: RIGHT_OPEN_WIDTH,
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-  rightActionSlot: {
-    width: Math.abs(LEFT_OPEN_WIDTH),
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    marginLeft: 'auto',
-  },
-  actionBtn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  actionBtnContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  editActionBtn: {
-    backgroundColor: palette.primary,
-  },
-  deleteActionBtn: {
-    backgroundColor: palette.criticalDot,
-  },
-  actionBtnPressed: {
-    opacity: 0.85,
-  },
-  actionBtnLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: palette.textInverse,
-    letterSpacing: 0.3,
-  },
-  animatedCardWrap: {
-    width: '100%',
-  },
+const styles = StyleSheet.create({
   plantCard: {
-    backgroundColor: palette.bgSurface,
     borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
+    borderWidth: BorderWidth.hairline,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.sm,
     gap: Spacing.md,
     ...CardShadow,
-  },
-  plantCardPressed: {
-    backgroundColor: palette.bgSubtle,
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -604,7 +257,6 @@ const createStyles = (palette: ThemePalette) =>
     width: 78,
     height: 78,
     borderRadius: 14,
-    backgroundColor: palette.bgSubtle,
   },
   cardHeaderMeta: {
     flex: 1,
@@ -622,31 +274,9 @@ const createStyles = (palette: ThemePalette) =>
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '700',
-    color: palette.textPrimary,
-  },
-  healthBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  healthBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
   },
   speciesLine: {
     fontSize: 13,
-    color: palette.textSecondary,
     fontWeight: '500',
   },
   scientificItalic: {
@@ -660,7 +290,6 @@ const createStyles = (palette: ThemePalette) =>
     marginTop: 2,
   },
   typeChip: {
-    backgroundColor: palette.bgSubtle,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: Radius.sm,
@@ -668,7 +297,6 @@ const createStyles = (palette: ThemePalette) =>
   typeChipText: {
     fontSize: 11,
     fontWeight: '700',
-    color: palette.primary,
   },
   locationChip: {
     flexDirection: 'row',
@@ -677,25 +305,20 @@ const createStyles = (palette: ThemePalette) =>
   },
   locationText: {
     fontSize: 12,
-    color: palette.textSecondary,
     fontWeight: '500',
   },
   diagnosisSnippetBox: {
-    backgroundColor: palette.bgPrimary,
     borderRadius: Radius.md,
     paddingHorizontal: 12,
     paddingVertical: 9,
-    borderWidth: 1,
-    borderColor: palette.borderSubtle,
+    borderWidth: BorderWidth.hairline,
   },
   diagnosisSnippetPrefix: {
     fontWeight: '700',
-    color: palette.primary,
   },
   diagnosisSnippetText: {
     fontSize: 13,
     lineHeight: 19,
-    color: palette.textSecondary,
   },
   cardFooter: {
     flexDirection: 'row',
@@ -704,16 +327,13 @@ const createStyles = (palette: ThemePalette) =>
     flexWrap: 'wrap',
     gap: 8,
     paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: palette.bgSubtle,
+    borderTopWidth: BorderWidth.hairline,
   },
   needsWaterBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: palette.waterAlertBg,
-    borderColor: palette.waterAlertBorder,
-    borderWidth: 1,
+    borderWidth: BorderWidth.hairline,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: Radius.full,
@@ -721,7 +341,6 @@ const createStyles = (palette: ThemePalette) =>
   needsWaterBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: palette.waterAlertText,
   },
   waterScheduleInfo: {
     flexDirection: 'row',
@@ -731,7 +350,6 @@ const createStyles = (palette: ThemePalette) =>
   waterScheduleText: {
     fontSize: 12,
     fontWeight: '600',
-    color: palette.textSecondary,
   },
   cardFooterRight: {
     flexDirection: 'row',
@@ -742,7 +360,6 @@ const createStyles = (palette: ThemePalette) =>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: palette.waterBlue,
     paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: Radius.full,
@@ -750,7 +367,6 @@ const createStyles = (palette: ThemePalette) =>
   quickWaterBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: palette.textInverse,
   },
   openNotebookLink: {
     flexDirection: 'row',
@@ -760,6 +376,5 @@ const createStyles = (palette: ThemePalette) =>
   openNotebookText: {
     fontSize: 13,
     fontWeight: '700',
-    color: palette.primary,
   },
 });

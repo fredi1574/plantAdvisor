@@ -1,78 +1,41 @@
-import { router } from "expo-router";
-import {
-  ArrowUpDown,
-  CheckCircle2,
-  Droplets,
-  FlaskConical,
-  Flower2,
-  LayoutGrid,
-  LayoutList,
-  Leaf,
-  MapPin,
-  Search,
-  ShieldAlert,
-  Sprout,
-  Sun,
-  X,
-} from "lucide-react-native";
-import { type ReactNode, useMemo, useState } from "react";
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from 'expo-router';
+import { LayoutGrid, LayoutList, MapPin, Sprout } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PlantGridCard } from "@/components/garden/plant-grid-card";
-import { SwipeablePlantCard } from "@/components/garden/swipeable-plant-card";
-import { EditPlantModal } from "@/components/modals/edit-plant-modal";
-import { BotanicalBackground } from "@/components/ui/botanical-background";
-import { FeedbackBanner } from "@/components/ui/feedback-banner";
-import { ScreenHeader } from "@/components/ui/screen-header";
+import {
+  GardenControlsCard,
+  type GardenFilterMode,
+  type GardenSortMode,
+  type GardenStats,
+} from '@/components/garden/garden-controls-card';
+import { GardenEmptyState } from '@/components/garden/garden-empty-state';
+import { PlantGridCard } from '@/components/garden/plant-grid-card';
+import { SwipeablePlantCard } from '@/components/garden/swipeable-plant-card';
+import { EditPlantModal } from '@/components/modals/edit-plant-modal';
+import { BotanicalBackground } from '@/components/ui/botanical-background';
+import { FeedbackBanner } from '@/components/ui/feedback-banner';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import {
   BorderWidth,
   BottomTabInset,
-  CardShadow,
-  Fonts,
   MaxContentWidth,
   Radius,
   Spacing,
-  Typography,
-} from "@/constants/theme";
-import { usePalette } from "@/hooks/use-theme";
-import { useToast } from "@/hooks/use-toast";
-import { confirmAction } from "@/services/dialogs";
-import { triggerLightHaptic } from "@/services/haptics";
-import { useAuthStore } from "@/store/useAuthStore";
+} from '@/constants/theme';
+import { usePalette } from '@/hooks/use-theme';
+import { useToast } from '@/hooks/use-toast';
+import { confirmAction } from '@/services/dialogs';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   doesPlantNeedWatering,
   getDaysUntilNextWater,
   usePlantStore,
-} from "@/store/usePlantStore";
-import type { HealthStatus, UserPlant } from "@/types/plant";
+} from '@/store/usePlantStore';
+import type { HealthStatus, UserPlant } from '@/types/plant';
 
-type FilterMode =
-  | "all"
-  | "needs_water"
-  | "needs_attention"
-  | "succulent"
-  | "propagation"
-  | "foliage"
-  | "flowering";
-
-type ViewMode = "list" | "grid";
-type SortMode = "needs_water" | "health" | "alpha" | "recent";
-
-const SORT_OPTIONS: { key: SortMode; label: string }[] = [
-  { key: "needs_water", label: "Needs Water" },
-  { key: "health", label: "Health" },
-  { key: "alpha", label: "A–Z" },
-  { key: "recent", label: "Recent" },
-];
+type ViewMode = 'list' | 'grid';
 
 const HEALTH_PRIORITY: Record<HealthStatus, number> = {
   critical: 0,
@@ -88,42 +51,42 @@ export default function MyGardenScreen() {
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
   const deletePlant = usePlantStore((s) => s.deletePlant);
 
-  const [filter, setFilter] = useState<FilterMode>("all");
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortMode>("needs_water");
+  const [filter, setFilter] = useState<GardenFilterMode>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<GardenSortMode>('needs_water');
   const [groupByLocation, setGroupByLocation] = useState(false);
+  const [editingPlant, setEditingPlant] = useState<UserPlant | null>(null);
+
+  const { message: feedbackMessage, showToast } = useToast();
 
   const userName =
     profile?.displayName?.trim() ||
     (user?.user_metadata?.display_name as string)?.trim() ||
     (user?.user_metadata?.name as string)?.trim() ||
     (user?.user_metadata?.full_name as string)?.trim() ||
-    user?.email?.split("@")[0]?.trim() ||
-    "Gardener";
+    user?.email?.split('@')[0]?.trim() ||
+    'Gardener';
 
-  const { message: feedbackMessage, showToast } = useToast();
-  const [editingPlant, setEditingPlant] = useState<UserPlant | null>(null);
+  const stats: GardenStats = useMemo(() => {
+    let needsWaterCount = 0;
+    let needsAttentionCount = 0;
+    let succulentCount = 0;
+    let propagationCount = 0;
+    let foliageCount = 0;
+    let floweringCount = 0;
 
-  const stats = useMemo(() => {
-    const needsWaterCount = plants.filter(doesPlantNeedWatering).length;
-    const needsAttentionCount = plants.filter(
-      (p) =>
-        p.latestHealthAssessment?.healthStatus === "needs_attention" ||
-        p.latestHealthAssessment?.healthStatus === "critical",
-    ).length;
-    const succulentCount = plants.filter(
-      (p) => p.species.plantType === "succulent",
-    ).length;
-    const propagationCount = plants.filter(
-      (p) => p.species.plantType === "propagation",
-    ).length;
-    const foliageCount = plants.filter(
-      (p) => p.species.plantType === "foliage",
-    ).length;
-    const floweringCount = plants.filter(
-      (p) => p.species.plantType === "flowering",
-    ).length;
+    for (const plant of plants) {
+      if (doesPlantNeedWatering(plant)) needsWaterCount += 1;
+      const health = plant.latestHealthAssessment?.healthStatus;
+      if (health === 'needs_attention' || health === 'critical') {
+        needsAttentionCount += 1;
+      }
+      if (plant.species.plantType === 'succulent') succulentCount += 1;
+      else if (plant.species.plantType === 'propagation') propagationCount += 1;
+      else if (plant.species.plantType === 'foliage') foliageCount += 1;
+      else if (plant.species.plantType === 'flowering') floweringCount += 1;
+    }
 
     return {
       total: plants.length,
@@ -136,88 +99,11 @@ export default function MyGardenScreen() {
     };
   }, [plants]);
 
-  const filterChips: {
-    key: FilterMode;
-    label: string;
-    count: number;
-    softBg: string;
-    softBorder: string;
-    accentColor: string;
-    renderIcon: (color: string) => ReactNode;
-  }[] = useMemo(
-    () => [
-      {
-        key: "all",
-        label: "All",
-        count: stats.total,
-        softBg: palette.primarySoft,
-        softBorder: palette.primaryBorder,
-        accentColor: palette.primary,
-        renderIcon: (color) => <Sprout size={13} color={color} />,
-      },
-      {
-        key: "needs_water",
-        label: "Thirsty",
-        count: stats.needsWaterCount,
-        softBg: palette.waterAlertBg,
-        softBorder: palette.waterAlertBorder,
-        accentColor: palette.waterBlue,
-        renderIcon: (color) => <Droplets size={13} color={color} />,
-      },
-      {
-        key: "needs_attention",
-        label: "Attention",
-        count: stats.needsAttentionCount,
-        softBg: palette.attentionBg,
-        softBorder: palette.attentionBorder,
-        accentColor: palette.attentionText,
-        renderIcon: (color) => <ShieldAlert size={13} color={color} />,
-      },
-      {
-        key: "foliage",
-        label: "Foliage",
-        count: stats.foliageCount,
-        softBg: palette.thrivingBg,
-        softBorder: palette.thrivingBorder,
-        accentColor: palette.thrivingText,
-        renderIcon: (color) => <Leaf size={13} color={color} />,
-      },
-      {
-        key: "succulent",
-        label: "Succulents",
-        count: stats.succulentCount,
-        softBg: palette.accentTerracottaSoft,
-        softBorder: palette.borderSubtle,
-        accentColor: palette.accentTerracotta,
-        renderIcon: (color) => <Sun size={13} color={color} />,
-      },
-      {
-        key: "propagation",
-        label: "Props",
-        count: stats.propagationCount,
-        softBg: palette.waterBlueSoft,
-        softBorder: palette.waterAlertBorder,
-        accentColor: palette.waterBlue,
-        renderIcon: (color) => <FlaskConical size={13} color={color} />,
-      },
-      {
-        key: "flowering",
-        label: "Flowering",
-        count: stats.floweringCount,
-        softBg: palette.accentTerracottaSoft,
-        softBorder: palette.borderSubtle,
-        accentColor: palette.accentTerracotta,
-        renderIcon: (color) => <Flower2 size={13} color={color} />,
-      },
-    ],
-    [stats, palette],
-  );
-
   const handleDeletePlant = (plant: UserPlant) => {
     confirmAction({
-      title: "Delete Plant",
+      title: 'Delete Plant',
       message: `Are you sure you want to delete "${plant.nickname}" (${plant.species.commonName}) and its care history?`,
-      confirmLabel: "Delete",
+      confirmLabel: 'Delete',
       destructive: true,
       onConfirm: () => {
         deletePlant(plant.id);
@@ -237,26 +123,22 @@ export default function MyGardenScreen() {
           plant.location.toLowerCase().includes(q);
         if (!matchesQuery) return false;
       }
-      if (filter === "needs_water") return doesPlantNeedWatering(plant);
-      if (filter === "needs_attention") {
+      if (filter === 'needs_water') return doesPlantNeedWatering(plant);
+      if (filter === 'needs_attention') {
         const status = plant.latestHealthAssessment?.healthStatus;
-        return status === "needs_attention" || status === "critical";
+        return status === 'needs_attention' || status === 'critical';
       }
-      if (filter === "succulent")
-        return plant.species.plantType === "succulent";
-      if (filter === "propagation")
-        return plant.species.plantType === "propagation";
-      if (filter === "foliage") return plant.species.plantType === "foliage";
-      if (filter === "flowering")
-        return plant.species.plantType === "flowering";
+      if (filter !== 'all') {
+        return plant.species.plantType === filter;
+      }
       return true;
     });
 
     return [...list].sort((a, b) => {
-      if (sortBy === "needs_water") {
+      if (sortBy === 'needs_water') {
         return getDaysUntilNextWater(a) - getDaysUntilNextWater(b);
       }
-      if (sortBy === "health") {
+      if (sortBy === 'health') {
         const pa = a.latestHealthAssessment
           ? HEALTH_PRIORITY[a.latestHealthAssessment.healthStatus]
           : 3;
@@ -266,7 +148,7 @@ export default function MyGardenScreen() {
         if (pa !== pb) return pa - pb;
         return getDaysUntilNextWater(a) - getDaysUntilNextWater(b);
       }
-      if (sortBy === "alpha") {
+      if (sortBy === 'alpha') {
         return a.nickname.localeCompare(b.nickname);
       }
       return (
@@ -278,7 +160,7 @@ export default function MyGardenScreen() {
   const plantsByLocation = useMemo(() => {
     const map = new Map<string, UserPlant[]>();
     for (const plant of filteredPlants) {
-      const loc = plant.location.trim() || "Unspecified Spot";
+      const loc = plant.location.trim() || 'Unspecified Spot';
       const existing = map.get(loc);
       if (existing) {
         existing.push(plant);
@@ -293,7 +175,7 @@ export default function MyGardenScreen() {
   }, [filteredPlants]);
 
   const renderPlantCollection = (items: UserPlant[]) => {
-    if (viewMode === "list") {
+    if (viewMode === 'list') {
       return (
         <View style={styles.listStack}>
           {items.map((plant) => (
@@ -305,7 +187,7 @@ export default function MyGardenScreen() {
                 waterPlantNow(plant.id);
                 showToast(`Watered "${plant.nickname}"!`);
               }}
-              onEdit={(p) => setEditingPlant(p)}
+              onEdit={setEditingPlant}
               onDelete={handleDeletePlant}
             />
           ))}
@@ -344,17 +226,14 @@ export default function MyGardenScreen() {
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}
-      edges={["top"]}
-    >
+      edges={['top']}>
       <BotanicalBackground variant="garden" />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         <View style={styles.maxContainer}>
-          {/* Editorial Header */}
           <ScreenHeader
             eyebrow="FLORALOG BOTANICAL NOTEBOOK"
             title={`Welcome, ${userName}`}
@@ -368,45 +247,42 @@ export default function MyGardenScreen() {
                       backgroundColor: palette.bgSurface,
                       borderColor: palette.borderSubtle,
                     },
-                  ]}
-                >
+                  ]}>
                   <Pressable
-                    onPress={() => setViewMode("list")}
+                    onPress={() => setViewMode('list')}
                     style={[
                       styles.viewToggleBtn,
-                      viewMode === "list" && {
+                      viewMode === 'list' && {
                         backgroundColor: palette.primary,
                       },
                     ]}
                     accessibilityRole="button"
-                    accessibilityState={{ selected: viewMode === "list" }}
-                    accessibilityLabel="List view"
-                  >
+                    accessibilityState={{ selected: viewMode === 'list' }}
+                    accessibilityLabel="List view">
                     <LayoutList
                       size={16}
                       color={
-                        viewMode === "list"
+                        viewMode === 'list'
                           ? palette.textInverse
                           : palette.textSecondary
                       }
                     />
                   </Pressable>
                   <Pressable
-                    onPress={() => setViewMode("grid")}
+                    onPress={() => setViewMode('grid')}
                     style={[
                       styles.viewToggleBtn,
-                      viewMode === "grid" && {
+                      viewMode === 'grid' && {
                         backgroundColor: palette.primary,
                       },
                     ]}
                     accessibilityRole="button"
-                    accessibilityState={{ selected: viewMode === "grid" }}
-                    accessibilityLabel="Two-column grid view"
-                  >
+                    accessibilityState={{ selected: viewMode === 'grid' }}
+                    accessibilityLabel="Two-column grid view">
                     <LayoutGrid
                       size={16}
                       color={
-                        viewMode === "grid"
+                        viewMode === 'grid'
                           ? palette.textInverse
                           : palette.textSecondary
                       }
@@ -419,353 +295,50 @@ export default function MyGardenScreen() {
 
           <FeedbackBanner message={feedbackMessage} />
 
-          {/* Unified Garden Controls: Search, Filters, Sort & Room Grouping */}
-          <View
-            style={{
-              backgroundColor: palette.bgSurface,
-              borderColor: palette.borderSubtle,
-              borderWidth: BorderWidth.hairline,
-              borderRadius: Radius.lg,
-              padding: Spacing.sm,
-              gap: Spacing.sm,
-              ...CardShadow,
-            }}
-          >
-            {plants.length > 0 && (
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: Spacing.sm,
-                  backgroundColor: palette.bgSubtle,
-                  borderRadius: Radius.md,
-                  paddingHorizontal: Spacing.md,
-                  paddingVertical: Platform.OS === "ios" ? 9 : 4,
-                }}
-              >
-                <Search size={15} color={palette.textMuted} />
-                <TextInput
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder="Search nickname, species, or room..."
-                  placeholderTextColor={palette.textMuted}
-                  style={{
-                    flex: 1,
-                    fontSize: 13,
-                    color: palette.textPrimary,
-                    paddingVertical: 4,
-                  }}
-                />
-                {searchQuery.length > 0 && (
-                  <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
-                    <X size={15} color={palette.textMuted} />
-                  </Pressable>
-                )}
-              </View>
-            )}
+          <GardenControlsCard
+            hasPlants={plants.length > 0}
+            stats={stats}
+            searchQuery={searchQuery}
+            filter={filter}
+            sortBy={sortBy}
+            groupByLocation={groupByLocation}
+            onChangeSearch={setSearchQuery}
+            onSelectFilter={setFilter}
+            onSelectSort={setSortBy}
+            onToggleGroupByLocation={() => setGroupByLocation((prev) => !prev)}
+          />
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}
-            >
-              {filterChips.map((chip) => {
-                const isSelected = filter === chip.key;
-                const contentColor = isSelected
-                  ? palette.textInverse
-                  : chip.accentColor;
-
-                return (
-                  <Pressable
-                    key={chip.key}
-                    onPress={() => {
-                      triggerLightHaptic();
-                      setFilter(chip.key);
-                    }}
-                    style={({ pressed }) => [
-                      styles.filterChip,
-                      {
-                        backgroundColor: isSelected
-                          ? chip.accentColor
-                          : chip.softBg,
-                        borderColor: isSelected
-                          ? chip.accentColor
-                          : chip.softBorder,
-                      },
-                      pressed && styles.pressedScale,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isSelected }}
-                  >
-                    {chip.renderIcon(contentColor)}
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        {
-                          color: contentColor,
-                        },
-                      ]}
-                    >
-                      {chip.label} ({chip.count})
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            {plants.length > 0 && (
-              <View
-                style={{
-                  borderTopWidth: BorderWidth.hairline,
-                  borderTopColor: palette.borderSubtle,
-                  paddingTop: Spacing.xs,
-                }}
-              >
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 4,
-                      marginRight: 2,
-                    }}
-                  >
-                    <ArrowUpDown size={13} color={palette.textSecondary} />
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: "700",
-                        color: palette.textSecondary,
-                      }}
-                    >
-                      Sort:
-                    </Text>
-                  </View>
-
-                  {SORT_OPTIONS.map((opt) => {
-                    const active = sortBy === opt.key;
-                    return (
-                      <Pressable
-                        key={opt.key}
-                        onPress={() => {
-                          triggerLightHaptic();
-                          setSortBy(opt.key);
-                        }}
-                        style={{
-                          paddingHorizontal: 10,
-                          paddingVertical: 5,
-                          borderRadius: Radius.full,
-                          borderWidth: 1,
-                          backgroundColor: active
-                            ? palette.primarySoft
-                            : palette.bgSubtle,
-                          borderColor: active
-                            ? palette.primary
-                            : palette.borderSubtle,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            fontWeight: active ? "700" : "600",
-                            color: active
-                              ? palette.primary
-                              : palette.textSecondary,
-                          }}
-                        >
-                          {opt.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-
-                  <Pressable
-                    onPress={() => {
-                      triggerLightHaptic();
-                      setGroupByLocation((prev) => !prev);
-                    }}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 4,
-                      paddingHorizontal: 10,
-                      paddingVertical: 5,
-                      borderRadius: Radius.full,
-                      borderWidth: 1,
-                      backgroundColor: groupByLocation
-                        ? palette.primary
-                        : palette.bgSubtle,
-                      borderColor: groupByLocation
-                        ? palette.primary
-                        : palette.borderSubtle,
-                    }}
-                  >
-                    <MapPin
-                      size={12}
-                      color={
-                        groupByLocation
-                          ? palette.textInverse
-                          : palette.textSecondary
-                      }
-                    />
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: "700",
-                        color: groupByLocation
-                          ? palette.textInverse
-                          : palette.textSecondary,
-                      }}
-                    >
-                      By Room
-                    </Text>
-                  </Pressable>
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
-          {/* Plant Collection */}
           {plants.length === 0 ? (
-            <View
-              style={[
-                styles.emptyFilterCard,
-                {
-                  backgroundColor: palette.bgSurface,
-                  borderColor: palette.borderSubtle,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.emptyFilterIconWrap,
-                  { backgroundColor: palette.primarySoft },
-                ]}
-              >
-                <Sprout size={24} color={palette.primary} />
-              </View>
-              <Text
-                style={[
-                  styles.emptyFilterTitle,
-                  { color: palette.textPrimary, fontFamily: Fonts?.serif },
-                ]}
-              >
-                Your garden is empty
-              </Text>
-              <Text
-                style={[
-                  styles.emptyFilterSubtitle,
-                  { color: palette.textSecondary },
-                ]}
-              >
-                Identify or snap a photo of your first plant to start tracking
-                watering schedules and AI health scans.
-              </Text>
-              <Pressable
-                onPress={() => router.push("/(tabs)/scan")}
-                style={[
-                  styles.emptyFilterBtn,
-                  { backgroundColor: palette.primary },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.emptyFilterBtnText,
-                    { color: palette.textInverse },
-                  ]}
-                >
-                  Identify Your First Plant
-                </Text>
-              </Pressable>
-            </View>
+            <GardenEmptyState
+              variant="empty-garden"
+              onAction={() => router.push('/(tabs)/scan')}
+            />
           ) : filteredPlants.length === 0 ? (
-            <View
-              style={[
-                styles.emptyFilterCard,
-                {
-                  backgroundColor: palette.bgSurface,
-                  borderColor: palette.borderSubtle,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.emptyFilterIconWrap,
-                  { backgroundColor: palette.thrivingBg },
-                ]}
-              >
-                <CheckCircle2 size={24} color={palette.primary} />
-              </View>
-              <Text
-                style={[
-                  styles.emptyFilterTitle,
-                  { color: palette.textPrimary, fontFamily: Fonts?.serif },
-                ]}
-              >
-                Nothing matches this filter
-              </Text>
-              <Text
-                style={[
-                  styles.emptyFilterSubtitle,
-                  { color: palette.textSecondary },
-                ]}
-              >
-                Your garden is looking calm here. Switch back to All to see
-                every specimen.
-              </Text>
-              <Pressable
-                onPress={() => setFilter("all")}
-                style={[
-                  styles.emptyFilterBtn,
-                  { backgroundColor: palette.primary },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.emptyFilterBtnText,
-                    { color: palette.textInverse },
-                  ]}
-                >
-                  Show All Plants
-                </Text>
-              </Pressable>
-            </View>
+            <GardenEmptyState
+              variant="no-matches"
+              onAction={() => {
+                setFilter('all');
+                setSearchQuery('');
+              }}
+            />
           ) : groupByLocation ? (
-            <View style={{ gap: Spacing.lg }}>
+            <View style={styles.locationGroups}>
               {plantsByLocation.map((group) => (
-                <View key={group.location} style={{ gap: Spacing.sm }}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
+                <View key={group.location} style={styles.locationGroup}>
+                  <View style={styles.locationHeaderRow}>
                     <MapPin size={14} color={palette.primary} />
                     <Text
-                      style={{
-                        fontSize: 14,
-                        fontWeight: "800",
-                        color: palette.textPrimary,
-                      }}
-                    >
+                      style={[
+                        styles.locationTitle,
+                        { color: palette.textPrimary },
+                      ]}>
                       {group.location}
                     </Text>
                     <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: "600",
-                        color: palette.textMuted,
-                      }}
-                    >
+                      style={[
+                        styles.locationCount,
+                        { color: palette.textMuted },
+                      ]}>
                       ({group.items.length})
                     </Text>
                   </View>
@@ -783,7 +356,10 @@ export default function MyGardenScreen() {
         visible={Boolean(editingPlant)}
         plant={editingPlant}
         onClose={() => setEditingPlant(null)}
-        onSaved={(message) => showToast(message)}
+        onSaved={(updatedName) =>
+          showToast(`Updated "${updatedName}" details! 🌿`)
+        }
+        onRequestDelete={handleDeletePlant}
       />
     </SafeAreaView>
   );
@@ -800,20 +376,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: BottomTabInset + Spacing.xl,
-    alignItems: "center",
+    alignItems: 'center',
   },
   maxContainer: {
-    width: "100%",
+    width: '100%',
     maxWidth: MaxContentWidth,
     gap: Spacing.md,
   },
   headerControls: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.sm,
   },
   viewToggleGroup: {
-    flexDirection: "row",
+    flexDirection: 'row',
     borderRadius: Radius.md,
     borderWidth: BorderWidth.hairline,
     padding: Spacing.half,
@@ -823,91 +399,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 30,
     borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pressedScale: {
-    opacity: 0.86,
-    transform: [{ scale: 0.97 }],
-  },
-  pulseCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing.md,
-    borderRadius: Radius.lg,
-    borderWidth: BorderWidth.hairline,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    ...CardShadow,
-  },
-  pulseTextCol: {
-    flex: 1,
-    gap: Spacing.xs,
-  },
-  pulseTitle: {
-    ...Typography.sectionTitle,
-  },
-  pulseMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
-  },
-  pulseSubtitle: {
-    ...Typography.caption,
-    fontWeight: "600",
-  },
-  attentionInline: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-  },
-  attentionInlineText: {
-    ...Typography.caption,
-    fontWeight: "700",
-  },
-  waterAllBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs + Spacing.half,
-    paddingHorizontal: Spacing.md + Spacing.half,
-    paddingVertical: Spacing.sm + Spacing.half,
-    borderRadius: Radius.full,
-    ...CardShadow,
-  },
-  waterAllBtnText: {
-    fontSize: Typography.caption.fontSize + 1,
-    fontWeight: "700",
-  },
-  calmBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + Spacing.half,
-    borderRadius: Radius.full,
-  },
-  calmBadgeText: {
-    ...Typography.caption,
-    fontWeight: "700",
-  },
-  filterRow: {
-    gap: Spacing.sm,
-    paddingVertical: Spacing.half,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs + Spacing.half,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs + Spacing.half,
-    borderRadius: Radius.full,
-    borderWidth: BorderWidth.hairline,
-  },
-  filterChipText: {
-    ...Typography.caption,
-    fontWeight: "700",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listStack: {
     gap: Spacing.md,
@@ -916,46 +409,29 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   gridRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: Spacing.md,
   },
   gridSpacer: {
     flex: 1,
   },
-  emptyFilterCard: {
-    borderRadius: Radius.lg,
-    borderWidth: BorderWidth.hairline,
-    paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.sm,
-    alignItems: "center",
-    justifyContent: "center",
+  locationGroups: {
+    gap: Spacing.lg,
+  },
+  locationGroup: {
     gap: Spacing.sm,
-    ...CardShadow,
   },
-  emptyFilterIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: Radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: Spacing.xs,
+  locationHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  emptyFilterTitle: {
-    ...Typography.sectionTitle,
+  locationTitle: {
+    fontSize: 14,
+    fontWeight: '800',
   },
-  emptyFilterSubtitle: {
-    ...Typography.body,
-    textAlign: "center",
-    maxWidth: 320,
-  },
-  emptyFilterBtn: {
-    marginTop: Spacing.xs,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-  },
-  emptyFilterBtnText: {
-    ...Typography.caption,
-    fontWeight: "700",
+  locationCount: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
