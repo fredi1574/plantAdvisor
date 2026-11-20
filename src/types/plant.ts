@@ -58,13 +58,6 @@ export interface DiagnosticPhotoInput {
   label?: string;
 }
 
-export interface VacationModeConfig {
-  enabled: boolean;
-  startDate: string; // YYYY-MM-DD
-  endDate: string; // YYYY-MM-DD
-  snoozeNotifications: boolean;
-}
-
 export interface AiQuotaStatus {
   limit: number;
   remaining: number;

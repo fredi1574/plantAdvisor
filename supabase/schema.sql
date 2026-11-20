@@ -114,10 +114,18 @@ create table if not exists public.user_plants (
   ),
   last_watered_at timestamptz not null default now(),
   custom_watering_interval_days integer not null default 7 check (custom_watering_interval_days >= 1),
+  fertilize_interval_days integer check (fertilize_interval_days is null or fertilize_interval_days >= 1),
+  rotate_interval_days integer check (rotate_interval_days is null or rotate_interval_days >= 1),
   latest_health_assessment jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Idempotent column upgrades for existing installations
+alter table public.user_plants
+  add column if not exists fertilize_interval_days integer check (fertilize_interval_days is null or fertilize_interval_days >= 1);
+alter table public.user_plants
+  add column if not exists rotate_interval_days integer check (rotate_interval_days is null or rotate_interval_days >= 1);
 
 create index if not exists user_plants_user_id_idx on public.user_plants (user_id);
 create index if not exists user_plants_species_id_idx on public.user_plants (species_id);
@@ -281,18 +289,30 @@ create policy "plant_photos_public_select" on storage.objects
 drop policy if exists "plant_photos_insert" on storage.objects;
 create policy "plant_photos_insert" on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'plant-photos');
+  with check (
+    bucket_id = 'plant-photos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
 
 drop policy if exists "plant_photos_update" on storage.objects;
 create policy "plant_photos_update" on storage.objects
   for update to authenticated
-  using (bucket_id = 'plant-photos')
-  with check (bucket_id = 'plant-photos');
+  using (
+    bucket_id = 'plant-photos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  )
+  with check (
+    bucket_id = 'plant-photos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
 
 drop policy if exists "plant_photos_delete" on storage.objects;
 create policy "plant_photos_delete" on storage.objects
   for delete to authenticated
-  using (bucket_id = 'plant-photos');
+  using (
+    bucket_id = 'plant-photos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
 
 -- ============================================================================
 -- 7. PER-USER AI SCAN QUOTAS (`ai_usage` + Atomic Quota RPCs)

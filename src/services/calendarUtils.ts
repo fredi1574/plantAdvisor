@@ -1,11 +1,13 @@
 /**
- * FloraLog — Calendar & Care Schedule Projection Engine (`PLAN.md` Section 2)
- * Projects upcoming watering/care duties across a multi-week horizon and maps
- * historical notebook entries to calendar dates for heatmaps and daily agendas.
+ * FloraLog — Calendar & Care Schedule Projection Engine
+ * Projects upcoming watering/care duties across a multi-week horizon, builds
+ * month calendar grids, and maps historical notebook entries to dates.
  */
 
-import { getDaysUntilNextWater } from '@/store/usePlantStore';
 import type { CareEventType, NotebookEntry, UserPlant } from '@/types/plant';
+import { DAY_MS, getDaysUntilNextWater, toLocalDateKey } from '@/utils/watering';
+
+export { toLocalDateKey };
 
 export type ProjectedTaskKind = 'water' | 'fertilize' | 'rotate';
 
@@ -17,7 +19,7 @@ export interface ProjectedPlantCareTask {
   isDueToday: boolean;
   actionLabel: string;
   cycleIndex: number; // 0 = next immediate cycle, 1+ = subsequent cycle projections
-  taskKind?: ProjectedTaskKind;
+  taskKind: ProjectedTaskKind;
 }
 
 export interface MonthlyCareSummary {
@@ -35,7 +37,7 @@ export interface DayCareSchedule {
   dayOfWeekShort: string; // 'Mon', 'Tue', etc.
   dayOfMonth: number;
   monthShort: string; // 'Jan', 'Feb', etc.
-  fullLabel: string; // 'Today, Nov 8' | 'Tomorrow, Nov 9' | 'Wed, Nov 11'
+  fullLabel: string; // 'Today · Nov 8' | 'Tomorrow · Nov 9' | 'Wed, Nov 11'
   projectedTasks: ProjectedPlantCareTask[];
   completedEntries: NotebookEntry[];
   hasWaterTask: boolean;
@@ -43,7 +45,52 @@ export interface DayCareSchedule {
   hasPropagationMilestone: boolean;
 }
 
-const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+export type CalendarGridCell =
+  | { kind: 'empty'; key: string }
+  | {
+      kind: 'day';
+      key: string;
+      dayNum: number;
+      dateKey: string;
+      isToday: boolean;
+      isPast: boolean;
+      schedule?: DayCareSchedule;
+      completedCount: number;
+    };
+
+export interface CalendarMonthGrid {
+  monthName: string;
+  year: string;
+  yearNum: number;
+  monthNum: number;
+  weeks: CalendarGridCell[][];
+}
+
+export const WEEKDAY_LABELS = [
+  'Sun',
+  'Mon',
+  'Tue',
+  'Wed',
+  'Thu',
+  'Fri',
+  'Sat',
+] as const;
+
+export const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
 const SHORT_MONTHS = [
   'Jan',
   'Feb',
@@ -60,20 +107,10 @@ const SHORT_MONTHS = [
 ] as const;
 
 /**
- * Formats a Date into local YYYY-MM-DD key.
- */
-export function toLocalDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-/**
  * Returns a new Date set to local midnight (00:00:00.000) for the given Date + offset days.
  */
 export function getLocalDayStart(baseDate: Date, offsetDays: number = 0): Date {
-  const d = new Date(
+  return new Date(
     baseDate.getFullYear(),
     baseDate.getMonth(),
     baseDate.getDate() + offsetDays,
@@ -82,14 +119,13 @@ export function getLocalDayStart(baseDate: Date, offsetDays: number = 0): Date {
     0,
     0
   );
-  return d;
 }
 
 /**
  * Builds a human-friendly header label for a date relative to today.
  */
 export function formatAgendaDayLabel(date: Date, daysFromToday: number): string {
-  const dayName = SHORT_DAYS[date.getDay()];
+  const dayName = WEEKDAY_LABELS[date.getDay()];
   const monthName = SHORT_MONTHS[date.getMonth()];
   const dayNum = date.getDate();
 
@@ -156,7 +192,26 @@ export function getHistoricalCareEvents(
 }
 
 /**
- * Projects watering and care events for the next `rangeDays` (default 30 days).
+ * Finds the most recent entry timestamp (ms) matching a predicate, regardless of input order.
+ */
+function findLatestEntryTimestampMs(
+  entries: NotebookEntry[],
+  plantId: string,
+  eventType: CareEventType
+): number | null {
+  let latestMs: number | null = null;
+  for (const entry of entries) {
+    if (entry.plantId !== plantId || entry.eventType !== eventType) continue;
+    const ms = new Date(entry.timestamp).getTime();
+    if (!Number.isNaN(ms) && (latestMs === null || ms > latestMs)) {
+      latestMs = ms;
+    }
+  }
+  return latestMs;
+}
+
+/**
+ * Projects watering, fertilizing, and rotation events for the next `rangeDays` (default 30 days).
  * Overdue plants are anchored on Today (day 0) with subsequent cycles projected forward.
  */
 export function getProjectedCareEvents(
@@ -208,16 +263,9 @@ export function getProjectedCareEvents(
     // Optional recurring fertilizing schedule
     if (plant.fertilizeIntervalDays && plant.fertilizeIntervalDays >= 1) {
       const fertInterval = Math.round(plant.fertilizeIntervalDays);
-      const lastFert = entries.find(
-        (e) => e.plantId === plant.id && e.eventType === 'fertilize'
-      );
-      const anchorMs = new Date(
-        lastFert?.timestamp ?? plant.acquiredAt
-      ).getTime();
-      const daysSince = Math.max(
-        0,
-        Math.floor((todayStartMs - anchorMs) / (24 * 60 * 60 * 1000))
-      );
+      const lastFertMs = findLatestEntryTimestampMs(entries, plant.id, 'fertilize');
+      const anchorMs = lastFertMs ?? new Date(plant.acquiredAt).getTime();
+      const daysSince = Math.max(0, Math.floor((todayStartMs - anchorMs) / DAY_MS));
       const rawFertUntil = fertInterval - daysSince;
       const fertOverdue = rawFertUntil < 0;
       const firstFertOffset = Math.max(0, rawFertUntil);
@@ -255,12 +303,11 @@ export function getProjectedCareEvents(
     if (plant.rotateIntervalDays && plant.rotateIntervalDays >= 1) {
       const rotInterval = Math.round(plant.rotateIntervalDays);
       const anchorMs = new Date(plant.acquiredAt).getTime();
-      const daysSince = Math.max(
-        0,
-        Math.floor((todayStartMs - anchorMs) / (24 * 60 * 60 * 1000))
-      );
+      const daysSince = Math.max(0, Math.floor((todayStartMs - anchorMs) / DAY_MS));
       const firstRotOffset =
-        daysSince === 0 ? rotInterval : (rotInterval - (daysSince % rotInterval)) % rotInterval;
+        daysSince === 0
+          ? rotInterval
+          : (rotInterval - (daysSince % rotInterval)) % rotInterval;
 
       let rotCycle = 0;
       for (
@@ -313,7 +360,7 @@ export function getProjectedCareEvents(
       date,
       daysFromToday: offset,
       isToday: offset === 0,
-      dayOfWeekShort: SHORT_DAYS[date.getDay()],
+      dayOfWeekShort: WEEKDAY_LABELS[date.getDay()],
       dayOfMonth: date.getDate(),
       monthShort: SHORT_MONTHS[date.getMonth()],
       fullLabel: formatAgendaDayLabel(date, offset),
@@ -326,6 +373,102 @@ export function getProjectedCareEvents(
   }
 
   return timeline;
+}
+
+/**
+ * Builds a 7-column calendar month grid padded with leading/trailing empty cells.
+ */
+export function buildCalendarMonthGrid(
+  monthOffset: number,
+  timelineByDate: Record<string, DayCareSchedule>,
+  historicalMap: Record<string, NotebookEntry[]>,
+  today: Date = new Date()
+): CalendarMonthGrid {
+  const viewDate = new Date(
+    today.getFullYear(),
+    today.getMonth() + monthOffset,
+    1
+  );
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayKey = toLocalDateKey(today);
+
+  const cells: CalendarGridCell[] = [];
+
+  for (let i = 0; i < firstWeekday; i += 1) {
+    cells.push({ kind: 'empty', key: `pad-start-${i}` });
+  }
+
+  for (let d = 1; d <= daysInMonth; d += 1) {
+    const cellDate = new Date(year, month, d);
+    const dateKey = toLocalDateKey(cellDate);
+    const schedule = timelineByDate[dateKey];
+    const completedCount =
+      schedule?.completedEntries.length ?? historicalMap[dateKey]?.length ?? 0;
+
+    cells.push({
+      kind: 'day',
+      key: dateKey,
+      dayNum: d,
+      dateKey,
+      isToday: dateKey === todayKey,
+      isPast: dateKey < todayKey,
+      schedule,
+      completedCount,
+    });
+  }
+
+  while (cells.length % 7 !== 0) {
+    cells.push({ kind: 'empty', key: `pad-end-${cells.length}` });
+  }
+
+  const weeks: CalendarGridCell[][] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    weeks.push(cells.slice(i, i + 7));
+  }
+
+  return {
+    monthName: MONTH_NAMES[month],
+    year: String(year),
+    yearNum: year,
+    monthNum: month,
+    weeks,
+  };
+}
+
+/**
+ * Builds a `DayCareSchedule` for historical or out-of-window calendar dates not present in the projected timeline.
+ */
+export function buildFallbackDaySchedule(
+  dateKey: string,
+  historicalMap: Record<string, NotebookEntry[]>,
+  today: Date = new Date()
+): DayCareSchedule | undefined {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  if (!y || !m || !d) return undefined;
+
+  const dateObj = new Date(y, m - 1, d);
+  const todayStart = getLocalDayStart(today, 0);
+  const diffDays = Math.round((dateObj.getTime() - todayStart.getTime()) / DAY_MS);
+  const completed = historicalMap[dateKey] ?? [];
+
+  return {
+    dateKey,
+    date: dateObj,
+    daysFromToday: diffDays,
+    isToday: diffDays === 0,
+    dayOfWeekShort: WEEKDAY_LABELS[dateObj.getDay()],
+    dayOfMonth: d,
+    monthShort: SHORT_MONTHS[m - 1] ?? '',
+    fullLabel: formatAgendaDayLabel(dateObj, diffDays),
+    projectedTasks: [],
+    completedEntries: completed,
+    hasWaterTask: completed.some((e) => e.eventType === 'water'),
+    hasFertilizeHistory: completed.some((e) => e.eventType === 'fertilize'),
+    hasPropagationMilestone: completed.some((e) => e.eventType === 'propagation'),
+  };
 }
 
 /**
@@ -387,4 +530,3 @@ export function getMonthlyCareSummary(
     consistencyPercent,
   };
 }
-
