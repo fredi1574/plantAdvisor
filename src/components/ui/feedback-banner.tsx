@@ -30,6 +30,8 @@ export function FeedbackBanner({
 
   return (
     <View
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
       style={[
         styles.banner,
         {

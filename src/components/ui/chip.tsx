@@ -22,6 +22,8 @@ interface ChipProps {
   size?: 'sm' | 'md';
   loading?: boolean;
   disabled?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
 }
@@ -39,6 +41,8 @@ export function Chip({
   size = 'sm',
   loading = false,
   disabled = false,
+  accessibilityLabel,
+  accessibilityHint,
   style,
   textStyle,
 }: ChipProps) {
@@ -73,6 +77,14 @@ export function Chip({
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{
+        selected,
+        disabled: disabled || loading,
+        busy: loading,
+      }}
       style={({ pressed }) => [
         styles.base,
         size === 'md' ? styles.sizeMd : styles.sizeSm,

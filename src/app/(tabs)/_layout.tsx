@@ -109,8 +109,8 @@ function FloatingTabBar({
                   styles.tabItem,
                   pressed && styles.tabItemPressed,
                 ]}
-                accessibilityRole="button"
-                accessibilityState={isFocused ? { selected: true } : {}}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isFocused }}
                 accessibilityLabel={options.tabBarAccessibilityLabel ?? label}>
                 {options.tabBarIcon?.({
                   focused: isFocused,

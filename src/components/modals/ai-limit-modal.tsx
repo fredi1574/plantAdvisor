@@ -73,6 +73,8 @@ export function AiLimitModal({
             <Pressable
               onPress={onClose}
               hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Close AI scan limit dialog"
               style={[styles.closeBtn, { backgroundColor: palette.bgSubtle }]}
             >
               <X size={16} color={palette.textSecondary} />
@@ -110,6 +112,8 @@ export function AiLimitModal({
                   onClose();
                   onAddManual();
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Add plant manually instead"
                 style={({ pressed }) => [
                   styles.primaryBtn,
                   { backgroundColor: palette.primary },
@@ -127,6 +131,8 @@ export function AiLimitModal({
 
             <Pressable
               onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss AI scan limit dialog"
               style={({ pressed }) => [
                 styles.secondaryBtn,
                 {

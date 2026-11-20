@@ -85,6 +85,7 @@ export function SwipeablePlantCard({
               source={{ uri: plant.photoUri }}
               style={[styles.thumbnail, { backgroundColor: palette.bgSubtle }]}
               contentFit="cover"
+              accessibilityLabel={`${plant.nickname} photo`}
             />
 
             <View style={styles.cardHeaderMeta}>
@@ -207,6 +208,12 @@ export function SwipeablePlantCard({
                     e.stopPropagation();
                     onWaterNow();
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    plant.species.plantType === 'propagation'
+                      ? `Refresh water for ${plant.nickname}`
+                      : `Log water for ${plant.nickname}`
+                  }
                   style={({ pressed: btnPressed }) => [
                     styles.quickWaterBtn,
                     { backgroundColor: palette.waterBlue },

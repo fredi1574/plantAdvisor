@@ -64,7 +64,12 @@ export function BottomSheetModal({
       <KeyboardAvoidingView
         style={[styles.backdrop, { backgroundColor: palette.scrimDark }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.backdropDismiss} onPress={onClose} />
+        <Pressable
+          style={styles.backdropDismiss}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel={closeAccessibilityLabel}
+        />
 
         <View
           style={[
@@ -150,6 +155,8 @@ export function BottomSheetModal({
 
             <Pressable
               onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
               style={({ pressed }) => [
                 styles.cancelBtn,
                 {
@@ -166,6 +173,8 @@ export function BottomSheetModal({
 
             <Pressable
               onPress={onSave}
+              accessibilityRole="button"
+              accessibilityLabel={saveLabel}
               style={({ pressed }) => [
                 styles.saveBtn,
                 { backgroundColor: palette.primary },
