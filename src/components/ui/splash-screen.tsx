@@ -20,7 +20,7 @@ import {
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 
-const LOGO_SOURCE = require('../../../logo_transparent.png');
+const LOGO_SOURCE = require('../../../assets/images/logo-transparent.png');
 
 interface BotanicalSplashScreenProps {
   onFinish?: () => void;

@@ -1,4 +1,4 @@
-import { CheckCircle2 } from 'lucide-react-native';
+import { AlertCircle, CheckCircle2 } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -7,31 +7,42 @@ import { usePalette } from '@/hooks/use-theme';
 
 interface FeedbackBannerProps {
   message: string | null;
+  variant?: 'success' | 'error';
 }
 
 /**
- * Reusable themed confirmation banner shown after care or profile actions.
+ * Reusable themed feedback banner for success confirmations and inline errors.
  */
-export function FeedbackBanner({ message }: FeedbackBannerProps) {
+export function FeedbackBanner({
+  message,
+  variant = 'success',
+}: FeedbackBannerProps) {
   const palette = usePalette();
 
   if (!message) {
     return null;
   }
 
+  const isError = variant === 'error';
+  const bgColor = isError ? palette.criticalBg : palette.thrivingBg;
+  const borderColor = isError ? palette.criticalBorder : palette.thrivingBorder;
+  const textColor = isError ? palette.criticalText : palette.thrivingText;
+
   return (
     <View
       style={[
         styles.banner,
         {
-          backgroundColor: palette.thrivingBg,
-          borderColor: palette.thrivingBorder,
+          backgroundColor: bgColor,
+          borderColor,
         },
       ]}>
-      <CheckCircle2 size={16} color={palette.thrivingText} />
-      <Text style={[styles.text, { color: palette.thrivingText }]}>
-        {message}
-      </Text>
+      {isError ? (
+        <AlertCircle size={16} color={textColor} />
+      ) : (
+        <CheckCircle2 size={16} color={textColor} />
+      )}
+      <Text style={[styles.text, { color: textColor }]}>{message}</Text>
     </View>
   );
 }
