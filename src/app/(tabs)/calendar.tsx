@@ -28,8 +28,14 @@ export default function CalendarScreen() {
     (s) => s.completeScheduledCareTask
   );
   const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
+  const undoWatering = usePlantStore((s) => s.undoWatering);
 
-  const { message: feedbackMessage, showToast } = useToast();
+  const {
+    message: feedbackMessage,
+    action: feedbackAction,
+    showToast,
+    dismissToast,
+  } = useToast();
 
   const handleCompleteTask = (task: ProjectedPlantCareTask) => {
     completeScheduledCareTask(task.plant.id, task.taskKind);
@@ -38,7 +44,18 @@ export default function CalendarScreen() {
     } else if (task.taskKind === 'rotate') {
       showToast(`Logged pot rotation for "${task.plant.nickname}"!`);
     } else {
-      showToast(`Marked "${task.plant.nickname}" as watered!`);
+      const undoSnapshot = usePlantStore.getState().lastWateringUndo;
+      showToast(`Marked "${task.plant.nickname}" as watered!`, {
+        action: undoSnapshot
+          ? {
+              label: 'Undo',
+              onPress: () => {
+                undoWatering(undoSnapshot);
+                showToast(`Undid watering for "${task.plant.nickname}".`);
+              },
+            }
+          : undefined,
+      });
     }
   };
 
@@ -55,8 +72,24 @@ export default function CalendarScreen() {
       onConfirm: () => {
         const count = waterAllNeedingWater();
         if (count > 0) {
+          const undoSnapshot = usePlantStore.getState().lastWateringUndo;
           showToast(
-            `All ${count} ${count === 1 ? 'plant' : 'plants'} marked as watered!`
+            `All ${count} ${count === 1 ? 'plant' : 'plants'} marked as watered!`,
+            {
+              action: undoSnapshot
+                ? {
+                    label: 'Undo',
+                    onPress: () => {
+                      const restored = undoWatering(undoSnapshot);
+                      showToast(
+                        `Undid watering for ${restored} ${
+                          restored === 1 ? 'plant' : 'plants'
+                        }.`
+                      );
+                    },
+                  }
+                : undefined,
+            }
           );
         }
       },
@@ -69,6 +102,13 @@ export default function CalendarScreen() {
       edges={['top']}>
       <BotanicalBackground variant="schedule" />
 
+      <FeedbackBanner
+        floating
+        message={feedbackMessage}
+        action={feedbackAction}
+        onDismiss={dismissToast}
+      />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -79,8 +119,6 @@ export default function CalendarScreen() {
             title="Care Schedule"
             icon={<CalendarDays size={16} color={palette.primary} />}
           />
-
-          <FeedbackBanner message={feedbackMessage} />
 
           <CareScheduleView
             plants={plants}

@@ -1,5 +1,5 @@
 import { SEED_NOTEBOOK_ENTRIES } from '@/constants/seedData';
-import { triggerSuccessHaptic } from '@/services/haptics';
+import { triggerLightHaptic, triggerSuccessHaptic } from '@/services/haptics';
 import { syncAllPlantNotifications } from '@/services/notificationService';
 import {
   getCurrentUserId,
@@ -11,6 +11,7 @@ import {
   reschedulePlantAndDigest,
   type CareLogSlice,
   type PlantSliceCreator,
+  type WateringUndoSnapshot,
 } from '@/store/plantStoreTypes';
 import { enqueueBatchSyncFallbacks, mergePendingOps } from '@/store/syncQueue';
 import type { NotebookEntry, UserPlant } from '@/types/plant';
@@ -52,11 +53,20 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
       lastWateredAt: nowIso,
     }));
 
+    const undoSnapshot: WateringUndoSnapshot = {
+      items: targets.map((plant, idx) => ({
+        plantId: plant.id,
+        previousLastWateredAt: plant.lastWateredAt,
+        createdEntryId: batchEntries[idx].id,
+      })),
+    };
+
     set((s) => ({
       plants: s.plants.map((p) =>
         targetIds.has(p.id) ? { ...p, lastWateredAt: nowIso } : p
       ),
       entries: [...batchEntries, ...s.entries],
+      lastWateringUndo: undoSnapshot,
       hasGuestEdits: s.ownerUserId === null ? true : s.hasGuestEdits,
     }));
 
@@ -89,6 +99,7 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
 
   return {
     entries: SEED_NOTEBOOK_ENTRIES,
+    lastWateringUndo: null,
 
     logCareEvent: (payload) => {
       const nowIso = new Date().toISOString();
@@ -207,18 +218,84 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
 
     waterPlantNow: (plantId, notes) => {
       const target = get().plants.find((p) => p.id === plantId);
-      if (!target) return;
+      if (!target) return null;
 
+      const previousLastWateredAt = target.lastWateredAt;
       triggerSuccessHaptic();
       const copy = buildDefaultWateringCopy(target);
 
-      get().logCareEvent({
+      const createdEntry = get().logCareEvent({
         plantId,
         eventType: 'water',
         title: copy.title,
         notes: notes || copy.notes,
         metrics: { soilMoisture: copy.soilMoisture },
       });
+
+      const snapshot: WateringUndoSnapshot = {
+        items: [
+          {
+            plantId,
+            previousLastWateredAt,
+            createdEntryId: createdEntry.id,
+          },
+        ],
+      };
+
+      set({ lastWateringUndo: snapshot });
+      return snapshot;
+    },
+
+    undoWatering: (snapshot) => {
+      const targetSnapshot = snapshot ?? get().lastWateringUndo;
+      if (!targetSnapshot || targetSnapshot.items.length === 0) return 0;
+
+      const restoreByPlantId = new Map<string, string>();
+      const entryIdsToRemove = new Set<string>();
+      for (const item of targetSnapshot.items) {
+        restoreByPlantId.set(item.plantId, item.previousLastWateredAt);
+        entryIdsToRemove.add(item.createdEntryId);
+      }
+
+      set((state) => {
+        let nextOps = state.pendingOps;
+        for (const item of targetSnapshot.items) {
+          nextOps = mergePendingOps(nextOps, {
+            kind: 'upsert_plant',
+            id: item.plantId,
+          });
+          nextOps = mergePendingOps(nextOps, {
+            kind: 'delete_entry',
+            id: item.createdEntryId,
+          });
+        }
+
+        return {
+          plants: state.plants.map((p) => {
+            const prevWatered = restoreByPlantId.get(p.id);
+            return prevWatered !== undefined
+              ? { ...p, lastWateredAt: prevWatered }
+              : p;
+          }),
+          entries: state.entries.filter((e) => !entryIdsToRemove.has(e.id)),
+          lastWateringUndo:
+            state.lastWateringUndo === targetSnapshot
+              ? null
+              : state.lastWateringUndo,
+          hasGuestEdits: state.ownerUserId === null ? true : state.hasGuestEdits,
+          pendingOps: nextOps,
+          pendingSyncCount: nextOps.length,
+        };
+      });
+
+      triggerLightHaptic();
+
+      void (async () => {
+        await syncAllPlantNotifications(get().plants, get().notificationPrefs);
+        await get().flushPendingSync();
+      })();
+
+      return targetSnapshot.items.length;
     },
 
     completeScheduledCareTask: (plantId, kind) => {

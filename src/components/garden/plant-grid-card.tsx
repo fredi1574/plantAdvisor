@@ -2,6 +2,7 @@ import { MapPin } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PlantStatusPhoto } from "@/components/garden/plant-status-photo";
+import { PropagationReadinessBar } from "@/components/garden/propagation-readiness-bar";
 import { WateringProgressPill } from "@/components/ui/hydration-bar";
 import {
   CardShadow,
@@ -19,6 +20,8 @@ interface PlantGridCardProps {
   onPress: () => void;
   onWaterNow: () => void;
   onLongPress?: () => void;
+  showPropagationProgress?: boolean;
+  latestRootLengthCm?: number | null;
 }
 
 export function PlantGridCard({
@@ -26,6 +29,8 @@ export function PlantGridCard({
   onPress,
   onWaterNow,
   onLongPress,
+  showPropagationProgress = false,
+  latestRootLengthCm = null,
 }: PlantGridCardProps) {
   const palette = usePalette();
   const healthStatus = plant.latestHealthAssessment?.healthStatus ?? "thriving";
@@ -82,6 +87,13 @@ export function PlantGridCard({
       </View>
 
       <View style={styles.footer}>
+        {showPropagationProgress &&
+          plant.species.plantType === "propagation" && (
+            <PropagationReadinessBar
+              rootLengthCm={latestRootLengthCm}
+              compact
+            />
+          )}
         <WateringProgressPill plant={plant} onWaterNow={onWaterNow} />
       </View>
     </Pressable>
@@ -125,5 +137,6 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.md,
+    gap: Spacing.xs + 2,
   },
 });

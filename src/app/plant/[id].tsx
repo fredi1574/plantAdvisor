@@ -37,12 +37,18 @@ export default function PlantDetailNotebookScreen() {
   const entries = usePlantStore((s) => s.entries);
   const healthAssessments = usePlantStore((s) => s.healthAssessments);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
+  const undoWatering = usePlantStore((s) => s.undoWatering);
   const deletePlant = usePlantStore((s) => s.deletePlant);
   const deleteCareEntry = usePlantStore((s) => s.deleteCareEntry);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<NotebookEntry | null>(null);
-  const { message: feedbackMessage, showToast } = useToast();
+  const {
+    message: feedbackMessage,
+    action: feedbackAction,
+    showToast,
+    dismissToast,
+  } = useToast();
 
   const plant = useMemo(
     () => (id ? plants.find((p) => p.id === id) : plants[0]),
@@ -126,6 +132,15 @@ export default function PlantDetailNotebookScreen() {
       style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}
       edges={['top', 'bottom']}>
       <BotanicalBackground variant="detail" />
+
+      <FeedbackBanner
+        floating
+        bottomOffset={Spacing.md}
+        message={feedbackMessage}
+        action={feedbackAction}
+        onDismiss={dismissToast}
+      />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -174,14 +189,22 @@ export default function PlantDetailNotebookScreen() {
             </Pressable>
           </View>
 
-          <FeedbackBanner message={feedbackMessage} />
-
           <AnimatedEntrance index={0}>
             <PlantHeroCard
               plant={plant}
               onWaterNow={() => {
-                waterPlantNow(plant.id);
-                showToast(`Watered "${plant.nickname}"!`);
+                const undoSnapshot = waterPlantNow(plant.id);
+                showToast(`Watered "${plant.nickname}"!`, {
+                  action: undoSnapshot
+                    ? {
+                        label: 'Undo',
+                        onPress: () => {
+                          undoWatering(undoSnapshot);
+                          showToast(`Undid watering for "${plant.nickname}".`);
+                        },
+                      }
+                    : undefined,
+                });
               }}
             />
           </AnimatedEntrance>

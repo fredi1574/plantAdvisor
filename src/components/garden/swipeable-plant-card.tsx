@@ -7,6 +7,7 @@ import {
 import { StyleSheet, Text, View } from "react-native";
 
 import { PlantStatusPhoto } from "@/components/garden/plant-status-photo";
+import { PropagationReadinessBar } from "@/components/garden/propagation-readiness-bar";
 import { WateringProgressPill } from "@/components/ui/hydration-bar";
 import { SwipeableRow } from "@/components/ui/swipeable-row";
 import {
@@ -33,6 +34,8 @@ interface SwipeablePlantCardProps {
   onWaterNow: () => void;
   onEdit: (plant: UserPlant) => void;
   onDelete: (plant: UserPlant) => void;
+  showPropagationProgress?: boolean;
+  latestRootLengthCm?: number | null;
 }
 
 export function SwipeablePlantCard({
@@ -41,6 +44,8 @@ export function SwipeablePlantCard({
   onWaterNow,
   onEdit,
   onDelete,
+  showPropagationProgress = false,
+  latestRootLengthCm = null,
 }: SwipeablePlantCardProps) {
   const palette = usePalette();
   const healthStatus = plant.latestHealthAssessment?.healthStatus ?? "thriving";
@@ -171,6 +176,11 @@ export function SwipeablePlantCard({
               </Text>
             </View>
           )}
+
+          {showPropagationProgress &&
+            plant.species.plantType === "propagation" && (
+              <PropagationReadinessBar rootLengthCm={latestRootLengthCm} />
+            )}
 
           <View
             style={[styles.cardFooter, { borderTopColor: palette.bgSubtle }]}

@@ -12,6 +12,10 @@ import {
 } from '@/components/garden/garden-controls-card';
 import { GardenEmptyState } from '@/components/garden/garden-empty-state';
 import { PlantGridCard } from '@/components/garden/plant-grid-card';
+import {
+  getLatestRootLengthCm,
+  PROPAGATION_READY_ROOT_CM,
+} from '@/components/garden/propagation-readiness-bar';
 import { SwipeablePlantCard } from '@/components/garden/swipeable-plant-card';
 import { EditPlantModal } from '@/components/modals/edit-plant-modal';
 import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
@@ -57,6 +61,7 @@ export default function MyGardenScreen() {
   const syncError = usePlantStore((s) => s.syncError);
   const syncWithSupabase = usePlantStore((s) => s.syncWithSupabase);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
+  const undoWatering = usePlantStore((s) => s.undoWatering);
   const deletePlant = usePlantStore((s) => s.deletePlant);
 
   const localPhotoCount = useMemo(
@@ -71,7 +76,51 @@ export default function MyGardenScreen() {
   const [groupByLocation, setGroupByLocation] = useState(false);
   const [editingPlant, setEditingPlant] = useState<UserPlant | null>(null);
 
-  const { message: feedbackMessage, showToast } = useToast();
+  const {
+    message: feedbackMessage,
+    action: feedbackAction,
+    showToast,
+    dismissToast,
+  } = useToast();
+
+  const isPropagationBench = filter === 'propagation';
+
+  const latestRootLengthByPlantId = useMemo(() => {
+    const map = new Map<string, number | null>();
+    if (!isPropagationBench) return map;
+    for (const plant of plants) {
+      if (plant.species.plantType === 'propagation') {
+        map.set(plant.id, getLatestRootLengthCm(entries, plant.id));
+      }
+    }
+    return map;
+  }, [entries, isPropagationBench, plants]);
+
+  const propagationReadyCount = useMemo(() => {
+    if (!isPropagationBench) return 0;
+    let ready = 0;
+    for (const rootCm of latestRootLengthByPlantId.values()) {
+      if (rootCm !== null && rootCm >= PROPAGATION_READY_ROOT_CM) {
+        ready += 1;
+      }
+    }
+    return ready;
+  }, [isPropagationBench, latestRootLengthByPlantId]);
+
+  const handleQuickWater = (plant: UserPlant) => {
+    const undoSnapshot = waterPlantNow(plant.id);
+    showToast(`Watered "${plant.nickname}"!`, {
+      action: undoSnapshot
+        ? {
+            label: 'Undo',
+            onPress: () => {
+              undoWatering(undoSnapshot);
+              showToast(`Undid watering for "${plant.nickname}".`);
+            },
+          }
+        : undefined,
+    });
+  };
 
   const userName =
     profile?.displayName?.trim() ||
@@ -196,12 +245,13 @@ export default function MyGardenScreen() {
               <SwipeablePlantCard
                 plant={plant}
                 onPress={() => router.push(`/plant/${plant.id}`)}
-                onWaterNow={() => {
-                  waterPlantNow(plant.id);
-                  showToast(`Watered "${plant.nickname}"!`);
-                }}
+                onWaterNow={() => handleQuickWater(plant)}
                 onEdit={setEditingPlant}
                 onDelete={handleDeletePlant}
+                showPropagationProgress={isPropagationBench}
+                latestRootLengthCm={
+                  latestRootLengthByPlantId.get(plant.id) ?? null
+                }
               />
             </AnimatedEntrance>
           ))}
@@ -227,11 +277,12 @@ export default function MyGardenScreen() {
                 key={plant.id}
                 plant={plant}
                 onPress={() => router.push(`/plant/${plant.id}`)}
-                onWaterNow={() => {
-                  waterPlantNow(plant.id);
-                  showToast(`Watered "${plant.nickname}"!`);
-                }}
+                onWaterNow={() => handleQuickWater(plant)}
                 onLongPress={() => setEditingPlant(plant)}
+                showPropagationProgress={isPropagationBench}
+                latestRootLengthCm={
+                  latestRootLengthByPlantId.get(plant.id) ?? null
+                }
               />
             ))}
             {row.length === 1 && <View style={styles.gridSpacer} />}
@@ -246,6 +297,13 @@ export default function MyGardenScreen() {
       style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}
       edges={['top']}>
       <BotanicalBackground variant="garden" />
+
+      <FeedbackBanner
+        floating
+        message={feedbackMessage}
+        action={feedbackAction}
+        onDismiss={dismissToast}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -311,8 +369,6 @@ export default function MyGardenScreen() {
             }
           />
 
-          <FeedbackBanner message={feedbackMessage} />
-
           <SyncStatusBanner
             visible={Boolean(user)}
             isSyncing={isSyncing}
@@ -344,6 +400,25 @@ export default function MyGardenScreen() {
             onSelectSort={setSortBy}
             onToggleGroupByLocation={() => setGroupByLocation((prev) => !prev)}
           />
+
+          {isPropagationBench && filteredPlants.length > 0 && (
+            <View
+              style={[
+                styles.propBenchBanner,
+                {
+                  backgroundColor: palette.primarySoft,
+                  borderColor: palette.primaryBorder,
+                },
+              ]}>
+              <Sprout size={15} color={palette.primary} />
+              <Text
+                style={[styles.propBenchText, { color: palette.textPrimary }]}>
+                Propagation Bench • {propagationReadyCount} of{' '}
+                {filteredPlants.length} ready to pot (≥{PROPAGATION_READY_ROOT_CM}{' '}
+                cm roots)
+              </Text>
+            </View>
+          )}
 
           {plants.length === 0 ? (
             <GardenEmptyState
@@ -470,5 +545,19 @@ const styles = StyleSheet.create({
   locationCount: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  propBenchBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  propBenchText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

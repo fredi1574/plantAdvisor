@@ -70,6 +70,50 @@ export interface AdaptiveCarePreferences {
   longitude: string;
 }
 
+export interface RoomPreset {
+  id: string;
+  name: string;
+  lightExposure: LightExposure;
+  isIndoor: boolean;
+}
+
+export interface WateringUndoItem {
+  plantId: string;
+  previousLastWateredAt: string;
+  createdEntryId: string;
+}
+
+export interface WateringUndoSnapshot {
+  items: WateringUndoItem[];
+}
+
+export const DEFAULT_ROOM_PRESETS: RoomPreset[] = [
+  {
+    id: 'room-south-sill',
+    name: 'South Living Room Sill',
+    lightExposure: 'bright_direct',
+    isIndoor: true,
+  },
+  {
+    id: 'room-east-kitchen',
+    name: 'East Kitchen Window',
+    lightExposure: 'bright_indirect',
+    isIndoor: true,
+  },
+  {
+    id: 'room-shady-desk',
+    name: 'Shady Desk Shelf',
+    lightExposure: 'low_shade',
+    isIndoor: true,
+  },
+  {
+    id: 'room-sunny-patio',
+    name: 'Sunny Patio / Balcony',
+    lightExposure: 'bright_direct',
+    isIndoor: false,
+  },
+];
+
 export const DEFAULT_ADAPTIVE_CARE_PREFS: AdaptiveCarePreferences = {
   hemisphere: 'northern',
   latitude: '40.71',
@@ -82,8 +126,11 @@ export const DEFAULT_FALLBACK_PHOTO =
 export interface PreferencesSlice {
   notificationPrefs: NotificationPreferences;
   adaptiveCarePrefs: AdaptiveCarePreferences;
+  roomPresets: RoomPreset[];
   setNotificationPrefs: (prefs: Partial<NotificationPreferences>) => Promise<void>;
   setAdaptiveCarePrefs: (prefs: Partial<AdaptiveCarePreferences>) => void;
+  addRoomPreset: (preset: Omit<RoomPreset, 'id'>) => RoomPreset;
+  deleteRoomPreset: (presetId: string) => void;
   rescheduleAllNotifications: () => Promise<void>;
 }
 
@@ -110,10 +157,15 @@ export interface PlantSlice {
 
 export interface CareLogSlice {
   entries: NotebookEntry[];
+  lastWateringUndo: WateringUndoSnapshot | null;
   logCareEvent: (payload: LogCareEventPayload) => NotebookEntry;
   updateCareEntry: (entryId: string, payload: UpdateCareEntryPayload) => void;
   deleteCareEntry: (entryId: string) => void;
-  waterPlantNow: (plantId: string, notes?: string) => void;
+  waterPlantNow: (
+    plantId: string,
+    notes?: string
+  ) => WateringUndoSnapshot | null;
+  undoWatering: (snapshot?: WateringUndoSnapshot | null) => number;
   completeScheduledCareTask: (plantId: string, kind: ProjectedTaskKind) => void;
   waterAllNeedingWater: () => number;
   waterAllPlants: () => number;

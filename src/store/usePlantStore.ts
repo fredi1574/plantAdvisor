@@ -13,8 +13,10 @@ import type {
   AddPlantPayload,
   LogCareEventPayload,
   PlantStoreState,
+  RoomPreset,
   UpdateCareEntryPayload,
   UpdatePlantPayload,
+  WateringUndoSnapshot,
 } from '@/store/plantStoreTypes';
 import { createCareLogSlice } from '@/store/slices/careLogSlice';
 import { createHealthAssessmentSlice } from '@/store/slices/healthAssessmentSlice';
@@ -32,8 +34,10 @@ export {
   type LogCareEventPayload,
   type PendingSyncOp,
   type PlantStoreState,
+  type RoomPreset,
   type UpdateCareEntryPayload,
   type UpdatePlantPayload,
+  type WateringUndoSnapshot,
 };
 
 export const usePlantStore = create<PlantStoreState>()(
@@ -59,6 +63,7 @@ export const usePlantStore = create<PlantStoreState>()(
         lastSyncedAt: state.lastSyncedAt,
         notificationPrefs: state.notificationPrefs,
         adaptiveCarePrefs: state.adaptiveCarePrefs,
+        roomPresets: state.roomPresets,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

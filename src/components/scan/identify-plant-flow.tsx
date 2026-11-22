@@ -1,16 +1,13 @@
 import { router } from 'expo-router';
-import { CheckCircle2, Sparkles } from 'lucide-react-native';
+import { BookmarkPlus, CheckCircle2, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { PetSafetyBadge } from '@/components/garden/pet-safety-badge';
-import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
+import {
+  AnimatedEntrance,
+  SpringPressable,
+} from '@/components/ui/animated-wrappers';
 import { BotanicalInput } from '@/components/ui/botanical-input';
 import { AiScanShimmerCard } from '@/components/ui/botanical-shimmer';
 import { Chip } from '@/components/ui/chip';
@@ -24,7 +21,7 @@ import {
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { AiQuotaExceededError, identifyPlant } from '@/services/aiPlantService';
-import { triggerSuccessHaptic } from '@/services/haptics';
+import { triggerLightHaptic, triggerSuccessHaptic } from '@/services/haptics';
 import { usePlantStore } from '@/store/usePlantStore';
 import type {
   AiQuotaStatus,
@@ -100,6 +97,8 @@ export function IdentifyPlantFlow({
 }: IdentifyPlantFlowProps) {
   const palette = usePalette();
   const addPlant = usePlantStore((s) => s.addPlant);
+  const roomPresets = usePlantStore((s) => s.roomPresets);
+  const addRoomPreset = usePlantStore((s) => s.addRoomPreset);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -196,13 +195,17 @@ export function IdentifyPlantFlow({
         style={styles.textInput}
       />
 
-      <Pressable
-        onPress={() => void handleRunIdentification()}
+      <SpringPressable
+        onPress={() => {
+          triggerLightHaptic();
+          void handleRunIdentification();
+        }}
         disabled={isLoading}
-        style={({ pressed }) => [
+        accessibilityRole="button"
+        style={[
           styles.primaryActionBtn,
           { backgroundColor: palette.primary },
-          (pressed || isLoading) && { opacity: 0.85 },
+          isLoading && { opacity: 0.78 },
         ]}>
         {isLoading ? (
           <ActivityIndicator color={palette.textInverse} size="small" />
@@ -213,7 +216,7 @@ export function IdentifyPlantFlow({
           style={[styles.primaryActionBtnText, { color: palette.textInverse }]}>
           {isLoading ? 'Analyzing Specimen...' : 'Run AI Plant Identification'}
         </Text>
-      </Pressable>
+      </SpringPressable>
 
       {isLoading && <AiScanShimmerCard mode="identify" />}
 
@@ -318,9 +321,70 @@ export function IdentifyPlantFlow({
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-              Location in Home / Garden
-            </Text>
+            <View style={styles.fieldLabelRow}>
+              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+                Location in Home / Garden
+              </Text>
+              <SpringPressable
+                onPress={() => {
+                  const trimmed = form.location.trim();
+                  if (!trimmed) return;
+                  triggerLightHaptic();
+                  addRoomPreset({
+                    name: trimmed,
+                    lightExposure: form.lightExposure,
+                    isIndoor: form.isIndoor,
+                  });
+                }}
+                disabled={!form.location.trim()}
+                accessibilityRole="button"
+                accessibilityLabel="Save current location as room preset"
+                style={[
+                  styles.savePresetBtn,
+                  {
+                    backgroundColor: palette.primarySoft,
+                    borderColor: palette.primaryBorder,
+                  },
+                  !form.location.trim() && { opacity: 0.45 },
+                ]}>
+                <BookmarkPlus size={12} color={palette.primary} />
+                <Text
+                  style={[styles.savePresetBtnText, { color: palette.primary }]}>
+                  Save Spot
+                </Text>
+              </SpringPressable>
+            </View>
+            {roomPresets.length > 0 && (
+              <View style={styles.presetRow}>
+                {roomPresets.map((preset) => {
+                  const isActivePreset =
+                    form.location.trim().toLowerCase() ===
+                      preset.name.trim().toLowerCase() &&
+                    form.lightExposure === preset.lightExposure &&
+                    form.isIndoor === preset.isIndoor;
+
+                  return (
+                    <Chip
+                      key={preset.id}
+                      label={`${preset.name} • ${preset.isIndoor ? 'Indoor' : 'Outdoor'}`}
+                      variant="subtle"
+                      size="sm"
+                      selected={isActivePreset}
+                      selectedStyle="solid"
+                      onPress={() => {
+                        triggerLightHaptic();
+                        setForm((prev) => ({
+                          ...prev,
+                          location: preset.name,
+                          lightExposure: preset.lightExposure,
+                          isIndoor: preset.isIndoor,
+                        }));
+                      }}
+                    />
+                  );
+                })}
+              </View>
+            )}
             <BotanicalInput
               surface="primary"
               compact={false}
@@ -385,12 +449,15 @@ export function IdentifyPlantFlow({
             contained={false}
           />
 
-          <Pressable
-            onPress={handleSaveIdentifiedPlant}
-            style={({ pressed }) => [
+          <SpringPressable
+            onPress={() => {
+              triggerLightHaptic();
+              handleSaveIdentifiedPlant();
+            }}
+            accessibilityRole="button"
+            style={[
               styles.terracottaBtn,
               { backgroundColor: palette.accentTerracotta },
-              pressed && { opacity: 0.85 },
             ]}>
             <CheckCircle2 size={17} color={palette.textInverse} />
             <Text
@@ -400,7 +467,7 @@ export function IdentifyPlantFlow({
               ]}>
               Add to My Garden & Open Notebook
             </Text>
-          </Pressable>
+          </SpringPressable>
         </AnimatedEntrance>
       )}
     </SurfaceCard>
@@ -489,8 +556,27 @@ const styles = StyleSheet.create({
   fieldGroup: {
     gap: 6,
   },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
   fieldLabel: {
     fontSize: 13,
+    fontWeight: '700',
+  },
+  savePresetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.full,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  savePresetBtnText: {
+    fontSize: 11,
     fontWeight: '700',
   },
   presetRow: {
