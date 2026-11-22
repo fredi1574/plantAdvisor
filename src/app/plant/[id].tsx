@@ -1,7 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Pencil, Stethoscope, Trash2 } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import {
+  BookOpen,
+  Pencil,
+  Sprout,
+  Stethoscope,
+  Trash2,
+} from 'lucide-react-native';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EditLogModal } from '@/components/modals/edit-log-modal';
@@ -10,14 +22,20 @@ import { CareLogSection } from '@/components/plant-detail/care-log-section';
 import { GrowthTrendChart } from '@/components/plant-detail/growth-trend-chart';
 import { PlantAdaptiveCareCard } from '@/components/plant-detail/plant-adaptive-care-card';
 import { PlantHealthAssessmentCard } from '@/components/plant-detail/plant-health-assessment-card';
-import { PlantHeroCard } from '@/components/plant-detail/plant-hero-card';
+import {
+  PlantHeroCard,
+  PlantOverviewSpecs,
+} from '@/components/plant-detail/plant-hero-card';
 import { VisualProgressGallery } from '@/components/plant-detail/visual-progress-gallery';
-import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
+import {
+  AnimatedEntrance,
+  MOTION_SPRINGS,
+} from '@/components/ui/animated-wrappers';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import {
   BorderWidth,
-  CardShadow,
+  getHealthBadgeTheme,
   MaxContentWidth,
   Radius,
   Spacing,
@@ -26,11 +44,21 @@ import {
 import { usePalette } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
 import { confirmAction } from '@/services/dialogs';
+import { triggerLightHaptic } from '@/services/haptics';
 import { usePlantStore } from '@/store/usePlantStore';
 import type { NotebookEntry } from '@/types/plant';
 
+type DetailTab = 'overview' | 'journal' | 'health';
+
+const DETAIL_TABS: { key: DetailTab; label: string }[] = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'journal', label: 'Journal' },
+  { key: 'health', label: 'Health' },
+];
+
 export default function PlantDetailNotebookScreen() {
   const palette = usePalette();
+  const reducedMotion = useReducedMotion();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const plants = usePlantStore((s) => s.plants);
@@ -41,6 +69,8 @@ export default function PlantDetailNotebookScreen() {
   const deletePlant = usePlantStore((s) => s.deletePlant);
   const deleteCareEntry = usePlantStore((s) => s.deleteCareEntry);
 
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const [tabBarWidth, setTabBarWidth] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<NotebookEntry | null>(null);
   const {
@@ -49,6 +79,26 @@ export default function PlantDetailNotebookScreen() {
     showToast,
     dismissToast,
   } = useToast();
+
+  const tabPad = Spacing.xs;
+  const activeTabIndex = DETAIL_TABS.findIndex((t) => t.key === activeTab);
+  const tabSlotWidth =
+    tabBarWidth > 0 ? (tabBarWidth - tabPad * 2) / DETAIL_TABS.length : 0;
+  const indicatorX = useSharedValue(0);
+
+  useEffect(() => {
+    if (tabSlotWidth <= 0) return;
+    const targetX = tabPad + activeTabIndex * tabSlotWidth;
+    if (reducedMotion) {
+      indicatorX.value = targetX;
+    } else {
+      indicatorX.value = withSpring(targetX, MOTION_SPRINGS.pill);
+    }
+  }, [activeTabIndex, tabSlotWidth, tabPad, indicatorX, reducedMotion]);
+
+  const activeTabPillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value }],
+  }));
 
   const plant = useMemo(
     () => (id ? plants.find((p) => p.id === id) : plants[0]),
@@ -127,10 +177,16 @@ export default function PlantDetailNotebookScreen() {
     });
   };
 
+  const healthStatus = plant.latestHealthAssessment?.healthStatus ?? 'thriving';
+  const healthAlertDot =
+    healthStatus !== 'thriving'
+      ? getHealthBadgeTheme(palette)[healthStatus].dot
+      : null;
+
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}
-      edges={['top', 'bottom']}>
+      edges={['bottom']}>
       <BotanicalBackground variant="detail" />
 
       <FeedbackBanner
@@ -145,150 +201,200 @@ export default function PlantDetailNotebookScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.maxContainer}>
-          <View style={styles.topNavRow}>
-            <Pressable
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              style={({ pressed }) => [
-                styles.navBackBtn,
-                pressed && { opacity: 0.75 },
-              ]}>
-              <ArrowLeft size={18} color={palette.textPrimary} />
-              <Text
-                style={[styles.navBackText, { color: palette.textPrimary }]}>
-                My Garden
-              </Text>
-            </Pressable>
+        <PlantHeroCard
+          plant={plant}
+          onBack={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)');
+            }
+          }}
+          onHealthScan={() =>
+            router.push({
+              pathname: '/(tabs)/scan',
+              params: { mode: 'diagnose', plantId: plant.id },
+            })
+          }
+          onWaterNow={() => {
+            const undoSnapshot = waterPlantNow(plant.id);
+            showToast(`Watered "${plant.nickname}"!`, {
+              action: undoSnapshot
+                ? {
+                    label: 'Undo',
+                    onPress: () => {
+                      undoWatering(undoSnapshot);
+                      showToast(`Undid watering for "${plant.nickname}".`);
+                    },
+                  }
+                : undefined,
+            });
+          }}
+        />
 
-            <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: '/(tabs)/scan',
-                  params: { mode: 'diagnose', plantId: plant.id },
-                })
-              }
-              style={({ pressed }) => [
-                styles.scanShortcutBtn,
-                { backgroundColor: palette.primary },
-                pressed && { opacity: 0.85 },
-              ]}>
-              <Stethoscope size={15} color={palette.textInverse} />
-              <Text
-                style={[
-                  styles.scanShortcutText,
-                  { color: palette.textInverse },
-                ]}>
-                Photo Health Scan
-              </Text>
-            </Pressable>
-          </View>
-
-          <AnimatedEntrance index={0}>
-            <PlantHeroCard
-              plant={plant}
-              onWaterNow={() => {
-                const undoSnapshot = waterPlantNow(plant.id);
-                showToast(`Watered "${plant.nickname}"!`, {
-                  action: undoSnapshot
-                    ? {
-                        label: 'Undo',
-                        onPress: () => {
-                          undoWatering(undoSnapshot);
-                          showToast(`Undid watering for "${plant.nickname}".`);
-                        },
-                      }
-                    : undefined,
-                });
-              }}
-            />
-          </AnimatedEntrance>
-
-          <AnimatedEntrance index={1}>
-            <GrowthTrendChart
-              entries={plantEntries}
-              plantType={plant.species.plantType}
-            />
-          </AnimatedEntrance>
-
-          <AnimatedEntrance index={2}>
-            <VisualProgressGallery
-              entries={plantEntries}
-              assessments={plantAssessments}
-              plantPhotoUri={plant.photoUri}
-              acquiredAt={plant.acquiredAt}
-            />
-          </AnimatedEntrance>
-
-          <AnimatedEntrance index={3}>
-            <PlantAdaptiveCareCard plant={plant} onShowToast={showToast} />
-          </AnimatedEntrance>
-
-          <AnimatedEntrance index={4}>
-            <PlantHealthAssessmentCard
-              plant={plant}
-              plantEntries={plantEntries}
-              plantAssessments={plantAssessments}
-              onShowToast={showToast}
-            />
-          </AnimatedEntrance>
-
-          <AnimatedEntrance index={5}>
-            <CareLogSection
-              plant={plant}
-              plantEntries={plantEntries}
-              onShowToast={showToast}
-              onEditEntry={setEditingEntry}
-              onDeleteEntry={handleDeleteLogEntry}
-            />
-          </AnimatedEntrance>
-
-          <View style={styles.bottomActionsRow}>
-            <Pressable
-              onPress={() => setIsEditModalOpen(true)}
-              style={({ pressed }) => [
-                styles.bottomActionBtn,
+        <View style={styles.contentWrap}>
+          <View style={styles.maxContainer}>
+            <View
+              accessibilityRole="tablist"
+              onLayout={(e) => setTabBarWidth(e.nativeEvent.layout.width)}
+              style={[
+                styles.segmentedBar,
                 {
-                  backgroundColor: palette.bgSurface,
+                  backgroundColor: palette.bgSubtle,
                   borderColor: palette.borderSubtle,
                 },
-                pressed && { opacity: 0.8 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Edit ${plant.nickname}`}>
-              <Pencil size={16} color={palette.primary} />
-              <Text
-                style={[styles.bottomActionText, { color: palette.primary }]}>
-                Edit Plant Details
-              </Text>
-            </Pressable>
+              ]}>
+              {tabSlotWidth > 0 && (
+                <Animated.View
+                  pointerEvents="none"
+                  style={[
+                    styles.activeSegmentPill,
+                    {
+                      width: tabSlotWidth,
+                      backgroundColor: palette.primary,
+                    },
+                    activeTabPillStyle,
+                  ]}
+                />
+              )}
 
-            <Pressable
-              onPress={handleDeleteCurrentPlant}
-              style={({ pressed }) => [
-                styles.bottomActionBtn,
-                {
-                  backgroundColor: palette.criticalBg,
-                  borderColor: palette.criticalBorder,
-                },
-                pressed && { opacity: 0.8 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Delete ${plant.nickname}`}>
-              <Trash2 size={16} color={palette.criticalText} />
-              <Text
-                style={[
-                  styles.bottomActionText,
-                  { color: palette.criticalText },
-                ]}>
-                Delete Plant
-              </Text>
-            </Pressable>
+              {DETAIL_TABS.map((tab) => {
+                const isSelected = activeTab === tab.key;
+                const color = isSelected
+                  ? palette.textInverse
+                  : palette.textSecondary;
+
+                return (
+                  <Pressable
+                    key={tab.key}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isSelected }}
+                    onPress={() => {
+                      if (!isSelected) {
+                        triggerLightHaptic();
+                        setActiveTab(tab.key);
+                      }
+                    }}
+                    style={({ pressed }) => [
+                      styles.segmentBtn,
+                      pressed && !isSelected && styles.segmentBtnPressed,
+                    ]}>
+                    {tab.key === 'overview' ? (
+                      <Sprout size={14} color={color} />
+                    ) : tab.key === 'journal' ? (
+                      <BookOpen size={14} color={color} />
+                    ) : (
+                      <Stethoscope size={14} color={color} />
+                    )}
+                    <Text style={[styles.segmentBtnText, { color }]}>
+                      {tab.key === 'journal' && plantEntries.length > 0
+                        ? `${tab.label} (${plantEntries.length})`
+                        : tab.label}
+                    </Text>
+                    {tab.key === 'health' && healthAlertDot && !isSelected && (
+                      <View
+                        style={[
+                          styles.healthDotIndicator,
+                          { backgroundColor: healthAlertDot },
+                        ]}
+                      />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {activeTab === 'overview' && (
+              <AnimatedEntrance key="tab-overview" style={styles.tabPanel}>
+                <PlantOverviewSpecs plant={plant} />
+
+                <VisualProgressGallery
+                  entries={plantEntries}
+                  assessments={plantAssessments}
+                  plantPhotoUri={plant.photoUri}
+                  acquiredAt={plant.acquiredAt}
+                />
+
+                <GrowthTrendChart
+                  entries={plantEntries}
+                  plantType={plant.species.plantType}
+                />
+
+                <View
+                  style={[
+                    styles.bottomActionsRow,
+                    { borderTopColor: palette.borderSubtle },
+                  ]}>
+                  <Pressable
+                    onPress={() => setIsEditModalOpen(true)}
+                    style={({ pressed }) => [
+                      styles.bottomActionBtn,
+                      {
+                        backgroundColor: palette.bgSurface,
+                        borderColor: palette.borderSubtle,
+                      },
+                      pressed && { opacity: 0.8 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Edit ${plant.nickname}`}>
+                    <Pencil size={15} color={palette.primary} />
+                    <Text
+                      style={[
+                        styles.bottomActionText,
+                        { color: palette.primary },
+                      ]}>
+                      Edit Details
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={handleDeleteCurrentPlant}
+                    style={({ pressed }) => [
+                      styles.bottomActionBtn,
+                      {
+                        backgroundColor: palette.criticalBg,
+                        borderColor: palette.criticalBorder,
+                      },
+                      pressed && { opacity: 0.8 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${plant.nickname}`}>
+                    <Trash2 size={15} color={palette.criticalText} />
+                    <Text
+                      style={[
+                        styles.bottomActionText,
+                        { color: palette.criticalText },
+                      ]}>
+                      Delete Plant
+                    </Text>
+                  </Pressable>
+                </View>
+              </AnimatedEntrance>
+            )}
+
+            {activeTab === 'journal' && (
+              <AnimatedEntrance key="tab-journal" style={styles.tabPanel}>
+                <CareLogSection
+                  plant={plant}
+                  plantEntries={plantEntries}
+                  onShowToast={showToast}
+                  onEditEntry={setEditingEntry}
+                  onDeleteEntry={handleDeleteLogEntry}
+                />
+              </AnimatedEntrance>
+            )}
+
+            {activeTab === 'health' && (
+              <AnimatedEntrance key="tab-health" style={styles.tabPanel}>
+                <PlantHealthAssessmentCard
+                  plant={plant}
+                  plantEntries={plantEntries}
+                  plantAssessments={plantAssessments}
+                  onShowToast={showToast}
+                />
+                <PlantAdaptiveCareCard plant={plant} onShowToast={showToast} />
+              </AnimatedEntrance>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -324,15 +430,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
     paddingBottom: Spacing.xxl * 1.5,
+  },
+  contentWrap: {
+    width: '100%',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
     alignItems: 'center',
   },
   maxContainer: {
     width: '100%',
     maxWidth: MaxContentWidth,
-    gap: Spacing.md,
+    gap: Spacing.lg,
   },
   emptyState: {
     flex: 1,
@@ -351,42 +460,50 @@ const styles = StyleSheet.create({
   backBtnText: {
     fontWeight: '700',
   },
-  topNavRow: {
+  segmentedBar: {
+    position: 'relative',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    padding: Spacing.xs,
+    borderRadius: Radius.pill,
+    borderWidth: BorderWidth.hairline,
   },
-  navBackBtn: {
+  activeSegmentPill: {
+    position: 'absolute',
+    left: 0,
+    top: Spacing.xs,
+    bottom: Spacing.xs,
+    borderRadius: Radius.pill - 4,
+  },
+  segmentBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingRight: 10,
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: Radius.pill - 4,
   },
-  navBackText: {
-    fontSize: 15,
+  segmentBtnPressed: {
+    opacity: 0.72,
+  },
+  segmentBtnText: {
+    fontSize: 12,
     fontWeight: '700',
   },
-  scanShortcutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 13,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
+  healthDotIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
-  scanShortcutText: {
-    ...Typography.caption,
-    fontWeight: '700',
+  tabPanel: {
+    gap: Spacing.lg,
   },
   bottomActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginTop: Spacing.xs,
+    paddingTop: Spacing.md,
+    borderTopWidth: BorderWidth.hairline,
   },
   bottomActionBtn: {
     flex: 1,
@@ -395,13 +512,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.sm,
     borderWidth: BorderWidth.hairline,
-    paddingVertical: 13,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: Radius.lg,
-    ...CardShadow,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
   },
   bottomActionText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
 });

@@ -20,6 +20,7 @@ import { AiLimitModal } from '@/components/modals/ai-limit-modal';
 import { HealthDiagnosisFlow } from '@/components/scan/health-diagnosis-flow';
 import { IdentifyPlantFlow } from '@/components/scan/identify-plant-flow';
 import { PhotoCaptureCard } from '@/components/scan/photo-capture-card';
+import { MOTION_SPRINGS } from '@/components/ui/animated-wrappers';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import {
@@ -78,11 +79,7 @@ export default function ScanScreen() {
     if (reducedMotion) {
       indicatorX.value = targetX;
     } else {
-      indicatorX.value = withSpring(targetX, {
-        damping: 22,
-        stiffness: 240,
-        mass: 0.9,
-      });
+      indicatorX.value = withSpring(targetX, MOTION_SPRINGS.pill);
     }
   }, [activeModeIndex, segmentSlotWidth, segmentPad, indicatorX, reducedMotion]);
 

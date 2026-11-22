@@ -25,7 +25,8 @@ interface CareLogSectionProps {
 }
 
 /**
- * Pairs the quick care composer with the specimen's chronological notebook timeline.
+ * Pairs the quick care composer with an unboxed, canvas-mounted chronological
+ * notebook timeline so entries breathe without nested card borders.
  */
 export function CareLogSection({
   plant,
@@ -37,15 +38,10 @@ export function CareLogSection({
   const palette = usePalette();
 
   return (
-    <SurfaceCard>
-      <CareEventComposer plant={plant} onShowToast={onShowToast} />
-
-      <View
-        style={[
-          styles.timelineDivider,
-          { backgroundColor: palette.borderSubtle },
-        ]}
-      />
+    <View style={styles.sectionRoot}>
+      <SurfaceCard variant="nested" style={styles.composerPanel}>
+        <CareEventComposer plant={plant} onShowToast={onShowToast} />
+      </SurfaceCard>
 
       <View style={styles.timelineHeaderRow}>
         <Text
@@ -74,7 +70,7 @@ export function CareLogSection({
           style={[
             styles.emptyTimelineBox,
             {
-              backgroundColor: palette.bgPrimary,
+              backgroundColor: palette.bgSurface,
               borderColor: palette.borderSubtle,
             },
           ]}>
@@ -109,11 +105,17 @@ export function CareLogSection({
           ))}
         </View>
       )}
-    </SurfaceCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  sectionRoot: {
+    gap: Spacing.lg,
+  },
+  composerPanel: {
+    padding: Spacing.md,
+  },
   timelineHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   sectionHeaderTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
   },
   countPill: {
@@ -134,12 +136,8 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     fontWeight: '700',
   },
-  timelineDivider: {
-    height: BorderWidth.hairline,
-    marginVertical: Spacing.xs,
-  },
   timelineList: {
-    marginTop: Spacing.xs,
+    marginTop: -Spacing.xs,
   },
   emptyTimelineBox: {
     marginTop: Spacing.xs,

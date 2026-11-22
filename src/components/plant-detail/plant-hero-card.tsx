@@ -1,51 +1,66 @@
 import { Image } from 'expo-image';
-import { Calendar, Layers, MapPin, Sun } from 'lucide-react-native';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  ArrowLeft,
+  Calendar,
+  Droplets,
+  Layers,
+  MapPin,
+  Stethoscope,
+  Sun,
+} from 'lucide-react-native';
+import React, { useContext } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { PetSafetyBadge } from '@/components/garden/pet-safety-badge';
+import { SpringPressable } from '@/components/ui/animated-wrappers';
 import { WateringProgressPill } from '@/components/ui/hydration-bar';
 import { HealthStatusBadge } from '@/components/ui/status-badges';
-import { SurfaceCard } from '@/components/ui/surface-card';
 import {
   BorderWidth,
   Fonts,
-  getHealthBadgeTheme,
+  MaxContentWidth,
   Radius,
   Spacing,
   Typography,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
 import type { UserPlant } from '@/types/plant';
 
 interface PlantHeroCardProps {
   plant: UserPlant;
   onWaterNow: () => void;
+  onBack: () => void;
+  onHealthScan: () => void;
 }
 
 /**
- * Editorial specimen hero card featuring a status-colored card border,
- * full-bleed photo banner with gradient scrim, overlaid Fraunces typography,
- * combined watering progress bar/button, container specs, baseline care, and pet safety.
+ * Full-bleed edge-to-edge editorial specimen hero with overlaid navigation pills,
+ * gradient scrim, Fraunces title, and canvas-mounted watering progress bar.
  */
-export function PlantHeroCard({ plant, onWaterNow }: PlantHeroCardProps) {
+export function PlantHeroCard({
+  plant,
+  onWaterNow,
+  onBack,
+  onHealthScan,
+}: PlantHeroCardProps) {
   const palette = usePalette();
+  const insets = useContext(SafeAreaInsetsContext);
+  const topInset = insets?.top ?? 0;
   const healthStatus = plant.latestHealthAssessment?.healthStatus ?? 'thriving';
-  const healthTheme = getHealthBadgeTheme(palette)[healthStatus];
-  const showDrainageWarning =
-    !plant.hasDrainageHole && plant.species.plantType === 'succulent';
 
   return (
-    <SurfaceCard
-      style={[
-        styles.heroCard,
-        {
-          borderColor: healthTheme.dot,
-          borderWidth: 1,
-        },
-      ]}>
-      <View style={[styles.bannerWrap, { backgroundColor: palette.bgSubtle }]}>
+    <View style={styles.heroOuter}>
+      <View
+        style={[
+          styles.bannerWrap,
+          {
+            height: 276 + topInset,
+            backgroundColor: palette.bgSubtle,
+          },
+        ]}>
         <Image
           source={{ uri: plant.photoUri }}
           style={styles.bannerPhoto}
@@ -60,145 +75,225 @@ export function PlantHeroCard({ plant, onWaterNow }: PlantHeroCardProps) {
           height="100%">
           <Defs>
             <LinearGradient id="heroScrim" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor="#0E1712" stopOpacity="0.22" />
-              <Stop offset="45%" stopColor="#0E1712" stopOpacity="0.1" />
-              <Stop offset="78%" stopColor="#0E1712" stopOpacity="0.62" />
-              <Stop offset="100%" stopColor="#0E1712" stopOpacity="0.88" />
+              <Stop offset="0%" stopColor="#0E1712" stopOpacity="0.52" />
+              <Stop offset="34%" stopColor="#0E1712" stopOpacity="0.12" />
+              <Stop offset="70%" stopColor="#0E1712" stopOpacity="0.58" />
+              <Stop offset="100%" stopColor="#0E1712" stopOpacity="0.9" />
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#heroScrim)" />
         </Svg>
 
-        <View style={styles.bannerTopBar}>
-          <HealthStatusBadge status={healthStatus} />
-          <View style={styles.familyPillOverlay}>
-            <Text style={styles.familyPillText}>{plant.species.family}</Text>
-          </View>
+        <View
+          style={[
+            styles.bannerTopBar,
+            { paddingTop: topInset + Spacing.sm },
+          ]}>
+          <Pressable
+            onPress={() => {
+              triggerLightHaptic();
+              onBack();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Back to My Garden"
+            style={({ pressed }) => [
+              styles.floatingNavPill,
+              pressed && { opacity: 0.78 },
+            ]}>
+            <ArrowLeft size={16} color="#FFFFFF" />
+            <Text style={styles.floatingNavText}>Garden</Text>
+          </Pressable>
+
+          <SpringPressable
+            onPress={() => {
+              triggerLightHaptic();
+              onHealthScan();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Run Photo Health Scan"
+            style={[
+              styles.floatingScanPill,
+              { backgroundColor: palette.primary },
+            ]}>
+            <Stethoscope size={14} color={palette.textInverse} />
+            <Text
+              style={[
+                styles.floatingScanText,
+                { color: palette.textInverse },
+              ]}>
+              Health Scan
+            </Text>
+          </SpringPressable>
         </View>
 
-        <View style={styles.bannerBottomText}>
-          <Text style={[styles.heroNickname, { fontFamily: Fonts.serif }]}>
-            {plant.nickname}
-          </Text>
-          <Text style={styles.heroSpecies} numberOfLines={1}>
-            {plant.species.commonName} •{' '}
-            <Text style={styles.italicScientific}>
-              {plant.species.scientificName}
-            </Text>
-          </Text>
-
-          <View style={styles.bannerMetaRow}>
-            <View style={styles.metaItem}>
-              <MapPin size={12} color="rgba(255,255,255,0.88)" />
-              <Text style={styles.bannerMetaText}>
-                {plant.location} • {plant.isIndoor ? 'Indoor' : 'Outdoor'}
-              </Text>
+        <View style={styles.bannerBottomWrap}>
+          <View style={styles.bannerBottomInner}>
+            <View style={styles.badgeOverlayRow}>
+              <HealthStatusBadge status={healthStatus} />
+              <View style={styles.familyPillOverlay}>
+                <Text style={styles.familyPillText}>
+                  {plant.species.family}
+                </Text>
+              </View>
             </View>
-            <View style={styles.metaItem}>
-              <Calendar size={11} color="rgba(255,255,255,0.75)" />
-              <Text style={styles.bannerMetaMuted}>
-                {new Date(plant.acquiredAt).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+
+            <Text style={[styles.heroNickname, { fontFamily: Fonts.serif }]}>
+              {plant.nickname}
+            </Text>
+            <Text style={styles.heroSpecies} numberOfLines={1}>
+              {plant.species.commonName} •{' '}
+              <Text style={styles.italicScientific}>
+                {plant.species.scientificName}
               </Text>
+            </Text>
+
+            <View style={styles.bannerMetaRow}>
+              <View style={styles.metaItem}>
+                <MapPin size={12} color="rgba(255,255,255,0.88)" />
+                <Text style={styles.bannerMetaText}>
+                  {plant.location} • {plant.isIndoor ? 'Indoor' : 'Outdoor'}
+                </Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Calendar size={11} color="rgba(255,255,255,0.75)" />
+                <Text style={styles.bannerMetaMuted}>
+                  {new Date(plant.acquiredAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
       </View>
 
-      <View style={styles.bodyContent}>
-        <WateringProgressPill
-          plant={plant}
-          onWaterNow={onWaterNow}
-          showInterval
+      <View style={styles.hydrationStripOuter}>
+        <View style={styles.hydrationStripInner}>
+          <WateringProgressPill
+            plant={plant}
+            onWaterNow={onWaterNow}
+            showInterval
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Editorial, borderless hairline-divided care specifications & pet safety block
+ * for the Overview tab (replaces boxed spec cards).
+ */
+export function PlantOverviewSpecs({ plant }: { plant: UserPlant }) {
+  const palette = usePalette();
+  const showDrainageWarning =
+    !plant.hasDrainageHole && plant.species.plantType === 'succulent';
+
+  const rows = [
+    {
+      icon: (
+        <Droplets
+          size={15}
+          color={showDrainageWarning ? palette.attentionText : palette.primary}
         />
+      ),
+      label: 'Container & Drainage',
+      value: `${plant.potMaterial.replace('_', ' ')} • ${
+        plant.hasDrainageHole ? 'Drainage Hole ✓' : 'No Drainage Hole'
+      }`,
+      warning: showDrainageWarning,
+    },
+    {
+      icon: <MapPin size={15} color={palette.primary} />,
+      label: 'Current Exposure',
+      value: `${plant.lightExposure.replace('_', ' ')} • ${
+        plant.isIndoor ? 'Indoor' : 'Outdoor'
+      }`,
+      warning: false,
+    },
+    {
+      icon: <Sun size={15} color={palette.primary} />,
+      label: 'Ideal Light',
+      value: plant.species.baselineCare.idealLight,
+      warning: false,
+    },
+    {
+      icon: <Layers size={15} color={palette.primary} />,
+      label: 'Recommended Soil',
+      value: plant.species.baselineCare.soilRecommendation,
+      warning: false,
+    },
+  ];
 
-        <View style={styles.specsGrid}>
+  return (
+    <View style={styles.specsSection}>
+      <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+        SPECIMEN CARE PROFILE
+      </Text>
+
+      <View
+        style={[
+          styles.specsList,
+          {
+            borderTopColor: palette.borderSubtle,
+            borderBottomColor: palette.borderSubtle,
+          },
+        ]}>
+        {rows.map((row, idx) => (
           <View
+            key={row.label}
             style={[
-              styles.specBadge,
-              {
-                backgroundColor: showDrainageWarning
-                  ? palette.attentionBg
-                  : palette.bgPrimary,
-                borderColor: showDrainageWarning
-                  ? palette.attentionBorder
-                  : palette.borderSubtle,
+              styles.specRow,
+              idx > 0 && {
+                borderTopWidth: BorderWidth.hairline,
+                borderTopColor: palette.borderSubtle,
+              },
+              row.warning && {
+                backgroundColor: palette.attentionBg,
+                paddingHorizontal: Spacing.sm,
+                marginHorizontal: -Spacing.sm,
+                borderRadius: Radius.sm,
               },
             ]}>
-            <Text style={[styles.specBadgeLabel, { color: palette.textMuted }]}>
-              CONTAINER & DRAINAGE
-            </Text>
-            <Text style={[styles.specBadgeValue, { color: palette.textPrimary }]}>
-              {plant.potMaterial.replace('_', ' ')} •{' '}
-              {plant.hasDrainageHole ? 'Drainage Hole ✓' : 'No Drainage Hole'}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.specBadge,
-              {
-                backgroundColor: palette.bgPrimary,
-                borderColor: palette.borderSubtle,
-              },
-            ]}>
-            <Text style={[styles.specBadgeLabel, { color: palette.textMuted }]}>
-              CURRENT EXPOSURE
-            </Text>
-            <Text style={[styles.specBadgeValue, { color: palette.textPrimary }]}>
-              {plant.lightExposure.replace('_', ' ')} •{' '}
-              {plant.isIndoor ? 'Indoor' : 'Outdoor'}
+            <View style={styles.specRowLeft}>
+              {row.icon}
+              <Text
+                style={[styles.specRowLabel, { color: palette.textSecondary }]}>
+                {row.label}
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.specRowValue,
+                {
+                  color: row.warning
+                    ? palette.attentionText
+                    : palette.textPrimary,
+                },
+              ]}>
+              {row.value}
             </Text>
           </View>
-        </View>
-
-        <View style={styles.baselineStack}>
-          <View
-            style={[
-              styles.baselineStrip,
-              { backgroundColor: palette.primarySoft },
-            ]}>
-            <Sun size={14} color={palette.primary} />
-            <Text style={[styles.baselineStripText, { color: palette.primary }]}>
-              <Text style={styles.boldText}>Ideal Light: </Text>
-              {plant.species.baselineCare.idealLight}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.baselineStrip,
-              { backgroundColor: palette.primarySoft },
-            ]}>
-            <Layers size={14} color={palette.primary} />
-            <Text style={[styles.baselineStripText, { color: palette.primary }]}>
-              <Text style={styles.boldText}>Recommended Soil: </Text>
-              {plant.species.baselineCare.soilRecommendation}
-            </Text>
-          </View>
-        </View>
-
-        {plant.species.petSafety ? (
-          <View style={styles.petSafetyWrap}>
-            <PetSafetyBadge petSafety={plant.species.petSafety} showDetails />
-          </View>
-        ) : null}
+        ))}
       </View>
-    </SurfaceCard>
+
+      {plant.species.petSafety ? (
+        <View style={styles.petSafetyWrap}>
+          <PetSafetyBadge petSafety={plant.species.petSafety} showDetails />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  heroCard: {
-    padding: 0,
-    gap: 0,
-    overflow: 'hidden',
+  heroOuter: {
+    width: '100%',
   },
   bannerWrap: {
     width: '100%',
-    height: 236,
     position: 'relative',
     justifyContent: 'space-between',
   },
@@ -208,12 +303,59 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   bannerTopBar: {
+    width: '100%',
+    maxWidth: MaxContentWidth + Spacing.lg * 2,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
+  },
+  floatingNavPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(18, 28, 22, 0.56)',
+    borderColor: 'rgba(255, 255, 255, 0.24)',
+    borderWidth: BorderWidth.hairline,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+  },
+  floatingNavText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  floatingScanPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderRadius: Radius.full,
+  },
+  floatingScanText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  bannerBottomWrap: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
+  },
+  bannerBottomInner: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    gap: 4,
+  },
+  badgeOverlayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: 4,
   },
   familyPillOverlay: {
     backgroundColor: 'rgba(18, 28, 22, 0.62)',
@@ -229,21 +371,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
-  bannerBottomText: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md + 2,
-    gap: 3,
-  },
   heroNickname: {
-    fontSize: 26,
-    lineHeight: 31,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   heroSpecies: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.92)',
   },
   italicScientific: {
     fontStyle: 'italic',
@@ -270,50 +407,44 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.78)',
   },
-  bodyContent: {
-    padding: Spacing.lg,
-    gap: Spacing.md,
+  hydrationStripOuter: {
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
   },
-  specsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  hydrationStripInner: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+  },
+  specsSection: {
     gap: Spacing.sm,
   },
-  specBadge: {
-    flex: 1,
-    minWidth: 150,
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.md,
-    padding: 10,
-    gap: 3,
+  eyebrow: {
+    ...Typography.eyebrow,
   },
-  specBadgeLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  specsList: {
+    borderTopWidth: BorderWidth.hairline,
+    borderBottomWidth: BorderWidth.hairline,
   },
-  specBadgeValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'capitalize',
+  specRow: {
+    paddingVertical: Spacing.sm + 3,
+    gap: 4,
   },
-  baselineStack: {
+  specRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
-  baselineStrip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
-  },
-  baselineStripText: {
-    flex: 1,
+  specRowLabel: {
     ...Typography.caption,
+    fontWeight: '600',
   },
-  boldText: {
-    fontWeight: '700',
+  specRowValue: {
+    ...Typography.body,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+    paddingLeft: 21,
   },
   petSafetyWrap: {
     marginTop: Spacing.xs,

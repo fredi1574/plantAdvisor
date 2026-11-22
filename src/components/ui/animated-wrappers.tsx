@@ -16,11 +16,30 @@ import Animated, {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const CALM_SPRING = {
-  damping: 20,
-  stiffness: 280,
-  mass: 0.85,
-};
+/**
+ * Centralized Reanimated spring presets for the entire app.
+ * - Increase `damping` for less bounce (higher = calmer, critically damped).
+ * - Increase `stiffness` for faster movement.
+ */
+export const MOTION_SPRINGS = {
+  /** Card & tab panel entrance / layout transitions */
+  entrance: {
+    damping: 28,
+    stiffness: 210,
+  },
+  /** Sliding pill indicators (tab bar, scan switcher, plant detail tabs) */
+  pill: {
+    damping: 28,
+    stiffness: 260,
+    mass: 0.9,
+  },
+  /** Tactile button press scale */
+  press: {
+    damping: 26,
+    stiffness: 300,
+    mass: 0.85,
+  },
+} as const;
 
 interface AnimatedEntranceProps {
   children: ReactNode;
@@ -48,11 +67,17 @@ export function AnimatedEntrance({
       entering={
         reducedMotion
           ? undefined
-          : FadeInDown.duration(320).delay(delay).springify().damping(22).stiffness(190)
+          : FadeInDown.duration(280)
+              .delay(delay)
+              .springify()
+              .damping(MOTION_SPRINGS.entrance.damping)
+              .stiffness(MOTION_SPRINGS.entrance.stiffness)
       }
       layout={
         animateLayout && !reducedMotion
-          ? LinearTransition.springify().damping(22).stiffness(190)
+          ? LinearTransition.springify()
+              .damping(MOTION_SPRINGS.entrance.damping)
+              .stiffness(MOTION_SPRINGS.entrance.stiffness)
           : undefined
       }
       style={style}>
@@ -92,13 +117,13 @@ export function SpringPressable({
       disabled={disabled}
       onPressIn={(e) => {
         if (!disabled && !reducedMotion) {
-          scale.set(withSpring(pressedScale, CALM_SPRING));
+          scale.set(withSpring(pressedScale, MOTION_SPRINGS.press));
         }
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
         if (!reducedMotion) {
-          scale.set(withSpring(1, CALM_SPRING));
+          scale.set(withSpring(1, MOTION_SPRINGS.press));
         }
         onPressOut?.(e);
       }}

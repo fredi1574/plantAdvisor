@@ -18,6 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MOTION_SPRINGS } from '@/components/ui/animated-wrappers';
 import { GlassPill } from '@/components/ui/glass-pill';
 import {
   BorderWidth,
@@ -63,11 +64,7 @@ function FloatingTabBar({
     if (reducedMotion) {
       indicatorX.value = targetX;
     } else {
-      indicatorX.value = withSpring(targetX, {
-        damping: 22,
-        stiffness: 240,
-        mass: 0.9,
-      });
+      indicatorX.value = withSpring(targetX, MOTION_SPRINGS.pill);
     }
   }, [state.index, pillSlotWidth, horizontalPad, indicatorX, reducedMotion]);
 
