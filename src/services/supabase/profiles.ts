@@ -91,3 +91,30 @@ export async function updateUserProfileInSupabase(
 
   return mapRowToProfile(data as DbProfileRow);
 }
+
+/**
+ * Invokes the `delete-account` Supabase Edge Function to permanently delete
+ * the currently authenticated user's account, garden data, and uploaded photos.
+ */
+export async function deleteAccountInSupabase(): Promise<void> {
+  if (!supabase) {
+    throw new Error('Cloud sync is not configured.');
+  }
+
+  const { data, error } = await supabase.functions.invoke<{
+    deleted?: boolean;
+    error?: string;
+  }>('delete-account', {
+    body: { confirm: 'DELETE' },
+  });
+
+  if (error) {
+    throw new Error(
+      error.message || 'Could not delete your account. Please try again.'
+    );
+  }
+
+  if (data && data.error) {
+    throw new Error(data.error);
+  }
+}

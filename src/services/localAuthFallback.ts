@@ -91,6 +91,18 @@ export async function clearLocalAuthSession(): Promise<void> {
   await AsyncStorage.removeItem(LOCAL_SESSION_STORAGE_KEY);
 }
 
+export async function deleteLocalAccount(email?: string): Promise<void> {
+  if (email) {
+    const accounts = await readLocalAccounts();
+    const key = email.trim().toLowerCase();
+    if (accounts[key]) {
+      delete accounts[key];
+      await writeLocalAccounts(accounts);
+    }
+  }
+  await clearLocalAuthSession();
+}
+
 export async function signInLocally(
   normalizedEmail: string,
   password: string

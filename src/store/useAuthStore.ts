@@ -9,12 +9,14 @@ import { create } from 'zustand';
 
 import {
   clearLocalAuthSession,
+  deleteLocalAccount,
   readLocalAuthSession,
   signInLocally,
   signUpLocally,
   updateLocalProfile,
 } from '@/services/localAuthFallback';
 import {
+  deleteAccountInSupabase,
   fetchOrCreateUserProfile,
   supabase,
   updateUserProfileInSupabase,
@@ -49,6 +51,7 @@ interface AuthStoreState {
     displayName?: string;
     avatarUrl?: string;
   }) => Promise<{ ok: boolean; error?: string }>;
+  deleteAccount: () => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   clearError: () => void;
 }
@@ -306,6 +309,45 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : 'Could not update profile.';
+      set({ isLoading: false, authError: msg });
+      return { ok: false, error: msg };
+    }
+  },
+
+  deleteAccount: async () => {
+    const currentUser = get().user;
+    if (!currentUser) {
+      return {
+        ok: false,
+        error: 'You must be signed in to delete your account.',
+      };
+    }
+
+    set({ isLoading: true, authError: null });
+
+    try {
+      if (supabase) {
+        await deleteAccountInSupabase();
+        await supabase.auth.signOut({ scope: 'local' });
+        await clearLocalAuthSession();
+      } else {
+        await deleteLocalAccount(currentUser.email);
+      }
+
+      await usePlantStore.getState().clearUserGarden();
+      set({
+        session: null,
+        user: null,
+        profile: null,
+        isLoading: false,
+        authError: null,
+      });
+      return { ok: true };
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Unable to delete your account right now.';
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }

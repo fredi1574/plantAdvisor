@@ -29,6 +29,7 @@ export {
   type DbUserPlantRow,
 } from '@/services/supabase/mappers';
 export {
+  deleteAccountInSupabase,
   fetchOrCreateUserProfile,
   updateUserProfileInSupabase,
 } from '@/services/supabase/profiles';

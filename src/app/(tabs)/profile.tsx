@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
-import { LogOut, RotateCcw, Sprout } from 'lucide-react-native';
-import React from 'react';
+import { LogOut, RotateCcw, Sprout, Trash2 } from 'lucide-react-native';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DeleteAccountModal } from '@/components/modals/delete-account-modal';
 import { AppearanceCard } from '@/components/profile/appearance-card';
 import { GuestCloudCard } from '@/components/profile/guest-cloud-card';
 import { NotificationsCard } from '@/components/profile/notifications-card';
@@ -32,11 +33,13 @@ export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
   const signOut = useAuthStore((s) => s.signOut);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
 
   const plantCount = usePlantStore((s) => s.plants.length);
   const entryCount = usePlantStore((s) => s.entries.length);
   const resetToSeedData = usePlantStore((s) => s.resetToSeedData);
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { message: toast, showToast } = useToast(3200);
 
   const handleSignOut = () => {
@@ -73,6 +76,8 @@ export default function ProfileScreen() {
       edges={['top']}>
       <BotanicalBackground variant="account" />
 
+      <FeedbackBanner floating message={toast} />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -83,8 +88,6 @@ export default function ProfileScreen() {
             title="Profile & Sync"
             icon={<Sprout size={16} color={palette.primary} />}
           />
-
-          <FeedbackBanner message={toast} />
 
           {!user ? (
             <GuestCloudCard plantCount={plantCount} entryCount={entryCount} />
@@ -140,25 +143,60 @@ export default function ProfileScreen() {
           </SurfaceCard>
 
           {user && (
-            <Pressable
-              onPress={handleSignOut}
-              style={({ pressed }) => [
-                styles.signOutBtn,
-                {
-                  backgroundColor: palette.criticalBg,
-                  borderColor: palette.criticalBorder,
-                },
-                pressed && { opacity: 0.8 },
-              ]}>
-              <LogOut size={16} color={palette.criticalText} />
-              <Text
-                style={[styles.signOutText, { color: palette.criticalText }]}>
-                Sign Out
-              </Text>
-            </Pressable>
+            <View style={styles.accountActionsStack}>
+              <Pressable
+                onPress={handleSignOut}
+                style={({ pressed }) => [
+                  styles.signOutBtn,
+                  {
+                    backgroundColor: palette.bgSurface,
+                    borderColor: palette.borderSubtle,
+                  },
+                  pressed && { opacity: 0.8 },
+                ]}>
+                <LogOut size={16} color={palette.textPrimary} />
+                <Text
+                  style={[styles.signOutText, { color: palette.textPrimary }]}>
+                  Sign Out
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setIsDeleteModalOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Delete Account"
+                style={({ pressed }) => [
+                  styles.signOutBtn,
+                  {
+                    backgroundColor: palette.criticalBg,
+                    borderColor: palette.criticalBorder,
+                  },
+                  pressed && { opacity: 0.8 },
+                ]}>
+                <Trash2 size={16} color={palette.criticalText} />
+                <Text
+                  style={[styles.signOutText, { color: palette.criticalText }]}>
+                  Delete Account
+                </Text>
+              </Pressable>
+            </View>
           )}
         </View>
       </ScrollView>
+
+      <DeleteAccountModal
+        visible={isDeleteModalOpen}
+        email={user?.email}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirmDelete={async () => {
+          const res = await deleteAccount();
+          if (res.ok) {
+            triggerSuccessHaptic();
+            router.replace('/auth');
+          }
+          return res;
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -209,6 +247,9 @@ const styles = StyleSheet.create({
   dangerOutlineBtnText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  accountActionsStack: {
+    gap: Spacing.sm,
   },
   signOutBtn: {
     flexDirection: 'row',
