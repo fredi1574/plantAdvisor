@@ -8,7 +8,6 @@ import {
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AdherenceRing } from '@/components/ui/adherence-ring';
 import { SpringPressable } from '@/components/ui/animated-wrappers';
 import { GlassCard } from '@/components/ui/glass-card';
 import {
@@ -22,13 +21,11 @@ import { usePalette } from '@/hooks/use-theme';
 import {
   WEEKDAY_LABELS,
   type CalendarMonthGrid,
-  type MonthlyCareSummary,
 } from '@/services/calendarUtils';
 import { triggerLightHaptic } from '@/services/haptics';
 
 interface CareMonthCalendarProps {
   calendarMonth: CalendarMonthGrid;
-  monthlySummary: MonthlyCareSummary;
   selectedDateKey?: string;
   onPrevMonth: () => void;
   onNextMonth: () => void;
@@ -36,11 +33,10 @@ interface CareMonthCalendarProps {
 }
 
 /**
- * Interactive 7-column botanical care heatmap calendar with monthly adherence strip and legend.
+ * Interactive 7-column botanical care heatmap calendar with legend.
  */
 export function CareMonthCalendar({
   calendarMonth,
-  monthlySummary,
   selectedDateKey,
   onPrevMonth,
   onNextMonth,
@@ -97,32 +93,6 @@ export function CareMonthCalendar({
           accessibilityLabel="Next month">
           <ChevronRight size={18} color={palette.textPrimary} />
         </SpringPressable>
-      </View>
-
-      <View
-        style={[
-          styles.summaryBanner,
-          {
-            backgroundColor: palette.primarySoft,
-            borderColor: palette.primaryBorder,
-          },
-        ]}>
-        <AdherenceRing percent={monthlySummary.consistencyPercent} />
-        <View style={styles.summaryTextCol}>
-          <Text
-            style={[
-              styles.summaryTitle,
-              { color: palette.primary, fontFamily: Fonts?.serif },
-            ]}>
-            Monthly Care Adherence
-          </Text>
-          <Text style={[styles.summaryText, { color: palette.textSecondary }]}>
-            {monthlySummary.totalCompleted} care{' '}
-            {monthlySummary.totalCompleted === 1 ? 'log' : 'logs'} across{' '}
-            {monthlySummary.activeDays}{' '}
-            {monthlySummary.activeDays === 1 ? 'active day' : 'active days'}
-          </Text>
-        </View>
       </View>
 
       <View style={styles.weekdayRow}>
@@ -333,27 +303,6 @@ const styles = StyleSheet.create({
   monthYear: {
     ...Typography.caption,
     fontSize: 11,
-    fontWeight: '600',
-  },
-  summaryBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
-  },
-  summaryTextCol: {
-    flex: 1,
-    gap: 2,
-  },
-  summaryTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  summaryText: {
-    fontSize: 12,
     fontWeight: '600',
   },
   weekdayRow: {

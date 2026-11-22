@@ -6,7 +6,6 @@ import { DayAgendaCard } from '@/components/calendar/day-agenda-card';
 import type {
   CalendarMonthGrid,
   DayCareSchedule,
-  MonthlyCareSummary,
 } from '@/services/calendarUtils';
 import type { UserPlant } from '@/types/plant';
 
@@ -64,14 +63,7 @@ describe('CareMonthCalendar', () => {
     ],
   };
 
-  const summary: MonthlyCareSummary = {
-    totalCompleted: 4,
-    wateringCount: 3,
-    activeDays: 3,
-    consistencyPercent: 75,
-  };
-
-  it('renders monthly adherence ring and handles navigation and date selection', async () => {
+  it('renders month header and handles navigation and date selection', async () => {
     const onPrevMonth = jest.fn();
     const onNextMonth = jest.fn();
     const onSelectDate = jest.fn();
@@ -79,7 +71,6 @@ describe('CareMonthCalendar', () => {
     await render(
       <CareMonthCalendar
         calendarMonth={calendarMonth}
-        monthlySummary={summary}
         selectedDateKey="2026-11-20"
         onPrevMonth={onPrevMonth}
         onNextMonth={onNextMonth}
@@ -87,9 +78,8 @@ describe('CareMonthCalendar', () => {
       />
     );
 
-    expect(screen.getByText('Monthly Care Adherence')).toBeTruthy();
-    expect(screen.getByText('4 care logs across 3 active days')).toBeTruthy();
-    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(screen.getByText('November')).toBeTruthy();
+    expect(screen.getByText('2026')).toBeTruthy();
 
     await fireEvent.press(screen.getByLabelText('Previous month'));
     expect(onPrevMonth).toHaveBeenCalledTimes(1);

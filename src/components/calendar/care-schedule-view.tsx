@@ -10,7 +10,6 @@ import {
   buildCalendarMonthGrid,
   buildFallbackDaySchedule,
   getHistoricalCareEvents,
-  getMonthlyCareSummary,
   getProjectedCareEvents,
   type DayCareSchedule,
   type ProjectedPlantCareTask,
@@ -65,16 +64,6 @@ export function CareScheduleView({
   const calendarMonth = useMemo(
     () => buildCalendarMonthGrid(monthOffset, timelineByDate, historicalMap),
     [monthOffset, timelineByDate, historicalMap]
-  );
-
-  const monthlySummary = useMemo(
-    () =>
-      getMonthlyCareSummary(
-        entries,
-        calendarMonth.yearNum,
-        calendarMonth.monthNum
-      ),
-    [entries, calendarMonth.yearNum, calendarMonth.monthNum]
   );
 
   const selectedDaySchedule = useMemo<DayCareSchedule | undefined>(() => {
@@ -144,7 +133,6 @@ export function CareScheduleView({
       <AnimatedEntrance index={2}>
         <CareMonthCalendar
           calendarMonth={calendarMonth}
-          monthlySummary={monthlySummary}
           selectedDateKey={selectedDaySchedule?.dateKey}
           onPrevMonth={() => setMonthOffset((m) => m - 1)}
           onNextMonth={() => setMonthOffset((m) => m + 1)}
