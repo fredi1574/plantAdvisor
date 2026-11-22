@@ -1,18 +1,13 @@
 import type { User } from '@supabase/supabase-js';
-import { Save, User as UserIcon } from 'lucide-react-native';
+import { Save } from 'lucide-react-native';
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { SpringPressable } from '@/components/ui/animated-wrappers';
 import { BotanicalInput } from '@/components/ui/botanical-input';
-import { SurfaceCard } from '@/components/ui/surface-card';
-import { Radius, Spacing } from '@/constants/theme';
+import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { UserProfile } from '@/types/plant';
 
@@ -23,7 +18,7 @@ interface ProfileEditorCardProps {
 }
 
 /**
- * Editable gardener profile card for updating display name.
+ * Inset grouped gardener profile editor for updating display name.
  */
 export function ProfileEditorCard({
   user,
@@ -43,6 +38,7 @@ export function ProfileEditorCard({
     'Gardener';
 
   const handleSaveProfile = async () => {
+    triggerLightHaptic();
     const res = await updateProfile({ displayName });
     if (res.ok) {
       setDraftName(null);
@@ -53,88 +49,97 @@ export function ProfileEditorCard({
   };
 
   return (
-    <SurfaceCard style={styles.card}>
-      <View style={styles.sectionTitleRow}>
-        <UserIcon size={17} color={palette.primary} />
-        <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
-          Gardener Profile
-        </Text>
-      </View>
+    <View style={styles.section}>
+      <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+        GARDENER PROFILE
+      </Text>
 
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: palette.textPrimary }]}>
+      <View
+        style={[
+          styles.groupedBox,
+          {
+            backgroundColor: palette.bgSurface,
+            borderColor: palette.borderSubtle,
+          },
+        ]}>
+        <Text style={[styles.label, { color: palette.textSecondary }]}>
           Display Name
         </Text>
-        <BotanicalInput
-          surface="primary"
-          compact={false}
-          value={displayName}
-          onChangeText={setDraftName}
-          placeholder="Your name or handle"
-          style={styles.input}
-        />
+        <View style={styles.inputRow}>
+          <BotanicalInput
+            surface="primary"
+            compact={false}
+            value={displayName}
+            onChangeText={setDraftName}
+            placeholder="Your name or handle"
+            style={styles.input}
+          />
+          <SpringPressable
+            onPress={() => void handleSaveProfile()}
+            disabled={isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Save profile"
+            style={[
+              styles.saveBtn,
+              { backgroundColor: palette.primary },
+              isLoading && { opacity: 0.65 },
+            ]}>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={palette.textInverse} />
+            ) : (
+              <>
+                <Save size={14} color={palette.textInverse} />
+                <Text
+                  style={[styles.saveBtnText, { color: palette.textInverse }]}>
+                  Save
+                </Text>
+              </>
+            )}
+          </SpringPressable>
+        </View>
       </View>
-
-      <Pressable
-        onPress={() => void handleSaveProfile()}
-        disabled={isLoading}
-        accessibilityRole="button"
-        accessibilityLabel="Save profile"
-        style={({ pressed }) => [
-          styles.primaryBtn,
-          { backgroundColor: palette.primary },
-          pressed && { opacity: 0.9 },
-          isLoading && { opacity: 0.65 },
-        ]}>
-        {isLoading ? (
-          <ActivityIndicator size="small" color={palette.textInverse} />
-        ) : (
-          <>
-            <Save size={16} color={palette.textInverse} />
-            <Text style={[styles.primaryBtnText, { color: palette.textInverse }]}>
-              Save Profile
-            </Text>
-          </>
-        )}
-      </Pressable>
-    </SurfaceCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.xl,
+  section: {
+    gap: Spacing.sm,
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  eyebrow: {
+    ...Typography.eyebrow,
+    paddingHorizontal: Spacing.xs,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  fieldGroup: {
-    gap: 6,
+  groupedBox: {
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    gap: Spacing.xs + 2,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...Typography.caption,
+    fontWeight: '600',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   input: {
+    flex: 1,
     fontSize: 15,
   },
-  primaryBtn: {
+  saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     borderRadius: Radius.md,
-    paddingVertical: 13,
-    marginTop: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
   },
-  primaryBtnText: {
-    fontSize: 15,
+  saveBtnText: {
+    fontSize: 13,
     fontWeight: '700',
   },
 });

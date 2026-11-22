@@ -1,14 +1,13 @@
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import { Bell, BellOff, Clock, Send } from 'lucide-react-native';
+import { ChevronRight, Clock, Send } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Chip } from '@/components/ui/chip';
-import { SurfaceCard } from '@/components/ui/surface-card';
 import { SwitchRow } from '@/components/ui/switch-row';
-import { BorderWidth, Radius, Spacing } from '@/constants/theme';
+import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import {
   getNotificationPermissionStatus,
@@ -151,18 +150,11 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
   );
 
   return (
-    <SurfaceCard style={styles.card}>
-      <View style={styles.headerRow}>
-        <View style={styles.sectionTitleRow}>
-          {notificationPrefs.enabled ? (
-            <Bell size={17} color={palette.primary} />
-          ) : (
-            <BellOff size={17} color={palette.textMuted} />
-          )}
-          <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
-            Local Care Notifications
-          </Text>
-        </View>
+    <View style={styles.section}>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+          NOTIFICATIONS
+        </Text>
         <View
           style={[
             styles.statusPill,
@@ -195,113 +187,106 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
         </View>
       </View>
 
-      <Text style={[styles.description, { color: palette.textSecondary }]}>
-        100% on-device watering alarms. Whenever you water a plant or update its
-        interval, FloraLog automatically reschedules its next due-date reminder.
-      </Text>
-
-      <SwitchRow
-        label="Watering Reminders"
-        description="Notify me on the day each plant is due for water"
-        value={notificationPrefs.enabled}
-        onValueChange={(val) => void handleToggleNotifications(val)}
-      />
-
-      {notificationPrefs.enabled && (
-        <>
+      <View
+        style={[
+          styles.groupedBox,
+          {
+            backgroundColor: palette.bgSurface,
+            borderColor: palette.borderSubtle,
+          },
+        ]}>
+        <View style={styles.rowPad}>
           <SwitchRow
-            label="Daily Garden Morning Digest"
-            description="Summary of plants needing attention today"
-            value={notificationPrefs.dailyDigestEnabled}
-            onValueChange={(val) => void handleToggleDailyDigest(val)}
+            label="Watering Reminders"
+            description="Notify on the day each plant is due for water"
+            value={notificationPrefs.enabled}
+            onValueChange={(val) => void handleToggleNotifications(val)}
+            contained={false}
           />
+        </View>
 
-          <View style={styles.fieldGroup}>
-            <View style={styles.timeLabelRow}>
-              <Clock size={14} color={palette.textSecondary} />
-              <Text style={[styles.label, { color: palette.textPrimary }]}>
-                Preferred Reminder Time
-              </Text>
+        {notificationPrefs.enabled && (
+          <>
+            <View
+              style={[
+                styles.divider,
+                { backgroundColor: palette.borderSubtle },
+              ]}
+            />
+            <View style={styles.rowPad}>
+              <SwitchRow
+                label="Daily Morning Digest"
+                description="Summary of plants needing attention today"
+                value={notificationPrefs.dailyDigestEnabled}
+                onValueChange={(val) => void handleToggleDailyDigest(val)}
+                contained={false}
+              />
             </View>
 
+            <View
+              style={[
+                styles.divider,
+                { backgroundColor: palette.borderSubtle },
+              ]}
+            />
+
             {Platform.OS === 'web' ? (
-              <View style={styles.webPresetsRow}>
-                {WEB_TIME_PRESETS.map((preset) => {
-                  const selected =
-                    notificationPrefs.reminderHour === preset.hour &&
-                    notificationPrefs.reminderMinute === preset.minute;
-                  return (
-                    <Chip
-                      key={preset.label}
-                      label={preset.label}
-                      size="md"
-                      selected={selected}
-                      onPress={() =>
-                        void handleSelectReminderTime(
-                          preset.hour,
-                          preset.minute,
-                          preset.label
-                        )
-                      }
-                    />
-                  );
-                })}
+              <View style={styles.webTimeBlock}>
+                <View style={styles.timeLabelRow}>
+                  <Clock size={14} color={palette.textSecondary} />
+                  <Text style={[styles.rowTitle, { color: palette.textPrimary }]}>
+                    Preferred Reminder Time
+                  </Text>
+                </View>
+                <View style={styles.webPresetsRow}>
+                  {WEB_TIME_PRESETS.map((preset) => {
+                    const selected =
+                      notificationPrefs.reminderHour === preset.hour &&
+                      notificationPrefs.reminderMinute === preset.minute;
+                    return (
+                      <Chip
+                        key={preset.label}
+                        label={preset.label}
+                        size="md"
+                        selected={selected}
+                        onPress={() =>
+                          void handleSelectReminderTime(
+                            preset.hour,
+                            preset.minute,
+                            preset.label
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </View>
               </View>
             ) : (
               <>
                 <Pressable
                   onPress={() => setShowNativePicker(true)}
                   style={({ pressed }) => [
-                    styles.timePickerTrigger,
-                    {
-                      backgroundColor: palette.bgPrimary,
-                      borderColor: palette.borderSubtle,
-                    },
-                    pressed && { opacity: 0.85 },
+                    styles.actionRow,
+                    pressed && { backgroundColor: palette.bgSubtle },
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={`Preferred reminder time ${formattedTime}. Tap to change.`}>
-                  <View style={styles.timeDisplayRow}>
-                    <View
-                      style={[
-                        styles.timeIconBadge,
-                        { backgroundColor: palette.primarySoft },
-                      ]}>
-                      <Clock size={16} color={palette.primary} />
-                    </View>
-                    <View>
-                      <Text
-                        style={[
-                          styles.timeValueText,
-                          { color: palette.textPrimary },
-                        ]}>
-                        {formattedTime}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.timeSubText,
-                          { color: palette.textSecondary },
-                        ]}>
-                        Opens system clock & time picker
-                      </Text>
-                    </View>
+                  <View style={styles.actionRowLeft}>
+                    <Clock size={16} color={palette.primary} />
+                    <Text
+                      style={[styles.rowTitle, { color: palette.textPrimary }]}>
+                      Reminder Time
+                    </Text>
                   </View>
-
-                  <View
-                    style={[
-                      styles.changePill,
-                      {
-                        backgroundColor: palette.primarySoft,
-                        borderColor: palette.primary,
-                      },
-                    ]}>
+                  <View style={styles.actionRowRight}>
                     <Text
                       style={[
-                        styles.changePillText,
+                        styles.rowValueText,
                         { color: palette.primary },
                       ]}>
-                      Change
+                      {formattedTime}
                     </Text>
+                    <ChevronRight size={15} color={palette.textMuted} />
                   </View>
                 </Pressable>
 
@@ -327,54 +312,55 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
                 )}
               </>
             )}
-          </View>
-        </>
-      )}
+          </>
+        )}
 
-      <Pressable
-        onPress={() => void handleSendTestReminder()}
-        style={({ pressed }) => [
-          styles.secondaryBtn,
-          {
-            backgroundColor: palette.primarySoft,
-            borderColor: palette.primary,
-          },
-          pressed && { opacity: 0.85 },
-        ]}>
-        <Send size={15} color={palette.primary} />
-        <Text style={[styles.secondaryBtnText, { color: palette.primary }]}>
-          Send Test Care Notification
-        </Text>
-      </Pressable>
-    </SurfaceCard>
+        <View
+          style={[styles.divider, { backgroundColor: palette.borderSubtle }]}
+        />
+        <Pressable
+          onPress={() => void handleSendTestReminder()}
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.actionRow,
+            pressed && { backgroundColor: palette.bgSubtle },
+          ]}>
+          <View style={styles.actionRowLeft}>
+            <Send size={15} color={palette.primary} />
+            <Text style={[styles.rowTitle, { color: palette.primary }]}>
+              Send Test Care Notification
+            </Text>
+          </View>
+          <ChevronRight size={15} color={palette.textMuted} />
+        </Pressable>
+      </View>
+
+      <Text style={[styles.footnote, { color: palette.textMuted }]}>
+        100% on-device alarms. Reminders reschedule automatically whenever you
+        water a plant or change its interval.
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.xl,
+  section: {
+    gap: Spacing.sm,
   },
-  headerRow: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    paddingHorizontal: Spacing.xs,
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+  eyebrow: {
+    ...Typography.eyebrow,
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
     paddingHorizontal: 9,
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderRadius: Radius.full,
     borderWidth: BorderWidth.hairline,
   },
@@ -382,79 +368,64 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
+  groupedBox: {
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
   },
-  fieldGroup: {
-    gap: 6,
+  rowPad: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+  },
+  divider: {
+    height: BorderWidth.hairline,
+    marginLeft: Spacing.md,
+  },
+  webTimeBlock: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 4,
+    gap: Spacing.sm,
   },
   timeLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
   webPresetsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
   },
-  timePickerTrigger: {
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    paddingVertical: 12,
-    borderRadius: Radius.md,
-    borderWidth: BorderWidth.medium,
+    paddingVertical: 13,
+    gap: Spacing.sm,
   },
-  timeDisplayRow: {
+  actionRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
-  timeIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timeValueText: {
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-  timeSubText: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-  changePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    borderWidth: BorderWidth.hairline,
-  },
-  changePillText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  secondaryBtn: {
+  actionRowRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.md,
-    paddingVertical: 11,
-    marginTop: 2,
+    gap: 4,
   },
-  secondaryBtnText: {
+  rowTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rowValueText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  footnote: {
+    ...Typography.caption,
+    paddingHorizontal: Spacing.xs,
+    lineHeight: 17,
   },
 });

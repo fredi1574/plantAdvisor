@@ -1,5 +1,11 @@
 import { router } from 'expo-router';
-import { LogOut, RotateCcw, Sprout, Trash2 } from 'lucide-react-native';
+import {
+  ChevronRight,
+  LogOut,
+  RotateCcw,
+  Sprout,
+  Trash2,
+} from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,13 +19,13 @@ import { ProfileOverviewCard } from '@/components/profile/profile-overview-card'
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { SurfaceCard } from '@/components/ui/surface-card';
 import {
   BorderWidth,
   BottomTabInset,
   MaxContentWidth,
   Radius,
   Spacing,
+  Typography,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
@@ -109,78 +115,108 @@ export default function ProfileScreen() {
           <AppearanceCard onShowToast={showToast} />
           <NotificationsCard onShowToast={showToast} />
 
-          <SurfaceCard style={styles.card}>
-            <View style={styles.sectionTitleRow}>
-              <RotateCcw size={18} color={palette.primary} />
-              <Text style={[styles.cardTitle, { color: palette.textPrimary }]}>
-                Sample Conservatory
-              </Text>
-            </View>
-            <Text style={[styles.description, { color: palette.textSecondary }]}>
-              Restore the default sample conservatory plants and care logs on
-              this device.
+          <View style={styles.section}>
+            <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+              DATA &amp; ACCOUNT
             </Text>
 
-            <Pressable
-              onPress={handleResetToSampleGarden}
-              style={({ pressed }) => [
-                styles.dangerOutlineBtn,
+            <View
+              style={[
+                styles.groupedBox,
                 {
-                  borderColor: palette.criticalBorder,
-                  backgroundColor: palette.criticalBg,
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
                 },
-                pressed && { opacity: 0.85 },
               ]}>
-              <RotateCcw size={14} color={palette.criticalText} />
-              <Text
-                style={[
-                  styles.dangerOutlineBtnText,
-                  { color: palette.criticalText },
-                ]}>
-                Reset to Sample Garden
-              </Text>
-            </Pressable>
-          </SurfaceCard>
-
-          {user && (
-            <View style={styles.accountActionsStack}>
               <Pressable
-                onPress={handleSignOut}
-                style={({ pressed }) => [
-                  styles.signOutBtn,
-                  {
-                    backgroundColor: palette.bgSurface,
-                    borderColor: palette.borderSubtle,
-                  },
-                  pressed && { opacity: 0.8 },
-                ]}>
-                <LogOut size={16} color={palette.textPrimary} />
-                <Text
-                  style={[styles.signOutText, { color: palette.textPrimary }]}>
-                  Sign Out
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => setIsDeleteModalOpen(true)}
+                onPress={handleResetToSampleGarden}
                 accessibilityRole="button"
-                accessibilityLabel="Delete Account"
+                accessibilityLabel="Reset to Sample Garden"
                 style={({ pressed }) => [
-                  styles.signOutBtn,
-                  {
-                    backgroundColor: palette.criticalBg,
-                    borderColor: palette.criticalBorder,
-                  },
-                  pressed && { opacity: 0.8 },
+                  styles.settingsRow,
+                  pressed && { backgroundColor: palette.bgSubtle },
                 ]}>
-                <Trash2 size={16} color={palette.criticalText} />
-                <Text
-                  style={[styles.signOutText, { color: palette.criticalText }]}>
-                  Delete Account
-                </Text>
+                <View style={styles.settingsRowLeft}>
+                  <RotateCcw size={16} color={palette.primary} />
+                  <View style={styles.settingsRowTextCol}>
+                    <Text
+                      style={[
+                        styles.settingsRowTitle,
+                        { color: palette.textPrimary },
+                      ]}>
+                      Reset to Sample Garden
+                    </Text>
+                    <Text
+                      style={[
+                        styles.settingsRowSub,
+                        { color: palette.textSecondary },
+                      ]}>
+                      Restore the default sample conservatory on this device
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={15} color={palette.textMuted} />
               </Pressable>
+
+              {user && (
+                <>
+                  <View
+                    style={[
+                      styles.divider,
+                      { backgroundColor: palette.borderSubtle },
+                    ]}
+                  />
+                  <Pressable
+                    onPress={handleSignOut}
+                    accessibilityRole="button"
+                    accessibilityLabel="Sign Out"
+                    style={({ pressed }) => [
+                      styles.settingsRow,
+                      pressed && { backgroundColor: palette.bgSubtle },
+                    ]}>
+                    <View style={styles.settingsRowLeft}>
+                      <LogOut size={16} color={palette.textPrimary} />
+                      <Text
+                        style={[
+                          styles.settingsRowTitle,
+                          { color: palette.textPrimary },
+                        ]}>
+                        Sign Out
+                      </Text>
+                    </View>
+                    <ChevronRight size={15} color={palette.textMuted} />
+                  </Pressable>
+
+                  <View
+                    style={[
+                      styles.divider,
+                      { backgroundColor: palette.borderSubtle },
+                    ]}
+                  />
+                  <Pressable
+                    onPress={() => setIsDeleteModalOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete Account"
+                    style={({ pressed }) => [
+                      styles.settingsRow,
+                      pressed && { backgroundColor: palette.criticalBg },
+                    ]}>
+                    <View style={styles.settingsRowLeft}>
+                      <Trash2 size={16} color={palette.criticalText} />
+                      <Text
+                        style={[
+                          styles.settingsRowTitle,
+                          { color: palette.criticalText },
+                        ]}>
+                        Delete Account
+                      </Text>
+                    </View>
+                    <ChevronRight size={15} color={palette.criticalText} />
+                  </Pressable>
+                </>
+              )}
             </View>
-          )}
+          </View>
         </View>
       </ScrollView>
 
@@ -217,51 +253,48 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
-    gap: Spacing.lg,
+    gap: Spacing.lg + 2,
   },
-  card: {
-    borderRadius: Radius.xl,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  dangerOutlineBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 11,
-    borderRadius: Radius.md,
-    borderWidth: BorderWidth.hairline,
-  },
-  dangerOutlineBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  accountActionsStack: {
+  section: {
     gap: Spacing.sm,
   },
-  signOutBtn: {
+  eyebrow: {
+    ...Typography.eyebrow,
+    paddingHorizontal: Spacing.xs,
+  },
+  groupedBox: {
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+  },
+  settingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
     paddingVertical: 13,
-    borderRadius: Radius.md,
-    borderWidth: BorderWidth.hairline,
+    gap: Spacing.sm,
   },
-  signOutText: {
+  settingsRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  settingsRowTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  settingsRowTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  settingsRowSub: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  divider: {
+    height: BorderWidth.hairline,
+    marginLeft: Spacing.md,
   },
 });

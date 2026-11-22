@@ -2,9 +2,9 @@ import { Monitor, Moon, Sun } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { SurfaceCard } from '@/components/ui/surface-card';
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
 import { useThemeStore, type ThemePreference } from '@/store/useThemeStore';
 
 const THEME_OPTIONS = [
@@ -22,7 +22,7 @@ interface AppearanceCardProps {
 }
 
 /**
- * Light / Dark / System theme switcher card.
+ * Inset grouped Light / Dark / System theme switcher.
  */
 export function AppearanceCard({ onShowToast }: AppearanceCardProps) {
   const palette = usePalette();
@@ -30,83 +30,87 @@ export function AppearanceCard({ onShowToast }: AppearanceCardProps) {
   const setThemePreference = useThemeStore((s) => s.setPreference);
 
   return (
-    <SurfaceCard style={styles.card}>
-      <View style={styles.sectionTitleRow}>
-        <Sun size={17} color={palette.primary} />
-        <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
-          Appearance
-        </Text>
-      </View>
-      <Text style={[styles.description, { color: palette.textSecondary }]}>
-        Choose Light, Dark (Night Conservatory), or follow your device system
-        setting.
+    <View style={styles.section}>
+      <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+        APPEARANCE
       </Text>
 
-      <View style={styles.row}>
-        {THEME_OPTIONS.map(({ key, label, Icon }) => {
-          const isSelected = themePreference === key;
-          return (
-            <Pressable
-              key={key}
-              onPress={() => {
-                setThemePreference(key);
-                onShowToast(`Theme set to ${label}.`);
-              }}
-              style={({ pressed }) => [
-                styles.pill,
-                {
-                  backgroundColor: isSelected
-                    ? palette.primary
-                    : palette.bgSubtle,
-                  borderColor: isSelected
-                    ? palette.primary
-                    : palette.borderSubtle,
-                },
-                pressed && { opacity: 0.85 },
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSelected }}>
-              <Icon
-                size={14}
-                color={
-                  isSelected ? palette.textInverse : palette.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.pillText,
+      <View
+        style={[
+          styles.groupedBox,
+          {
+            backgroundColor: palette.bgSurface,
+            borderColor: palette.borderSubtle,
+          },
+        ]}>
+        <View style={styles.row}>
+          {THEME_OPTIONS.map(({ key, label, Icon }) => {
+            const isSelected = themePreference === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => {
+                  triggerLightHaptic();
+                  setThemePreference(key);
+                  onShowToast(`Theme set to ${label}.`);
+                }}
+                style={({ pressed }) => [
+                  styles.pill,
                   {
-                    color: isSelected
-                      ? palette.textInverse
-                      : palette.textPrimary,
+                    backgroundColor: isSelected
+                      ? palette.primary
+                      : palette.bgPrimary,
+                    borderColor: isSelected
+                      ? palette.primary
+                      : palette.borderSubtle,
                   },
-                ]}>
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
+                  pressed && { opacity: 0.85 },
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}>
+                <Icon
+                  size={14}
+                  color={
+                    isSelected ? palette.textInverse : palette.textSecondary
+                  }
+                />
+                <Text
+                  style={[
+                    styles.pillText,
+                    {
+                      color: isSelected
+                        ? palette.textInverse
+                        : palette.textPrimary,
+                    },
+                  ]}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
-    </SurfaceCard>
+
+      <Text style={[styles.footnote, { color: palette.textMuted }]}>
+        Choose Light, Dark (Night Conservatory), or match your device system
+        setting.
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.xl,
+  section: {
+    gap: Spacing.sm,
   },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  eyebrow: {
+    ...Typography.eyebrow,
+    paddingHorizontal: Spacing.xs,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
+  groupedBox: {
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.lg,
+    padding: Spacing.sm,
   },
   row: {
     flexDirection: 'row',
@@ -125,5 +129,9 @@ const styles = StyleSheet.create({
   pillText: {
     ...Typography.caption,
     fontWeight: '700',
+  },
+  footnote: {
+    ...Typography.caption,
+    paddingHorizontal: Spacing.xs,
   },
 });

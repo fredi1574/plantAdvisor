@@ -16,10 +16,10 @@ import {
   View,
 } from 'react-native';
 
-import { SurfaceCard } from '@/components/ui/surface-card';
-import { BorderWidth, Radius, Spacing } from '@/constants/theme';
+import { SpringPressable } from '@/components/ui/animated-wrappers';
+import { BorderWidth, Fonts, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
-import { triggerSuccessHaptic } from '@/services/haptics';
+import { triggerLightHaptic, triggerSuccessHaptic } from '@/services/haptics';
 import { pickPlantImage } from '@/services/imagePicker';
 import { uploadPlantPhotoIfNeeded } from '@/services/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -100,7 +100,7 @@ export function ProfileOverviewCard({
   };
 
   return (
-    <SurfaceCard style={styles.card}>
+    <View style={styles.container}>
       <View style={styles.profileHeaderRow}>
         <Pressable
           onPress={() => void handlePickAvatar()}
@@ -131,7 +131,7 @@ export function ProfileOverviewCard({
               styles.avatarCameraBadge,
               {
                 backgroundColor: palette.primary,
-                borderColor: palette.bgSurface,
+                borderColor: palette.bgPrimary,
               },
             ]}>
             {isUploadingAvatar ? (
@@ -143,7 +143,11 @@ export function ProfileOverviewCard({
         </Pressable>
 
         <View style={styles.profileInfo}>
-          <Text style={[styles.profileName, { color: palette.textPrimary }]}>
+          <Text
+            style={[
+              styles.profileName,
+              { color: palette.textPrimary, fontFamily: Fonts?.serif },
+            ]}>
             {profile?.displayName || 'Gardener'}
           </Text>
           <Text style={[styles.profileEmail, { color: palette.textSecondary }]}>
@@ -197,8 +201,8 @@ export function ProfileOverviewCard({
         style={[
           styles.statsBar,
           {
-            backgroundColor: palette.bgPrimary,
-            borderColor: palette.borderSubtle,
+            borderTopColor: palette.borderSubtle,
+            borderBottomColor: palette.borderSubtle,
           },
         ]}>
         <View style={styles.statItem}>
@@ -223,41 +227,49 @@ export function ProfileOverviewCard({
         <View
           style={[styles.statDivider, { backgroundColor: palette.borderSubtle }]}
         />
-        <Pressable
-          onPress={() => void handleManualSync()}
+        <SpringPressable
+          onPress={() => {
+            triggerLightHaptic();
+            void handleManualSync();
+          }}
           disabled={isSyncing}
-          style={({ pressed }) => [
+          accessibilityRole="button"
+          accessibilityLabel="Sync garden now"
+          style={[
             styles.syncNowBtn,
-            { backgroundColor: palette.primarySoft },
-            pressed && { opacity: 0.8 },
+            {
+              backgroundColor: palette.primarySoft,
+              borderColor: palette.primaryBorder,
+            },
           ]}>
           {isSyncing ? (
             <ActivityIndicator size="small" color={palette.primary} />
           ) : (
-            <RefreshCw size={15} color={palette.primary} />
+            <RefreshCw size={14} color={palette.primary} />
           )}
           <Text style={[styles.syncNowText, { color: palette.primary }]}>
             {isSyncing ? 'Syncing...' : 'Sync Now'}
           </Text>
-        </Pressable>
+        </SpringPressable>
       </View>
-    </SurfaceCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.xl,
+  container: {
+    gap: Spacing.md,
   },
   profileHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
+    paddingVertical: Spacing.xs,
   },
   avatarCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -266,21 +278,21 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 28,
+    borderRadius: 32,
   },
   avatarCameraBadge: {
     position: 'absolute',
     right: -2,
     bottom: -2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
   },
   profileInfo: {
@@ -288,8 +300,9 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   profileName: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
   },
   profileEmail: {
     fontSize: 13,
@@ -317,10 +330,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: Radius.md,
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.md,
-    borderWidth: BorderWidth.hairline,
+    paddingVertical: Spacing.md,
+    borderTopWidth: BorderWidth.hairline,
+    borderBottomWidth: BorderWidth.hairline,
   },
   statItem: {
     alignItems: 'center',
@@ -336,15 +348,16 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    height: 26,
+    height: 24,
   },
   syncNowBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
     borderRadius: Radius.full,
+    borderWidth: BorderWidth.hairline,
   },
   syncNowText: {
     fontSize: 12,
