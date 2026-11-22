@@ -254,27 +254,31 @@ export default function ScanScreen() {
             })}
           </View>
 
-          <PhotoCaptureCard
-            imageUri={imageUri}
-            imageDimensions={imageDimensions}
-            onImageSelected={handleImageSelected}
-            onError={setErrorMessage}
-          />
-
           <FeedbackBanner message={errorMessage} variant="error" />
 
           {mode === 'identify' ? (
-            <IdentifyPlantFlow
-              imageUri={imageUri}
-              photoRevision={photoRevision}
-              manualEntryRevision={manualEntryRevision}
-              aiQuota={aiQuota}
-              onQuotaExceeded={handleQuotaExceeded}
-              onError={setErrorMessage}
-            />
+            <>
+              <PhotoCaptureCard
+                stepLabel="STEP 1 · SPECIMEN PHOTO"
+                imageUri={imageUri}
+                imageDimensions={imageDimensions}
+                onImageSelected={handleImageSelected}
+                onError={setErrorMessage}
+              />
+              <IdentifyPlantFlow
+                imageUri={imageUri}
+                photoRevision={photoRevision}
+                manualEntryRevision={manualEntryRevision}
+                aiQuota={aiQuota}
+                onQuotaExceeded={handleQuotaExceeded}
+                onError={setErrorMessage}
+              />
+            </>
           ) : (
             <HealthDiagnosisFlow
               imageUri={imageUri}
+              imageDimensions={imageDimensions}
+              onImageSelected={handleImageSelected}
               initialPlantId={params.plantId}
               aiQuota={aiQuota}
               onQuotaExceeded={handleQuotaExceeded}

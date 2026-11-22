@@ -4,6 +4,7 @@ import React from 'react';
 import { GardenEmptyState } from '@/components/garden/garden-empty-state';
 import { CareLogSection } from '@/components/plant-detail/care-log-section';
 import { PhotoCaptureCard } from '@/components/scan/photo-capture-card';
+import { PlantSelectorField } from '@/components/scan/plant-selector-field';
 import type { NotebookEntry, UserPlant } from '@/types/plant';
 
 jest.mock('@/components/plant-detail/care-event-composer', () => ({
@@ -134,5 +135,34 @@ describe('PhotoCaptureCard', () => {
     ).toBeTruthy();
     expect(screen.getByLabelText('Capture photo with camera')).toBeTruthy();
     expect(screen.getByLabelText('Choose photo from library')).toBeTruthy();
+  });
+});
+
+describe('PlantSelectorField', () => {
+  it('opens dropdown modal and selects a plant cleanly', async () => {
+    const secondPlant: UserPlant = {
+      ...MOCK_PLANT,
+      id: 'plant-2',
+      nickname: 'Kitchen Pothos',
+      location: 'East Kitchen Shelf',
+    };
+    const onSelectPlant = jest.fn();
+
+    await render(
+      <PlantSelectorField
+        plants={[MOCK_PLANT, secondPlant]}
+        selectedPlant={MOCK_PLANT}
+        onSelectPlant={onSelectPlant}
+      />
+    );
+
+    const trigger = screen.getByLabelText(
+      'Selected plant Sunny Jade. Tap to change specimen.'
+    );
+    await fireEvent.press(trigger);
+
+    expect(screen.getByText('Choose Specimen')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Kitchen Pothos'));
+    expect(onSelectPlant).toHaveBeenCalledWith('plant-2');
   });
 });

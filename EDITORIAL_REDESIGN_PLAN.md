@@ -18,16 +18,16 @@ A focused plan to eliminate "card fatigue" on long screens by replacing stacked 
 ## 2. Profile & Settings (`src/app/(tabs)/profile.tsx`, `src/components/profile/`)
 **Problem:** 5 bulky shadowed cards stacked vertically make settings feel heavy and slow to scan.
 
-- [ ] **Borderless Identity Header:** Render avatar, display name, email, and cloud sync status directly on the warm `bgPrimary` canvas with no outer card border.
-- [ ] **Inset Grouped Settings Rows:** Replace heavy cards with uppercase eyebrow section labels (`APPEARANCE`, `NOTIFICATIONS`, `DATA & ACCOUNT`) above flat, hairline-divided grouped rows with zero drop shadow.
+- [x] **Borderless Identity Header:** Render avatar, display name, email, and cloud sync status directly on the warm `bgPrimary` canvas with no outer card border.
+- [x] **Inset Grouped Settings Rows:** Replace heavy cards with uppercase eyebrow section labels (`APPEARANCE`, `NOTIFICATIONS`, `DATA & ACCOUNT`) above flat, hairline-divided grouped rows with zero drop shadow.
 
 ---
 
 ## 3. Scan Screen (`src/app/(tabs)/scan.tsx`, `src/components/scan/`)
 **Problem:** Step 1 (`PhotoCaptureCard`) and Step 2 (`IdentifyPlantFlow` / `HealthDiagnosisFlow`) are both boxed in cards with nested cards inside them.
 
-- [ ] **Unbox Input Steps:** Place the camera viewfinder, inputs, and symptom chips directly on the `bgPrimary` canvas separated by crisp Fraunces section headers and hairline dividers.
-- [ ] **Highlight AI Results:** Reserve elevated `SurfaceCard` containers specifically for **AI output payoffs** (species match card & `DiagnosisResultPanel`) so results stand out immediately.
+- [x] **Unbox Input Steps:** Place the camera viewfinder, inputs, and symptom chips directly on the `bgPrimary` canvas separated by crisp Fraunces section headers and hairline dividers.
+- [x] **Highlight AI Results:** Reserve elevated `SurfaceCard` containers specifically for **AI output payoffs** (species match card & `DiagnosisResultPanel`) so results stand out immediately.
 
 ---
 

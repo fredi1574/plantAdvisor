@@ -181,305 +181,334 @@ export function IdentifyPlantFlow({
   };
 
   return (
-    <SurfaceCard>
-      <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
-        Step 2 — Botanical Name or Visual Clues
-      </Text>
-
-      <BotanicalInput
-        surface="primary"
-        compact={false}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder="e.g., Crassula ovata, Jade Plant, Avocado seed, Monstera..."
-        style={styles.textInput}
+    <View style={styles.flowRoot}>
+      <View
+        style={[
+          styles.sectionDivider,
+          { backgroundColor: palette.borderSubtle },
+        ]}
       />
 
-      <SpringPressable
-        onPress={() => {
-          triggerLightHaptic();
-          void handleRunIdentification();
-        }}
-        disabled={isLoading}
-        accessibilityRole="button"
-        style={[
-          styles.primaryActionBtn,
-          { backgroundColor: palette.primary },
-          isLoading && { opacity: 0.78 },
-        ]}>
-        {isLoading ? (
-          <ActivityIndicator color={palette.textInverse} size="small" />
-        ) : (
-          <Sparkles size={17} color={palette.textInverse} />
-        )}
-        <Text
-          style={[styles.primaryActionBtnText, { color: palette.textInverse }]}>
-          {isLoading ? 'Analyzing Specimen...' : 'Run AI Plant Identification'}
+      <View style={styles.stepBlock}>
+        <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+          STEP 2 · BOTANICAL NAME OR VISUAL CLUES
         </Text>
-      </SpringPressable>
+
+        <BotanicalInput
+          surface="surface"
+          compact={false}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="e.g., Crassula ovata, Jade Plant, Avocado seed, Monstera..."
+          style={styles.textInput}
+        />
+
+        <SpringPressable
+          onPress={() => {
+            triggerLightHaptic();
+            void handleRunIdentification();
+          }}
+          disabled={isLoading}
+          accessibilityRole="button"
+          style={[
+            styles.primaryActionBtn,
+            { backgroundColor: palette.primary },
+            isLoading && { opacity: 0.78 },
+          ]}>
+          {isLoading ? (
+            <ActivityIndicator color={palette.textInverse} size="small" />
+          ) : (
+            <Sparkles size={17} color={palette.textInverse} />
+          )}
+          <Text
+            style={[
+              styles.primaryActionBtnText,
+              { color: palette.textInverse },
+            ]}>
+            {isLoading ? 'Analyzing Specimen...' : 'Run AI Plant Identification'}
+          </Text>
+        </SpringPressable>
+      </View>
 
       {isLoading && <AiScanShimmerCard mode="identify" />}
 
       {!isLoading && idResult && (
-        <AnimatedEntrance
-          style={[
-            styles.resultContainer,
-            { borderTopColor: palette.borderSubtle },
-          ]}>
-          <View style={styles.resultHeaderRow}>
-            <View style={styles.flex}>
-              <Text
+        <AnimatedEntrance style={styles.resultSection}>
+          <SurfaceCard style={styles.resultCard}>
+            <View style={styles.resultHeaderRow}>
+              <View style={styles.flex}>
+                <Text
+                  style={[
+                    styles.resultCommonName,
+                    { color: palette.textPrimary },
+                  ]}>
+                  {idResult.commonName}
+                </Text>
+                <Text
+                  style={[
+                    styles.resultScientific,
+                    { color: palette.textSecondary },
+                  ]}>
+                  {idResult.scientificName} • {idResult.family}
+                </Text>
+              </View>
+              <View
                 style={[
-                  styles.resultCommonName,
-                  { color: palette.textPrimary },
+                  styles.confidenceBadge,
+                  {
+                    backgroundColor: palette.thrivingBg,
+                    borderColor: palette.thrivingBorder,
+                  },
                 ]}>
-                {idResult.commonName}
-              </Text>
-              <Text
-                style={[
-                  styles.resultScientific,
-                  { color: palette.textSecondary },
-                ]}>
-                {idResult.scientificName} • {idResult.family}
-              </Text>
+                <Text
+                  style={[
+                    styles.confidenceText,
+                    { color: palette.thrivingText },
+                  ]}>
+                  {Math.round(idResult.confidence * 100)}% Match
+                </Text>
+              </View>
             </View>
-            <View
-              style={[
-                styles.confidenceBadge,
-                {
-                  backgroundColor: palette.thrivingBg,
-                  borderColor: palette.thrivingBorder,
-                },
-              ]}>
+
+            <Text style={[styles.resultNotes, { color: palette.textSecondary }]}>
+              {idResult.identificationNotes}
+            </Text>
+
+            {idResult.petSafety ? (
+              <PetSafetyBadge petSafety={idResult.petSafety} showDetails />
+            ) : null}
+
+            <SurfaceCard variant="nested" style={styles.careSpecBox}>
               <Text
-                style={[
-                  styles.confidenceText,
-                  { color: palette.thrivingText },
-                ]}>
-                {Math.round(idResult.confidence * 100)}% Match
+                style={[styles.careSpecLine, { color: palette.textPrimary }]}>
+                <Text style={[styles.careSpecLabel, { color: palette.primary }]}>
+                  Ideal Light:{' '}
+                </Text>
+                {idResult.baselineCare.idealLight}
               </Text>
-            </View>
-          </View>
+              <Text
+                style={[styles.careSpecLine, { color: palette.textPrimary }]}>
+                <Text style={[styles.careSpecLabel, { color: palette.primary }]}>
+                  Base Watering:{' '}
+                </Text>
+                Every {idResult.baselineCare.baseWateringDays} days
+              </Text>
+              <Text
+                style={[styles.careSpecLine, { color: palette.textPrimary }]}>
+                <Text style={[styles.careSpecLabel, { color: palette.primary }]}>
+                  Substrate:{' '}
+                </Text>
+                {idResult.baselineCare.soilRecommendation}
+              </Text>
+            </SurfaceCard>
 
-          <Text style={[styles.resultNotes, { color: palette.textSecondary }]}>
-            {idResult.identificationNotes}
-          </Text>
-
-          {idResult.petSafety ? (
-            <PetSafetyBadge petSafety={idResult.petSafety} showDetails />
-          ) : null}
-
-          <SurfaceCard variant="nested" style={styles.careSpecBox}>
-            <Text style={[styles.careSpecLine, { color: palette.textPrimary }]}>
-              <Text style={[styles.careSpecLabel, { color: palette.primary }]}>
-                Ideal Light:{' '}
-              </Text>
-              {idResult.baselineCare.idealLight}
-            </Text>
-            <Text style={[styles.careSpecLine, { color: palette.textPrimary }]}>
-              <Text style={[styles.careSpecLabel, { color: palette.primary }]}>
-                Base Watering:{' '}
-              </Text>
-              Every {idResult.baselineCare.baseWateringDays} days
-            </Text>
-            <Text style={[styles.careSpecLine, { color: palette.textPrimary }]}>
-              <Text style={[styles.careSpecLabel, { color: palette.primary }]}>
-                Substrate:{' '}
-              </Text>
-              {idResult.baselineCare.soilRecommendation}
-            </Text>
+            {idResult.baselineCare.succulentGuardrails.isSucculentOrCactus && (
+              <SucculentGuardrailBanner
+                message={idResult.baselineCare.succulentGuardrails.rotWarningNote}
+              />
+            )}
           </SurfaceCard>
-
-          {idResult.baselineCare.succulentGuardrails.isSucculentOrCactus && (
-            <SucculentGuardrailBanner
-              message={idResult.baselineCare.succulentGuardrails.rotWarningNote}
-            />
-          )}
 
           <View
             style={[
-              styles.formDivider,
+              styles.sectionDivider,
               { backgroundColor: palette.borderSubtle },
             ]}
           />
-          <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
-            Step 3 — Save Specimen to My Garden
-          </Text>
 
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-              Plant Nickname
+          <View style={styles.stepBlock}>
+            <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+              STEP 3 · SAVE SPECIMEN TO MY GARDEN
             </Text>
-            <BotanicalInput
-              surface="primary"
-              compact={false}
-              value={form.nickname}
-              onChangeText={(val) => updateForm('nickname', val)}
-              placeholder="e.g., Sunny Window Jade"
-              style={styles.textInput}
-            />
-          </View>
 
-          <View style={styles.fieldGroup}>
-            <View style={styles.fieldLabelRow}>
+            <View style={styles.fieldGroup}>
               <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                Location in Home / Garden
+                Plant Nickname
               </Text>
-              <SpringPressable
-                onPress={() => {
-                  const trimmed = form.location.trim();
-                  if (!trimmed) return;
-                  triggerLightHaptic();
-                  addRoomPreset({
-                    name: trimmed,
-                    lightExposure: form.lightExposure,
-                    isIndoor: form.isIndoor,
-                  });
-                }}
-                disabled={!form.location.trim()}
-                accessibilityRole="button"
-                accessibilityLabel="Save current location as room preset"
-                style={[
-                  styles.savePresetBtn,
-                  {
-                    backgroundColor: palette.primarySoft,
-                    borderColor: palette.primaryBorder,
-                  },
-                  !form.location.trim() && { opacity: 0.45 },
-                ]}>
-                <BookmarkPlus size={12} color={palette.primary} />
+              <BotanicalInput
+                surface="surface"
+                compact={false}
+                value={form.nickname}
+                onChangeText={(val) => updateForm('nickname', val)}
+                placeholder="e.g., Sunny Window Jade"
+                style={styles.textInput}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
                 <Text
-                  style={[styles.savePresetBtnText, { color: palette.primary }]}>
-                  Save Spot
+                  style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+                  Location in Home / Garden
                 </Text>
-              </SpringPressable>
-            </View>
-            {roomPresets.length > 0 && (
-              <View style={styles.presetRow}>
-                {roomPresets.map((preset) => {
-                  const isActivePreset =
-                    form.location.trim().toLowerCase() ===
-                      preset.name.trim().toLowerCase() &&
-                    form.lightExposure === preset.lightExposure &&
-                    form.isIndoor === preset.isIndoor;
-
-                  return (
-                    <Chip
-                      key={preset.id}
-                      label={`${preset.name} • ${preset.isIndoor ? 'Indoor' : 'Outdoor'}`}
-                      variant="subtle"
-                      size="sm"
-                      selected={isActivePreset}
-                      selectedStyle="solid"
-                      onPress={() => {
-                        triggerLightHaptic();
-                        setForm((prev) => ({
-                          ...prev,
-                          location: preset.name,
-                          lightExposure: preset.lightExposure,
-                          isIndoor: preset.isIndoor,
-                        }));
-                      }}
-                    />
-                  );
-                })}
+                <SpringPressable
+                  onPress={() => {
+                    const trimmed = form.location.trim();
+                    if (!trimmed) return;
+                    triggerLightHaptic();
+                    addRoomPreset({
+                      name: trimmed,
+                      lightExposure: form.lightExposure,
+                      isIndoor: form.isIndoor,
+                    });
+                  }}
+                  disabled={!form.location.trim()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save current location as room preset"
+                  style={[
+                    styles.savePresetBtn,
+                    {
+                      backgroundColor: palette.primarySoft,
+                      borderColor: palette.primaryBorder,
+                    },
+                    !form.location.trim() && { opacity: 0.45 },
+                  ]}>
+                  <BookmarkPlus size={12} color={palette.primary} />
+                  <Text
+                    style={[
+                      styles.savePresetBtnText,
+                      { color: palette.primary },
+                    ]}>
+                    Save Spot
+                  </Text>
+                </SpringPressable>
               </View>
-            )}
-            <BotanicalInput
-              surface="primary"
-              compact={false}
-              value={form.location}
-              onChangeText={(val) => updateForm('location', val)}
-              placeholder="e.g., South Living Room Sill"
-              style={styles.textInput}
+              {roomPresets.length > 0 && (
+                <View style={styles.presetRow}>
+                  {roomPresets.map((preset) => {
+                    const isActivePreset =
+                      form.location.trim().toLowerCase() ===
+                        preset.name.trim().toLowerCase() &&
+                      form.lightExposure === preset.lightExposure &&
+                      form.isIndoor === preset.isIndoor;
+
+                    return (
+                      <Chip
+                        key={preset.id}
+                        label={`${preset.name} • ${preset.isIndoor ? 'Indoor' : 'Outdoor'}`}
+                        variant="subtle"
+                        size="sm"
+                        selected={isActivePreset}
+                        selectedStyle="solid"
+                        onPress={() => {
+                          triggerLightHaptic();
+                          setForm((prev) => ({
+                            ...prev,
+                            location: preset.name,
+                            lightExposure: preset.lightExposure,
+                            isIndoor: preset.isIndoor,
+                          }));
+                        }}
+                      />
+                    );
+                  })}
+                </View>
+              )}
+              <BotanicalInput
+                surface="surface"
+                compact={false}
+                value={form.location}
+                onChangeText={(val) => updateForm('location', val)}
+                placeholder="e.g., South Living Room Sill"
+                style={styles.textInput}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+                Light Exposure
+              </Text>
+              <View style={styles.presetRow}>
+                {LIGHT_EXPOSURE_OPTIONS.map((opt) => (
+                  <Chip
+                    key={opt.key}
+                    label={opt.label}
+                    variant="subtle"
+                    size="md"
+                    selected={form.lightExposure === opt.key}
+                    selectedStyle="solid"
+                    onPress={() => updateForm('lightExposure', opt.key)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <SwitchRow
+              label="Indoor Specimen"
+              description="Toggle off if grown outdoors on a patio or garden bed"
+              value={form.isIndoor}
+              onValueChange={(val) => updateForm('isIndoor', val)}
+              contained={false}
             />
-          </View>
 
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-              Light Exposure
-            </Text>
-            <View style={styles.presetRow}>
-              {LIGHT_EXPOSURE_OPTIONS.map((opt) => (
-                <Chip
-                  key={opt.key}
-                  label={opt.label}
-                  variant="subtle"
-                  size="md"
-                  selected={form.lightExposure === opt.key}
-                  selectedStyle="solid"
-                  onPress={() => updateForm('lightExposure', opt.key)}
-                />
-              ))}
+            <View style={styles.fieldGroup}>
+              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+                Pot / Vessel Material
+              </Text>
+              <View style={styles.presetRow}>
+                {POT_MATERIAL_OPTIONS.slice(0, 4).map((pm) => (
+                  <Chip
+                    key={pm.key}
+                    label={pm.label}
+                    variant="subtle"
+                    size="md"
+                    selected={form.potMaterial === pm.key}
+                    selectedStyle="solid"
+                    onPress={() => updateForm('potMaterial', pm.key)}
+                  />
+                ))}
+              </View>
             </View>
-          </View>
 
-          <SwitchRow
-            label="Indoor Specimen"
-            description="Toggle off if grown outdoors on a patio or garden bed"
-            value={form.isIndoor}
-            onValueChange={(val) => updateForm('isIndoor', val)}
-            contained={false}
-          />
+            <SwitchRow
+              label="Container Has Bottom Drainage Hole"
+              description="Critical for preventing anaerobic root rot in succulents"
+              value={form.hasDrainageHole}
+              onValueChange={(val) => updateForm('hasDrainageHole', val)}
+              contained={false}
+            />
 
-          <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-              Pot / Vessel Material
-            </Text>
-            <View style={styles.presetRow}>
-              {POT_MATERIAL_OPTIONS.slice(0, 4).map((pm) => (
-                <Chip
-                  key={pm.key}
-                  label={pm.label}
-                  variant="subtle"
-                  size="md"
-                  selected={form.potMaterial === pm.key}
-                  selectedStyle="solid"
-                  onPress={() => updateForm('potMaterial', pm.key)}
-                />
-              ))}
-            </View>
-          </View>
-
-          <SwitchRow
-            label="Container Has Bottom Drainage Hole"
-            description="Critical for preventing anaerobic root rot in succulents"
-            value={form.hasDrainageHole}
-            onValueChange={(val) => updateForm('hasDrainageHole', val)}
-            contained={false}
-          />
-
-          <SpringPressable
-            onPress={() => {
-              triggerLightHaptic();
-              handleSaveIdentifiedPlant();
-            }}
-            accessibilityRole="button"
-            style={[
-              styles.terracottaBtn,
-              { backgroundColor: palette.accentTerracotta },
-            ]}>
-            <CheckCircle2 size={17} color={palette.textInverse} />
-            <Text
+            <SpringPressable
+              onPress={() => {
+                triggerLightHaptic();
+                handleSaveIdentifiedPlant();
+              }}
+              accessibilityRole="button"
               style={[
-                styles.primaryActionBtnText,
-                { color: palette.textInverse },
+                styles.terracottaBtn,
+                { backgroundColor: palette.accentTerracotta },
               ]}>
-              Add to My Garden & Open Notebook
-            </Text>
-          </SpringPressable>
+              <CheckCircle2 size={17} color={palette.textInverse} />
+              <Text
+                style={[
+                  styles.primaryActionBtnText,
+                  { color: palette.textInverse },
+                ]}>
+                Add to My Garden & Open Notebook
+              </Text>
+            </SpringPressable>
+          </View>
         </AnimatedEntrance>
       )}
-    </SurfaceCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  flowRoot: {
+    gap: Spacing.lg,
+  },
+  sectionDivider: {
+    height: BorderWidth.hairline,
+  },
+  stepBlock: {
+    gap: Spacing.md,
+  },
+  eyebrow: {
+    ...Typography.eyebrow,
+  },
   flex: {
     flex: 1,
-  },
-  sectionTitle: {
-    ...Typography.cardTitle,
   },
   textInput: {
     paddingHorizontal: 14,
@@ -507,11 +536,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  resultContainer: {
-    marginTop: Spacing.sm,
-    paddingTop: 14,
-    borderTopWidth: BorderWidth.hairline,
-    gap: Spacing.md,
+  resultSection: {
+    gap: Spacing.lg,
+  },
+  resultCard: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
   },
   resultHeaderRow: {
     flexDirection: 'row',

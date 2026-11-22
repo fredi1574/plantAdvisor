@@ -3,7 +3,6 @@ import { Camera, Image as ImageIcon } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
-import { SurfaceCard } from '@/components/ui/surface-card';
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { triggerLightHaptic } from '@/services/haptics';
@@ -14,6 +13,7 @@ interface PhotoCaptureCardProps {
   imageDimensions: string;
   onImageSelected: (uri: string, dimensions: string) => void;
   onError: (message: string | null) => void;
+  stepLabel?: string;
 }
 
 function ViewfinderBrackets({
@@ -65,6 +65,7 @@ export function PhotoCaptureCard({
   imageDimensions,
   onImageSelected,
   onError,
+  stepLabel = 'STEP 1 · SPECIMEN PHOTO',
 }: PhotoCaptureCardProps) {
   const palette = usePalette();
 
@@ -91,14 +92,20 @@ export function PhotoCaptureCard({
   };
 
   return (
-    <SurfaceCard>
-      <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
-        Step 1 — Photo or Sample Preset
+    <View style={styles.section}>
+      <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+        {stepLabel}
       </Text>
 
       {imageUri ? (
         <View
-          style={[styles.previewWrapper, { backgroundColor: palette.bgSubtle }]}>
+          style={[
+            styles.previewWrapper,
+            {
+              backgroundColor: palette.bgSubtle,
+              borderColor: palette.borderSubtle,
+            },
+          ]}>
           <Image
             source={{ uri: imageUri }}
             style={styles.previewImage}
@@ -123,7 +130,7 @@ export function PhotoCaptureCard({
             styles.emptyPreviewBox,
             {
               borderColor: palette.borderSubtle,
-              backgroundColor: palette.bgPrimary,
+              backgroundColor: palette.bgSurface,
             },
           ]}>
           <ViewfinderBrackets color={palette.primaryMuted} inset={10} />
@@ -155,7 +162,7 @@ export function PhotoCaptureCard({
           style={[
             styles.secondaryMediaBtn,
             {
-              backgroundColor: palette.primarySoft,
+              backgroundColor: palette.bgSurface,
               borderColor: palette.primaryBorder,
             },
           ]}>
@@ -173,7 +180,7 @@ export function PhotoCaptureCard({
           style={[
             styles.secondaryMediaBtn,
             {
-              backgroundColor: palette.primarySoft,
+              backgroundColor: palette.bgSurface,
               borderColor: palette.primaryBorder,
             },
           ]}>
@@ -184,19 +191,23 @@ export function PhotoCaptureCard({
           </Text>
         </SpringPressable>
       </View>
-    </SurfaceCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: {
-    ...Typography.cardTitle,
+  section: {
+    gap: Spacing.sm + 2,
+  },
+  eyebrow: {
+    ...Typography.eyebrow,
   },
   previewWrapper: {
     position: 'relative',
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
+    borderWidth: BorderWidth.hairline,
     overflow: 'hidden',
-    height: 190,
+    height: 204,
   },
   previewImage: {
     width: '100%',

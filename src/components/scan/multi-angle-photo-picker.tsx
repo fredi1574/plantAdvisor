@@ -1,6 +1,13 @@
 import { Image } from 'expo-image';
-import { Camera, Image as ImageIcon, X } from 'lucide-react-native';
-import React from 'react';
+import {
+  Camera,
+  ChevronDown,
+  ChevronUp,
+  Image as ImageIcon,
+  Images,
+  X,
+} from 'lucide-react-native';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -39,7 +46,7 @@ interface MultiAnglePhotoPickerProps {
 }
 
 /**
- * Three-slot diagnostic angle photo picker (Canopy, Leaf/Stem Close-Up, Soil Surface).
+ * Collapsible three-slot diagnostic angle photo picker (Canopy, Leaf/Stem Close-Up, Soil Surface).
  */
 export function MultiAnglePhotoPicker({
   photos,
@@ -47,113 +54,163 @@ export function MultiAnglePhotoPicker({
   onClearPhoto,
 }: MultiAnglePhotoPickerProps) {
   const palette = usePalette();
+  const [expanded, setExpanded] = useState(false);
+
+  const attachedCount = DIAGNOSTIC_ANGLE_SLOTS.filter((slot) =>
+    Boolean(photos[slot.angle])
+  ).length;
 
   return (
-    <View style={styles.fieldGroup}>
-      <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-        Multi-Angle Diagnostic Photos (Up to 3)
-      </Text>
-      <View style={styles.angleGrid}>
-        {DIAGNOSTIC_ANGLE_SLOTS.map((slot) => {
-          const uri = photos[slot.angle];
-          return (
-            <View
-              key={slot.angle}
-              style={[
-                styles.angleSlot,
-                {
-                  backgroundColor: palette.bgSubtle,
-                  borderColor: palette.borderSubtle,
-                },
-              ]}>
-              <View style={styles.angleSlotHeader}>
-                <View style={styles.flex}>
-                  <Text
-                    style={[
-                      styles.angleSlotTitle,
-                      { color: palette.textPrimary },
-                    ]}>
-                    {slot.label}
-                  </Text>
-                  <Text
-                    style={[styles.angleSlotHint, { color: palette.textMuted }]}>
-                    {slot.hint}
-                  </Text>
-                </View>
-                {uri ? (
-                  <Pressable
-                    onPress={() => onClearPhoto(slot.angle)}
-                    style={[
-                      styles.angleClearBtn,
-                      { backgroundColor: palette.bgSurface },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Remove ${slot.label} photo`}>
-                    <X size={14} color={palette.textSecondary} />
-                  </Pressable>
-                ) : null}
-              </View>
+    <View
+      style={[
+        styles.accordion,
+        {
+          backgroundColor: palette.bgSurface,
+          borderColor: palette.borderSubtle,
+        },
+      ]}>
+      <Pressable
+        onPress={() => {
+          triggerLightHaptic();
+          setExpanded((prev) => !prev);
+        }}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel="Toggle multi-angle diagnostic photos"
+        style={({ pressed }) => [
+          styles.accordionHeader,
+          pressed && { opacity: 0.78 },
+        ]}>
+        <View style={styles.accordionHeaderLeft}>
+          <Images size={15} color={palette.primary} />
+          <View style={styles.flex}>
+            <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+              Multi-Angle Diagnostic Photos (Optional)
+            </Text>
+            <Text style={[styles.accordionHint, { color: palette.textMuted }]}>
+              {attachedCount > 0
+                ? `${attachedCount} of 3 angles attached`
+                : 'Add canopy, leaf close-up, or soil shots'}
+            </Text>
+          </View>
+        </View>
+        {expanded ? (
+          <ChevronUp size={16} color={palette.textMuted} />
+        ) : (
+          <ChevronDown size={16} color={palette.textMuted} />
+        )}
+      </Pressable>
 
-              {uri ? (
-                <Image
-                  source={{ uri }}
-                  style={styles.anglePreview}
-                  contentFit="cover"
-                />
-              ) : (
-                <View style={styles.angleActionsRow}>
-                  <SpringPressable
-                    onPress={() => {
-                      triggerLightHaptic();
-                      onPickPhoto(slot.angle, 'camera');
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Capture ${slot.label} with camera`}
-                    style={[
-                      styles.anglePickBtn,
-                      {
-                        backgroundColor: palette.bgSurface,
-                        borderColor: palette.borderSubtle,
-                      },
-                    ]}>
-                    <Camera size={14} color={palette.primary} />
+      {expanded && (
+        <View
+          style={[
+            styles.angleGrid,
+            { borderTopColor: palette.borderSubtle },
+          ]}>
+          {DIAGNOSTIC_ANGLE_SLOTS.map((slot) => {
+            const uri = photos[slot.angle];
+            return (
+              <View
+                key={slot.angle}
+                style={[
+                  styles.angleSlot,
+                  {
+                    backgroundColor: palette.bgPrimary,
+                    borderColor: palette.borderSubtle,
+                  },
+                ]}>
+                <View style={styles.angleSlotHeader}>
+                  <View style={styles.flex}>
                     <Text
                       style={[
-                        styles.anglePickBtnText,
-                        { color: palette.primary },
+                        styles.angleSlotTitle,
+                        { color: palette.textPrimary },
                       ]}>
-                      Camera
+                      {slot.label}
                     </Text>
-                  </SpringPressable>
-                  <SpringPressable
-                    onPress={() => {
-                      triggerLightHaptic();
-                      onPickPhoto(slot.angle, 'library');
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Choose ${slot.label} from library`}
-                    style={[
-                      styles.anglePickBtn,
-                      {
-                        backgroundColor: palette.bgSurface,
-                        borderColor: palette.borderSubtle,
-                      },
-                    ]}>
-                    <ImageIcon size={14} color={palette.primary} />
                     <Text
                       style={[
-                        styles.anglePickBtnText,
-                        { color: palette.primary },
+                        styles.angleSlotHint,
+                        { color: palette.textMuted },
                       ]}>
-                      Library
+                      {slot.hint}
                     </Text>
-                  </SpringPressable>
+                  </View>
+                  {uri ? (
+                    <Pressable
+                      onPress={() => onClearPhoto(slot.angle)}
+                      style={[
+                        styles.angleClearBtn,
+                        { backgroundColor: palette.bgSurface },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${slot.label} photo`}>
+                      <X size={14} color={palette.textSecondary} />
+                    </Pressable>
+                  ) : null}
                 </View>
-              )}
-            </View>
-          );
-        })}
-      </View>
+
+                {uri ? (
+                  <Image
+                    source={{ uri }}
+                    style={styles.anglePreview}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={styles.angleActionsRow}>
+                    <SpringPressable
+                      onPress={() => {
+                        triggerLightHaptic();
+                        onPickPhoto(slot.angle, 'camera');
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Capture ${slot.label} with camera`}
+                      style={[
+                        styles.anglePickBtn,
+                        {
+                          backgroundColor: palette.bgSurface,
+                          borderColor: palette.borderSubtle,
+                        },
+                      ]}>
+                      <Camera size={14} color={palette.primary} />
+                      <Text
+                        style={[
+                          styles.anglePickBtnText,
+                          { color: palette.primary },
+                        ]}>
+                        Camera
+                      </Text>
+                    </SpringPressable>
+                    <SpringPressable
+                      onPress={() => {
+                        triggerLightHaptic();
+                        onPickPhoto(slot.angle, 'library');
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Choose ${slot.label} from library`}
+                      style={[
+                        styles.anglePickBtn,
+                        {
+                          backgroundColor: palette.bgSurface,
+                          borderColor: palette.borderSubtle,
+                        },
+                      ]}>
+                      <ImageIcon size={14} color={palette.primary} />
+                      <Text
+                        style={[
+                          styles.anglePickBtnText,
+                          { color: palette.primary },
+                        ]}>
+                        Library
+                      </Text>
+                    </SpringPressable>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -162,15 +219,37 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  fieldGroup: {
-    gap: 6,
+  accordion: {
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+  },
+  accordionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 11,
+    gap: Spacing.sm,
+  },
+  accordionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm + 2,
+    flex: 1,
+  },
+  accordionHint: {
+    fontSize: 11,
+    marginTop: 1,
   },
   fieldLabel: {
     fontSize: 13,
     fontWeight: '700',
   },
   angleGrid: {
-    gap: Spacing.xs,
+    borderTopWidth: BorderWidth.hairline,
+    padding: Spacing.sm,
+    gap: Spacing.xs + 2,
   },
   angleSlot: {
     borderWidth: BorderWidth.hairline,

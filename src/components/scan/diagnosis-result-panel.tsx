@@ -1,15 +1,18 @@
 import { router } from 'expo-router';
 import { CheckCircle2 } from 'lucide-react-native';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { SpringPressable } from '@/components/ui/animated-wrappers';
 import {
   HealthStatusBadge,
   SucculentGuardrailBanner,
   UrgencyBadge,
 } from '@/components/ui/status-badges';
+import { SurfaceCard } from '@/components/ui/surface-card';
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
 import type { PlantDiagnosisResult, UserPlant } from '@/types/plant';
 
 interface DiagnosisResultPanelProps {
@@ -18,8 +21,8 @@ interface DiagnosisResultPanelProps {
 }
 
 /**
- * Renders the structured AI diagnosis summary, succulent guardrail notice,
- * recommended next steps, and notebook deep link.
+ * Elevated spotlight card for structured AI diagnosis summary, succulent guardrail
+ * notice, recommended next steps, and notebook deep link.
  */
 export function DiagnosisResultPanel({
   diagnosis,
@@ -28,7 +31,7 @@ export function DiagnosisResultPanel({
   const palette = usePalette();
 
   return (
-    <View style={[styles.container, { borderTopColor: palette.borderSubtle }]}>
+    <SurfaceCard style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={[styles.title, { color: palette.textPrimary }]}>
           AI Diagnosis Complete
@@ -67,33 +70,32 @@ export function DiagnosisResultPanel({
         </View>
       ))}
 
-      <Pressable
-        onPress={() =>
+      <SpringPressable
+        onPress={() => {
+          triggerLightHaptic();
           router.push({
             pathname: '/plant/[id]',
             params: { id: plant.id },
-          })
-        }
-        style={({ pressed }) => [
+          });
+        }}
+        accessibilityRole="button"
+        style={[
           styles.openNotebookBtn,
           { backgroundColor: palette.accentTerracotta },
-          pressed && { opacity: 0.85 },
         ]}>
         <CheckCircle2 size={16} color={palette.textInverse} />
         <Text style={[styles.btnText, { color: palette.textInverse }]}>
           View in {plant.nickname} Notebook
         </Text>
-      </Pressable>
-    </View>
+      </SpringPressable>
+    </SurfaceCard>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: Spacing.sm,
-    paddingTop: 14,
-    borderTopWidth: BorderWidth.hairline,
-    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
   },
   headerRow: {
     flexDirection: 'row',
