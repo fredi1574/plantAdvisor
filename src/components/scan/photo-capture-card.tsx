@@ -1,10 +1,12 @@
 import { Image } from 'expo-image';
 import { Camera, Image as ImageIcon } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { SpringPressable } from '@/components/ui/animated-wrappers';
 import { SurfaceCard } from '@/components/ui/surface-card';
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
 import { pickPlantImage, type ImagePickSource } from '@/services/imagePicker';
 
 interface PhotoCaptureCardProps {
@@ -12,6 +14,47 @@ interface PhotoCaptureCardProps {
   imageDimensions: string;
   onImageSelected: (uri: string, dimensions: string) => void;
   onError: (message: string | null) => void;
+}
+
+function ViewfinderBrackets({
+  color,
+  inset = 10,
+}: {
+  color: string;
+  inset?: number;
+}) {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View
+        style={[
+          styles.bracket,
+          styles.bracketTopLeft,
+          { top: inset, left: inset, borderColor: color },
+        ]}
+      />
+      <View
+        style={[
+          styles.bracket,
+          styles.bracketTopRight,
+          { top: inset, right: inset, borderColor: color },
+        ]}
+      />
+      <View
+        style={[
+          styles.bracket,
+          styles.bracketBottomLeft,
+          { bottom: inset, left: inset, borderColor: color },
+        ]}
+      />
+      <View
+        style={[
+          styles.bracket,
+          styles.bracketBottomRight,
+          { bottom: inset, right: inset, borderColor: color },
+        ]}
+      />
+    </View>
+  );
 }
 
 /**
@@ -26,6 +69,7 @@ export function PhotoCaptureCard({
   const palette = usePalette();
 
   const handlePickPhoto = async (source: ImagePickSource) => {
+    triggerLightHaptic();
     onError(null);
     const result = await pickPlantImage(source, {
       allowsEditing: true,
@@ -60,6 +104,7 @@ export function PhotoCaptureCard({
             style={styles.previewImage}
             contentFit="cover"
           />
+          <ViewfinderBrackets color="rgba(255, 255, 255, 0.72)" inset={12} />
           {Boolean(imageDimensions) && (
             <View style={styles.compressionBadge}>
               <Text
@@ -81,7 +126,17 @@ export function PhotoCaptureCard({
               backgroundColor: palette.bgPrimary,
             },
           ]}>
-          <Camera size={28} color={palette.primaryMuted} />
+          <ViewfinderBrackets color={palette.primaryMuted} inset={10} />
+          <View
+            style={[
+              styles.reticleCircle,
+              {
+                backgroundColor: palette.primarySoft,
+                borderColor: palette.primaryBorder,
+              },
+            ]}>
+            <Camera size={24} color={palette.primary} />
+          </View>
           <Text
             style={[styles.emptyPreviewTitle, { color: palette.textPrimary }]}>
             Snap a leaf photo or choose a sample below
@@ -93,39 +148,41 @@ export function PhotoCaptureCard({
       )}
 
       <View style={styles.mediaButtonsRow}>
-        <Pressable
+        <SpringPressable
           onPress={() => void handlePickPhoto('camera')}
-          style={({ pressed }) => [
+          accessibilityRole="button"
+          accessibilityLabel="Capture photo with camera"
+          style={[
             styles.secondaryMediaBtn,
             {
               backgroundColor: palette.primarySoft,
               borderColor: palette.primaryBorder,
             },
-            pressed && { opacity: 0.8 },
           ]}>
           <Camera size={16} color={palette.primary} />
           <Text
             style={[styles.secondaryMediaBtnText, { color: palette.primary }]}>
             Camera
           </Text>
-        </Pressable>
+        </SpringPressable>
 
-        <Pressable
+        <SpringPressable
           onPress={() => void handlePickPhoto('library')}
-          style={({ pressed }) => [
+          accessibilityRole="button"
+          accessibilityLabel="Choose photo from library"
+          style={[
             styles.secondaryMediaBtn,
             {
               backgroundColor: palette.primarySoft,
               borderColor: palette.primaryBorder,
             },
-            pressed && { opacity: 0.8 },
           ]}>
           <ImageIcon size={16} color={palette.primary} />
           <Text
             style={[styles.secondaryMediaBtnText, { color: palette.primary }]}>
             Photo Library
           </Text>
-        </Pressable>
+        </SpringPressable>
       </View>
     </SurfaceCard>
   );
@@ -145,6 +202,31 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  bracket: {
+    position: 'absolute',
+    width: 18,
+    height: 18,
+  },
+  bracketTopLeft: {
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderTopLeftRadius: 5,
+  },
+  bracketTopRight: {
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+    borderTopRightRadius: 5,
+  },
+  bracketBottomLeft: {
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+    borderBottomLeftRadius: 5,
+  },
+  bracketBottomRight: {
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
+    borderBottomRightRadius: 5,
+  },
   compressionBadge: {
     position: 'absolute',
     bottom: Spacing.sm,
@@ -159,6 +241,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyPreviewBox: {
+    position: 'relative',
     borderWidth: BorderWidth.hairline,
     borderStyle: 'dashed',
     borderRadius: Radius.md,
@@ -167,9 +250,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  reticleCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.full,
+    borderWidth: BorderWidth.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
   emptyPreviewTitle: {
     ...Typography.body,
     fontWeight: '600',
+    textAlign: 'center',
   },
   emptyPreviewSub: {
     ...Typography.caption,
@@ -185,7 +278,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: Radius.md,
     borderWidth: BorderWidth.hairline,
   },

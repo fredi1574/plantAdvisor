@@ -3,8 +3,10 @@ import { Camera, Image as ImageIcon, X } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { SpringPressable } from '@/components/ui/animated-wrappers';
 import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
 import type { ImagePickSource } from '@/services/imagePicker';
 import type { DiagnosticPhotoAngle } from '@/types/plant';
 
@@ -100,8 +102,13 @@ export function MultiAnglePhotoPicker({
                 />
               ) : (
                 <View style={styles.angleActionsRow}>
-                  <Pressable
-                    onPress={() => onPickPhoto(slot.angle, 'camera')}
+                  <SpringPressable
+                    onPress={() => {
+                      triggerLightHaptic();
+                      onPickPhoto(slot.angle, 'camera');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Capture ${slot.label} with camera`}
                     style={[
                       styles.anglePickBtn,
                       {
@@ -117,9 +124,14 @@ export function MultiAnglePhotoPicker({
                       ]}>
                       Camera
                     </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => onPickPhoto(slot.angle, 'library')}
+                  </SpringPressable>
+                  <SpringPressable
+                    onPress={() => {
+                      triggerLightHaptic();
+                      onPickPhoto(slot.angle, 'library');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Choose ${slot.label} from library`}
                     style={[
                       styles.anglePickBtn,
                       {
@@ -135,7 +147,7 @@ export function MultiAnglePhotoPicker({
                       ]}>
                       Library
                     </Text>
-                  </Pressable>
+                  </SpringPressable>
                 </View>
               )}
             </View>

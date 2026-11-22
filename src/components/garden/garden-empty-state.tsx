@@ -1,10 +1,15 @@
-import { CheckCircle2, Sprout } from 'lucide-react-native';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
+import { SpringPressable } from '@/components/ui/animated-wrappers';
+import {
+  PottedSucculentIllustration,
+  SproutSearchIllustration,
+} from '@/components/ui/botanical-illustrations';
 import { SurfaceCard } from '@/components/ui/surface-card';
 import { Fonts, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
 
 interface GardenEmptyStateProps {
   variant: 'empty-garden' | 'no-matches';
@@ -20,21 +25,11 @@ export function GardenEmptyState({ variant, onAction }: GardenEmptyStateProps) {
 
   return (
     <SurfaceCard style={styles.card}>
-      <View
-        style={[
-          styles.iconWrap,
-          {
-            backgroundColor: isEmptyGarden
-              ? palette.primarySoft
-              : palette.thrivingBg,
-          },
-        ]}>
-        {isEmptyGarden ? (
-          <Sprout size={24} color={palette.primary} />
-        ) : (
-          <CheckCircle2 size={24} color={palette.primary} />
-        )}
-      </View>
+      {isEmptyGarden ? (
+        <PottedSucculentIllustration size={108} />
+      ) : (
+        <SproutSearchIllustration size={102} />
+      )}
 
       <Text
         style={[
@@ -50,17 +45,17 @@ export function GardenEmptyState({ variant, onAction }: GardenEmptyStateProps) {
           : 'Your garden is looking calm here. Reset filters and search to see every specimen.'}
       </Text>
 
-      <Pressable
-        onPress={onAction}
-        style={({ pressed }) => [
-          styles.actionBtn,
-          { backgroundColor: palette.primary },
-          pressed && { opacity: 0.85 },
-        ]}>
+      <SpringPressable
+        onPress={() => {
+          triggerLightHaptic();
+          onAction();
+        }}
+        accessibilityRole="button"
+        style={[styles.actionBtn, { backgroundColor: palette.primary }]}>
         <Text style={[styles.actionBtnText, { color: palette.textInverse }]}>
           {isEmptyGarden ? 'Identify Your First Plant' : 'Show All Plants'}
         </Text>
-      </Pressable>
+      </SpringPressable>
     </SurfaceCard>
   );
 }
@@ -73,16 +68,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.sm,
   },
-  iconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: Radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xs,
-  },
   title: {
     ...Typography.sectionTitle,
+    marginTop: Spacing.xs,
   },
   subtitle: {
     ...Typography.body,
@@ -92,7 +80,7 @@ const styles = StyleSheet.create({
   actionBtn: {
     marginTop: Spacing.xs,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.sm + 2,
     borderRadius: Radius.full,
   },
   actionBtnText: {

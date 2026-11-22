@@ -1,19 +1,42 @@
 import { Image } from 'expo-image';
-import { Pencil, Trash2 } from 'lucide-react-native';
+import { Maximize2, Pencil, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { SpringPressable } from '@/components/ui/animated-wrappers';
 import { PhotoLightboxModal } from '@/components/ui/photo-lightbox-modal';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
-import { BorderWidth, Radius } from '@/constants/theme';
+import { BorderWidth, Radius, Spacing, type ThemePalette } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
-import type { NotebookEntry } from '@/types/plant';
+import { triggerLightHaptic } from '@/services/haptics';
+import type { CareEventType, NotebookEntry } from '@/types/plant';
 
 interface SwipeableLogItemProps {
   entry: NotebookEntry;
   isLast: boolean;
   onEdit: (entry: NotebookEntry) => void;
   onDelete: (entry: NotebookEntry) => void;
+}
+
+function getEventNodeColors(eventType: CareEventType, palette: ThemePalette) {
+  switch (eventType) {
+    case 'water':
+      return { dot: palette.waterBlue, halo: palette.waterBlueSoft };
+    case 'propagation':
+    case 'repot':
+      return {
+        dot: palette.accentTerracotta,
+        halo: palette.accentTerracottaSoft,
+      };
+    case 'ai_scan':
+      return { dot: palette.attentionDot, halo: palette.attentionBg };
+    case 'fertilize':
+    case 'prune':
+      return { dot: palette.primary, halo: palette.primarySoft };
+    case 'note':
+    default:
+      return { dot: palette.primaryMuted, halo: palette.primarySoft };
+  }
 }
 
 export function SwipeableLogItem({
@@ -25,17 +48,23 @@ export function SwipeableLogItem({
   const palette = usePalette();
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  const nodeColor =
-    entry.eventType === 'water'
-      ? palette.waterBlue
-      : entry.eventType === 'propagation' || entry.eventType === 'repot'
-        ? palette.accentTerracotta
-        : palette.primary;
+  const nodeColors = getEventNodeColors(entry.eventType, palette);
 
   return (
     <View style={styles.timelineRow}>
       <View style={styles.timelineRailCol}>
-        <View style={[styles.timelineNode, { backgroundColor: nodeColor }]} />
+        <View
+          style={[
+            styles.timelineNodeHalo,
+            {
+              backgroundColor: nodeColors.halo,
+              borderColor: nodeColors.dot,
+            },
+          ]}>
+          <View
+            style={[styles.timelineNode, { backgroundColor: nodeColors.dot }]}
+          />
+        </View>
         {!isLast && (
           <View
             style={[
@@ -83,13 +112,25 @@ export function SwipeableLogItem({
                 ]}>
                 {entry.title}
               </Text>
-              <Text
-                style={[styles.timelineEventDate, { color: palette.textMuted }]}>
-                {new Date(entry.timestamp).toLocaleDateString(undefined, {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </Text>
+              <View
+                style={[
+                  styles.dateChip,
+                  {
+                    backgroundColor: palette.bgSubtle,
+                    borderColor: palette.borderSubtle,
+                  },
+                ]}>
+                <Text
+                  style={[
+                    styles.timelineEventDate,
+                    { color: palette.textMuted },
+                  ]}>
+                  {new Date(entry.timestamp).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </Text>
+              </View>
             </View>
 
             <Text
@@ -101,18 +142,30 @@ export function SwipeableLogItem({
             </Text>
 
             {Boolean(entry.photoUri) && (
-              <Pressable
-                onPress={() => setPreviewOpen(true)}
+              <SpringPressable
+                pressedScale={0.97}
+                onPress={() => {
+                  triggerLightHaptic();
+                  setPreviewOpen(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Inspect photo for ${entry.title}`}
                 style={[
                   styles.photoThumbWrap,
-                  { borderColor: palette.borderSubtle },
+                  {
+                    borderColor: palette.borderSubtle,
+                    backgroundColor: palette.bgSubtle,
+                  },
                 ]}>
                 <Image
                   source={{ uri: entry.photoUri }}
                   style={styles.photoThumb}
                   contentFit="cover"
                 />
-              </Pressable>
+                <View style={styles.photoZoomBadge}>
+                  <Maximize2 size={11} color="#FFFFFF" />
+                </View>
+              </SpringPressable>
             )}
 
             {entry.metrics && (
@@ -177,28 +230,37 @@ const styles = StyleSheet.create({
   },
   timelineRailCol: {
     alignItems: 'center',
-    width: 18,
+    width: 22,
+  },
+  timelineNodeHalo: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: BorderWidth.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
   },
   timelineNode: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 5,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
   },
   timelineVerticalLine: {
     flex: 1,
     width: 2,
+    borderRadius: 1,
     marginVertical: 4,
   },
   swipeWrapper: {
     flex: 1,
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   timelineEventBox: {
     borderWidth: BorderWidth.hairline,
     borderRadius: Radius.md,
     padding: 12,
-    gap: 5,
+    gap: 6,
   },
   timelineEventHeader: {
     flexDirection: 'row',
@@ -211,8 +273,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  dateChip: {
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
   timelineEventDate: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   timelineEventNotes: {
@@ -220,6 +288,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   photoThumbWrap: {
+    position: 'relative',
     marginTop: 4,
     alignSelf: 'flex-start',
     borderRadius: Radius.md,
@@ -227,8 +296,19 @@ const styles = StyleSheet.create({
     borderWidth: BorderWidth.hairline,
   },
   photoThumb: {
-    width: 92,
-    height: 68,
+    width: 104,
+    height: 76,
+  },
+  photoZoomBadge: {
+    position: 'absolute',
+    right: 6,
+    bottom: 6,
+    width: 22,
+    height: 22,
+    borderRadius: Radius.full,
+    backgroundColor: 'rgba(28, 40, 32, 0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metricsPillsRow: {
     flexDirection: 'row',

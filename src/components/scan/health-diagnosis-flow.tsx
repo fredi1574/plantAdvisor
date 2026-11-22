@@ -1,19 +1,16 @@
 import { Stethoscope } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { DiagnosisResultPanel } from '@/components/scan/diagnosis-result-panel';
 import {
   DIAGNOSTIC_ANGLE_SLOTS,
   MultiAnglePhotoPicker,
 } from '@/components/scan/multi-angle-photo-picker';
-import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
+import {
+  AnimatedEntrance,
+  SpringPressable,
+} from '@/components/ui/animated-wrappers';
 import { BotanicalInput } from '@/components/ui/botanical-input';
 import { AiScanShimmerCard } from '@/components/ui/botanical-shimmer';
 import { Chip } from '@/components/ui/chip';
@@ -24,7 +21,7 @@ import {
   AiQuotaExceededError,
   diagnosePlantHealth,
 } from '@/services/aiPlantService';
-import { triggerSuccessHaptic } from '@/services/haptics';
+import { triggerLightHaptic, triggerSuccessHaptic } from '@/services/haptics';
 import { pickPlantImage, type ImagePickSource } from '@/services/imagePicker';
 import { usePlantStore } from '@/store/usePlantStore';
 import type {
@@ -263,13 +260,17 @@ export function HealthDiagnosisFlow({
         </View>
       </View>
 
-      <Pressable
-        onPress={() => void handleRunHealthDiagnosis()}
+      <SpringPressable
+        onPress={() => {
+          triggerLightHaptic();
+          void handleRunHealthDiagnosis();
+        }}
         disabled={isLoading}
-        style={({ pressed }) => [
+        accessibilityRole="button"
+        style={[
           styles.primaryActionBtn,
           { backgroundColor: palette.primary },
-          (pressed || isLoading) && { opacity: 0.85 },
+          isLoading && { opacity: 0.78 },
         ]}>
         {isLoading ? (
           <ActivityIndicator color={palette.textInverse} size="small" />
@@ -282,7 +283,7 @@ export function HealthDiagnosisFlow({
             ? 'Cross-Referencing Photo & Care Logs...'
             : 'Run AI Health & Condition Scan'}
         </Text>
-      </Pressable>
+      </SpringPressable>
 
       {isLoading && <AiScanShimmerCard mode="diagnose" />}
 

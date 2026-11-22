@@ -8,6 +8,12 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AiLimitModal } from '@/components/modals/ai-limit-modal';
@@ -19,6 +25,7 @@ import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import {
   BorderWidth,
   BottomTabInset,
+  Fonts,
   MaxContentWidth,
   Radius,
   Spacing,
@@ -29,17 +36,28 @@ import {
   fetchAiQuotaStatus,
   subscribeToAiQuota,
 } from '@/services/aiPlantService';
+import { triggerLightHaptic } from '@/services/haptics';
 import type { AiQuotaStatus } from '@/types/plant';
 
 type ScanWorkflowMode = 'identify' | 'diagnose';
 
+const MODE_OPTIONS: {
+  key: ScanWorkflowMode;
+  label: string;
+}[] = [
+  { key: 'identify', label: '1. Identify & Add Plant' },
+  { key: 'diagnose', label: '2. AI Health Scan' },
+];
+
 export default function ScanScreen() {
   const palette = usePalette();
+  const reducedMotion = useReducedMotion();
   const params = useLocalSearchParams<{ mode?: string; plantId?: string }>();
 
   const [mode, setMode] = useState<ScanWorkflowMode>(
     params.mode === 'diagnose' ? 'diagnose' : 'identify'
   );
+  const [segmentBarWidth, setSegmentBarWidth] = useState(0);
   const [imageUri, setImageUri] = useState('');
   const [imageDimensions, setImageDimensions] = useState('');
   const [photoRevision, setPhotoRevision] = useState(0);
@@ -47,6 +65,30 @@ export default function ScanScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [aiQuota, setAiQuota] = useState<AiQuotaStatus | null>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
+
+  const segmentPad = Spacing.xs;
+  const activeModeIndex = mode === 'diagnose' ? 1 : 0;
+  const segmentSlotWidth =
+    segmentBarWidth > 0 ? (segmentBarWidth - segmentPad * 2) / 2 : 0;
+  const indicatorX = useSharedValue(0);
+
+  useEffect(() => {
+    if (segmentSlotWidth <= 0) return;
+    const targetX = segmentPad + activeModeIndex * segmentSlotWidth;
+    if (reducedMotion) {
+      indicatorX.value = targetX;
+    } else {
+      indicatorX.value = withSpring(targetX, {
+        damping: 22,
+        stiffness: 240,
+        mass: 0.9,
+      });
+    }
+  }, [activeModeIndex, segmentSlotWidth, segmentPad, indicatorX, reducedMotion]);
+
+  const activePillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value }],
+  }));
 
   useEffect(() => {
     const unsubscribe = subscribeToAiQuota(setAiQuota);
@@ -142,7 +184,11 @@ export default function ScanScreen() {
                 </Pressable>
               ) : null}
             </View>
-            <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>
+            <Text
+              style={[
+                styles.headerTitle,
+                { color: palette.textPrimary, fontFamily: Fonts?.serif },
+              ]}>
               Add or Scan Plant
             </Text>
             <Text
@@ -153,6 +199,8 @@ export default function ScanScreen() {
           </View>
 
           <View
+            accessibilityRole="tablist"
+            onLayout={(e) => setSegmentBarWidth(e.nativeEvent.layout.width)}
             style={[
               styles.segmentedBar,
               {
@@ -160,67 +208,53 @@ export default function ScanScreen() {
                 borderColor: palette.borderSubtle,
               },
             ]}>
-            <Pressable
-              onPress={() => {
-                setMode('identify');
-                setErrorMessage(null);
-              }}
-              style={[
-                styles.segmentBtn,
-                mode === 'identify' && { backgroundColor: palette.primary },
-              ]}>
-              <Sprout
-                size={16}
-                color={
-                  mode === 'identify'
-                    ? palette.textInverse
-                    : palette.textSecondary
-                }
-              />
-              <Text
+            {segmentSlotWidth > 0 && (
+              <Animated.View
+                pointerEvents="none"
                 style={[
-                  styles.segmentBtnText,
+                  styles.activeSegmentPill,
                   {
-                    color:
-                      mode === 'identify'
-                        ? palette.textInverse
-                        : palette.textSecondary,
+                    width: segmentSlotWidth,
+                    backgroundColor: palette.primary,
                   },
-                ]}>
-                1. Identify & Add Plant
-              </Text>
-            </Pressable>
+                  activePillStyle,
+                ]}
+              />
+            )}
 
-            <Pressable
-              onPress={() => {
-                setMode('diagnose');
-                setErrorMessage(null);
-              }}
-              style={[
-                styles.segmentBtn,
-                mode === 'diagnose' && { backgroundColor: palette.primary },
-              ]}>
-              <Stethoscope
-                size={16}
-                color={
-                  mode === 'diagnose'
-                    ? palette.textInverse
-                    : palette.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.segmentBtnText,
-                  {
-                    color:
-                      mode === 'diagnose'
-                        ? palette.textInverse
-                        : palette.textSecondary,
-                  },
-                ]}>
-                2. AI Health Scan
-              </Text>
-            </Pressable>
+            {MODE_OPTIONS.map((option) => {
+              const isSelected = mode === option.key;
+              const color = isSelected
+                ? palette.textInverse
+                : palette.textSecondary;
+
+              return (
+                <Pressable
+                  key={option.key}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: isSelected }}
+                  onPress={() => {
+                    if (!isSelected) {
+                      triggerLightHaptic();
+                      setMode(option.key);
+                      setErrorMessage(null);
+                    }
+                  }}
+                  style={({ pressed }) => [
+                    styles.segmentBtn,
+                    pressed && !isSelected && styles.segmentBtnPressed,
+                  ]}>
+                  {option.key === 'identify' ? (
+                    <Sprout size={16} color={color} />
+                  ) : (
+                    <Stethoscope size={16} color={color} />
+                  )}
+                  <Text style={[styles.segmentBtnText, { color }]}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
           <PhotoCaptureCard
@@ -302,11 +336,18 @@ const styles = StyleSheet.create({
     ...Typography.body,
   },
   segmentedBar: {
+    position: 'relative',
     flexDirection: 'row',
     padding: Spacing.xs,
-    borderRadius: Radius.md,
+    borderRadius: Radius.pill,
     borderWidth: BorderWidth.hairline,
-    gap: 6,
+  },
+  activeSegmentPill: {
+    position: 'absolute',
+    left: 0,
+    top: Spacing.xs,
+    bottom: Spacing.xs,
+    borderRadius: Radius.pill - 4,
   },
   segmentBtn: {
     flex: 1,
@@ -315,7 +356,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 10,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.pill - 4,
+  },
+  segmentBtnPressed: {
+    opacity: 0.72,
   },
   segmentBtnText: {
     fontSize: 13,
