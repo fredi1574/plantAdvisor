@@ -1,0 +1,333 @@
+{
+  "common": {
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "undo": "Отменить",
+    "edit": "Изменить",
+    "close": "Закрыть",
+    "confirm": "Подтвердить",
+    "loading": "Загрузка..."
+  },
+  "tabs": {
+    "garden": "Сад",
+    "schedule": "График",
+    "scan": "Скан",
+    "account": "Профиль"
+  },
+  "plantOptions": {
+    "plantType": {
+      "succulent": "Суккулент",
+      "propagation": "Черенок",
+      "foliage": "Декоративно-лиственное",
+      "flowering": "Цветущее"
+    },
+    "potMaterial": {
+      "terracotta": "Терракота",
+      "ceramic_glazed": "Глазурованная керамика",
+      "plastic_nursery": "Пластиковый горшок",
+      "glass_vessel": "Стеклянная ёмкость",
+      "fabric_grow_bag": "Тканевый мешок"
+    },
+    "lightExposure": {
+      "bright_direct": "Яркий прямой свет",
+      "bright_indirect": "Яркий рассеянный свет",
+      "medium_filtered": "Умеренный свет",
+      "low_shade": "Полутень",
+      "grow_light": "Фитолампа"
+    },
+    "soilMoisture": {
+      "bone_dry": "Сухая почва",
+      "slightly_damp": "Слегка влажная",
+      "moist": "Влажная",
+      "waterlogged": "Переувлажнённая"
+    }
+  },
+  "badges": {
+    "health": {
+      "thriving": "Отлично",
+      "needs_attention": "Нужен уход",
+      "critical": "Критично"
+    },
+    "urgency": {
+      "immediate": "Срочно",
+      "soon": "Скоро",
+      "routine": "Планово"
+    },
+    "petSafety": {
+      "safe": "Безопасно для питомцев",
+      "cats": "кошек",
+      "dogs": "собак",
+      "pets": "питомцев",
+      "level": {
+        "mild": "Слабая",
+        "moderate": "Умеренная",
+        "severe": "Сильная"
+      },
+      "toxicTo": "Токсично для {{targets}} · {{level}}",
+      "compound": "Вещество: {{value}}"
+    }
+  },
+  "hydration": {
+    "refresh": "Обновить воду",
+    "waterToday": "Полить сегодня",
+    "overdue": "Просрочено {{count}} д.",
+    "untilWater": "Полив через {{count}} д.",
+    "untilWaterEvery": "Полив через {{count}} д. · раз в {{interval}} д."
+  },
+  "editPlant": {
+    "eyebrow": "БОТАНИЧЕСКИЙ ОБРАЗЕЦ",
+    "title": "Редактировать растение",
+    "saveLabel": "Сохранить изменения",
+    "specimenPhoto": "Фото растения",
+    "camera": "Камера",
+    "library": "Галерея",
+    "nickname": "Название (кличка)",
+    "nicknamePlaceholder": "Напр., Толстянка на окне",
+    "commonName": "Обычное название",
+    "commonNamePlaceholder": "Напр., Толстянка",
+    "scientificName": "Научное название",
+    "scientificNamePlaceholder": "Напр., Crassula ovata",
+    "roomPresets": "Пресеты комнат",
+    "saveSpot": "Сохранить место",
+    "location": "Место дома / в саду",
+    "locationPlaceholder": "Напр., Южный подоконник",
+    "waterEvery": "Полив каждые (дн.)",
+    "fertilizeEvery": "Подкормка каждые (дн.)",
+    "rotateEvery": "Поворот каждые (дн.)",
+    "botanicalCategory": "Категория растения",
+    "lightExposure": "Освещение",
+    "potMaterial": "Материал горшка",
+    "drainageLabel": "В горшке есть дренажное отверстие",
+    "drainageDesc": "Рекомендуется для аэрации корней и защиты от гнили"
+  },
+  "garden": {
+    "eyebrow": "БОТАНИЧЕСКАЯ ОРАНЖЕРЕЯ",
+    "title": "Мой сад",
+    "welcome": "Добро пожаловать, {{name}}",
+    "waterAll": "Полить все ({{count}})",
+    "waterAllTitle": "Полить все растения",
+    "waterAllMessage_one": "Отметить {{count}} растение как политое?",
+    "waterAllMessage_few": "Отметить все {{count}} растения как политые?",
+    "waterAllMessage_many": "Отметить все {{count}} растений как политые?",
+    "waterAllConfirm": "Отметить полив",
+    "waterAllToast_one": "{{count}} растение отмечено как политое!",
+    "waterAllToast_few": "Все {{count}} растения отмечены как политые!",
+    "waterAllToast_many": "Все {{count}} растений отмечены как политые!",
+    "wateredToast": "Полив «{{name}}» отмечен!",
+    "undoWateredToast": "Полив «{{name}}» отменён.",
+    "undoWaterAllToast_one": "Полив {{count}} растения отменён.",
+    "undoWaterAllToast_few": "Полив {{count}} растений отменён.",
+    "undoWaterAllToast_many": "Полив {{count}} растений отменён.",
+    "deleteTitle": "Удалить растение",
+    "deleteMessage": "Удалить «{{name}}» и все записи ухода?",
+    "deleteConfirm": "Удалить",
+    "deleteToast": "«{{name}}» удалено из вашего сада."
+  },
+  "schedule": {
+    "eyebrow": "КАЛЕНДАРЬ И ПЛАН УХОДА",
+    "title": "График ухода",
+    "fertilizedToast": "Подкормка для «{{name}}» записана!",
+    "rotatedToast": "Поворот горшка «{{name}}» записан!",
+    "wateredToast": "Полив «{{name}}» отмечен!",
+    "undoWateredToast": "Полив «{{name}}» отменён.",
+    "waterAllTitle": "Полить все растения",
+    "waterAllMessage_one": "Отметить {{count}} растение как политое?",
+    "waterAllMessage_few": "Отметить все {{count}} растения как политые?",
+    "waterAllMessage_many": "Отметить все {{count}} растений как политые?",
+    "waterAllConfirm": "Отметить полив",
+    "waterAllToast_one": "{{count}} растение отмечено как политое!",
+    "waterAllToast_few": "Все {{count}} растения отмечены как политые!",
+    "waterAllToast_many": "Все {{count}} растений отмечены как политые!",
+    "undoWaterAllToast_one": "Полив {{count}} растения отменён.",
+    "undoWaterAllToast_few": "Полив {{count}} растений отменён.",
+    "undoWaterAllToast_many": "Полив {{count}} растений отменён.",
+    "agendaEmpty": "На этот день уход не запланирован",
+    "tasksScheduled_one": "Запланирована {{count}} задача",
+    "tasksScheduled_few": "Запланировано {{count}} задачи",
+    "tasksScheduled_many": "Запланировано {{count}} задач",
+    "waterAllBtn": "Полить все",
+    "restDayTitle": "День отдыха для вашего сада",
+    "restDayText": "Все растения в порядке на {{day}}.",
+    "logFeed": "Подкормить",
+    "logRotate": "Повернуть",
+    "markWatered": "Полить",
+    "waterEarly": "Полить раньше",
+    "legend": {
+      "watering": "Полив",
+      "care": "Уход",
+      "propagation": "Черенки"
+    },
+    "today": "Сегодня",
+    "tomorrow": "Завтра",
+    "yesterday": "Вчера",
+    "weekdays": ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+    "months": [
+      "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+      "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+    ],
+    "shortMonths": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"],
+    "actionVerb": {
+      "refreshWater": "Обновить воду",
+      "soakAndDry": "Пролить и просушить",
+      "water": "Полить"
+    },
+    "actionPill": {
+      "overdue": "Просрочено · {{verb}}",
+      "dueToday": "Сегодня: {{verb}}",
+      "tomorrow": "Завтра: {{verb}}",
+      "dueIn_one": "Через {{count}} день",
+      "dueIn_few": "Через {{count}} дня",
+      "dueIn_many": "Через {{count}} дней"
+    },
+    "eventTypes": {
+      "water": "Полив",
+      "fertilize": "Подкормка",
+      "repot": "Пересадка",
+      "prune": "Обрезка",
+      "propagation": "Черенкование",
+      "ai_scan": "ИИ-скан здоровья",
+      "note": "Заметка"
+    }
+  },
+  "scan": {
+    "eyebrow": "ИИ-БОТАНИК И СКАНЕР",
+    "title": "Добавить или сканировать",
+    "subtitle": "Определите новое растение или запустите ИИ-диагностику по фото листьев и истории ухода.",
+    "quotaLeft": "Осталось {{remaining}} / {{limit}} бесплатных сканов сегодня",
+    "modeIdentify": "1. Определить и добавить",
+    "modeDiagnose": "2. ИИ-диагностика",
+    "photo": {
+      "step1": "ШАГ 1 · ФОТО РАСТЕНИЯ",
+      "step2": "ШАГ 2 · ФОТО ЛИСТЬЕВ ИЛИ РАСТЕНИЯ",
+      "emptyTitle": "Сделайте фото или выберите из галереи",
+      "emptySub": "Автоматическое сжатие до ≤1024×1024",
+      "optimized": "Оптимизировано ≤1024px: {{dimensions}}",
+      "camera": "Камера",
+      "library": "Галерея"
+    },
+    "identify": {
+      "step2": "ШАГ 2 · НАЗВАНИЕ ИЛИ ПРИЗНАКИ",
+      "searchPlaceholder": "Напр., Толстянка, Монстера, Авокадо...",
+      "analyzing": "Анализируем образец...",
+      "runButton": "Определить растение с ИИ",
+      "match": "Совпадение {{percent}}%",
+      "idealLight": "Идеальный свет:",
+      "baseWatering": "Базовый полив:",
+      "everyDays": "Каждые {{days}} дн.",
+      "substrate": "Грунт:",
+      "step3": "ШАГ 3 · СОХРАНИТЬ В МОЙ САД",
+      "indoorLabel": "Домашнее растение",
+      "indoorDesc": "Отключите, если растение растёт на улице",
+      "drainageDesc": "Критически важно для защиты корней от гнили",
+      "saveButton": "Добавить в сад и открыть журнал"
+    },
+    "diagnose": {
+      "contextTitle": "Контекст для ИИ",
+      "contextSubtitle": "История ухода автоматически передаётся ИИ вместе со снимком для точной диагностики.",
+      "contextSpecies": "Вид: {{common}} ({{scientific}}, {{family}})",
+      "contextContainer": "Горшок: {{pot}} • {{drainage}}",
+      "hasDrainage": "Есть дренажное отверстие",
+      "noDrainage": "НЕТ дренажного отверстия",
+      "contextTimeline": "История ухода: {{count}} записей (Последний полив: {{date}})",
+      "step3": "ШАГ 3 · СИМПТОМЫ И ИИ-ДИАГНОСТИКА",
+      "symptomsLabel": "Визуальные симптомы / наблюдения (необязательно)",
+      "symptomsPlaceholder": "Опишите пожелтение, пятна, вытягивание или состояние корней...",
+      "symptoms": [
+        "Желтеют нижние листья",
+        "Мягкие или вялые листья",
+        "Вытянутые стебли",
+        "Сухие коричневые кончики"
+      ],
+      "analyzing": "Сверяем фото с историей ухода...",
+      "runButton": "Запустить ИИ-диагностику"
+    }
+  },
+  "plantDetail": {
+    "tabs": {
+      "overview": "Обзор",
+      "journal": "Журнал",
+      "health": "Здоровье"
+    },
+    "notFoundTitle": "Растение не найдено",
+    "notFoundAction": "Вернуться в сад",
+    "deleteTitle": "Удалить растение",
+    "deleteMessage": "Удалить «{{name}}» ({{species}}) и всю историю ухода?",
+    "deleteConfirm": "Удалить",
+    "deleteLogTitle": "Удалить запись",
+    "deleteLogMessage": "Удалить запись «{{title}}»?",
+    "deleteLogConfirm": "Удалить",
+    "deleteLogToast": "Запись «{{title}}» удалена.",
+    "wateredToast": "Полив «{{name}}» отмечен!",
+    "undoWateredToast": "Полив «{{name}}» отменён.",
+    "editDetails": "Редактировать",
+    "deletePlant": "Удалить растение",
+    "updatedPlantToast": "Данные «{{name}}» обновлены!",
+    "updatedLogToast": "Запись «{{title}}» обновлена!",
+    "hero": {
+      "garden": "Сад",
+      "healthScan": "Скан здоровья",
+      "indoor": "Домашнее",
+      "outdoor": "Уличное"
+    },
+    "specs": {
+      "eyebrow": "ПРОФИЛЬ УХОДА",
+      "containerAndDrainage": "Горшок и дренаж",
+      "drainageYes": "Есть дренаж ✓",
+      "drainageNo": "Без дренажа",
+      "currentExposure": "Текущее освещение",
+      "idealLight": "Идеальный свет",
+      "recommendedSoil": "Рекомендуемый грунт"
+    },
+    "journal": {
+      "timelineTitle": "Хронология ухода",
+      "emptyTitle": "Журнал ухода готов",
+      "emptySubtitle": "Добавьте полив, пересадку или наблюдение выше, чтобы начать историю этого растения."
+    },
+    "gallery": {
+      "aiScan": "ИИ-скан здоровья",
+      "baselinePhoto": "Исходное фото"
+    },
+    "growth": {
+      "rootLength": "Длина корней",
+      "stemHeight": "Высота стебля",
+      "leafCount": "Количество листьев",
+      "unitCm": "см",
+      "unitLeaves": "лист."
+    }
+  },
+  "profile": {
+    "eyebrow": "АККАУНТ САДОВОДА И ОБЛАКО",
+    "title": "Профиль и синхронизация",
+    "appearance": {
+      "eyebrow": "ОФОРМЛЕНИЕ",
+      "system": "Системная",
+      "light": "Светлая",
+      "dark": "Тёмная",
+      "toast": "Выбрана тема: {{label}}.",
+      "footnote": "Выберите светлую, тёмную тему или системную настройку устройства."
+    },
+    "language": {
+      "eyebrow": "ЯЗЫК",
+      "system": "Системный",
+      "en": "English",
+      "ru": "Русский",
+      "toast": "Выбран язык: {{label}}.",
+      "footnote": "Выберите английский, русский или язык вашего устройства."
+    },
+    "dataAndAccount": {
+      "eyebrow": "ДАННЫЕ И АККАУНТ",
+      "privacyPolicy": "Политика конфиденциальности",
+      "termsOfService": "Условия использования",
+      "resetTitle": "Сбросить к демо-саду",
+      "resetSubtitle": "Восстановить стандартную коллекцию растений на этом устройстве",
+      "resetMessage": "Заменить текущий локальный сад демо-коллекцией? Это действие нельзя отменить.",
+      "resetConfirm": "Сбросить",
+      "resetToast": "Демо-коллекция восстановлена.",
+      "signOut": "Выйти",
+      "signOutMessage": "Выйти из облачного аккаунта FloraLog?",
+      "deleteAccount": "Удалить аккаунт",
+      "deleteAccountSubtitle": "Безвозвратно удалить облачный аккаунт и все синхронизированные данные"
+    }
+  }
+}

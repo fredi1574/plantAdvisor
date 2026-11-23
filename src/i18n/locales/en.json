@@ -1,0 +1,325 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "undo": "Undo",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "loading": "Loading..."
+  },
+  "tabs": {
+    "garden": "Garden",
+    "schedule": "Schedule",
+    "scan": "Scan",
+    "account": "Account"
+  },
+  "plantOptions": {
+    "plantType": {
+      "succulent": "Succulent",
+      "propagation": "Propagation",
+      "foliage": "Foliage",
+      "flowering": "Flowering"
+    },
+    "potMaterial": {
+      "terracotta": "Terracotta",
+      "ceramic_glazed": "Glazed Ceramic",
+      "plastic_nursery": "Nursery Pot",
+      "glass_vessel": "Glass Jar",
+      "fabric_grow_bag": "Grow Bag"
+    },
+    "lightExposure": {
+      "bright_direct": "Bright Direct",
+      "bright_indirect": "Bright Indirect",
+      "medium_filtered": "Medium Filtered",
+      "low_shade": "Low Shade",
+      "grow_light": "Grow Light"
+    },
+    "soilMoisture": {
+      "bone_dry": "Bone Dry",
+      "slightly_damp": "Slightly Damp",
+      "moist": "Moist",
+      "waterlogged": "Waterlogged"
+    }
+  },
+  "badges": {
+    "health": {
+      "thriving": "Thriving",
+      "needs_attention": "Needs Attention",
+      "critical": "Critical"
+    },
+    "urgency": {
+      "immediate": "Immediate",
+      "soon": "Soon",
+      "routine": "Routine"
+    },
+    "petSafety": {
+      "safe": "Pet Safe (Cats & Dogs)",
+      "cats": "Cats",
+      "dogs": "Dogs",
+      "pets": "Pets",
+      "level": {
+        "mild": "Mild",
+        "moderate": "Moderate",
+        "severe": "Severe"
+      },
+      "toxicTo": "Toxic to {{targets}} · {{level}}",
+      "compound": "Compound: {{value}}"
+    }
+  },
+  "hydration": {
+    "refresh": "Refresh",
+    "waterToday": "Water Today",
+    "overdue": "{{count}}d Overdue",
+    "untilWater": "{{count}}d until water",
+    "untilWaterEvery": "{{count}}d until water · every {{interval}}d"
+  },
+  "editPlant": {
+    "eyebrow": "BOTANICAL SPECIMEN",
+    "title": "Edit Plant Details",
+    "saveLabel": "Save Changes",
+    "specimenPhoto": "Specimen Photo",
+    "camera": "Camera",
+    "library": "Library",
+    "nickname": "Plant Nickname",
+    "nicknamePlaceholder": "e.g., Sunny Window Jade",
+    "commonName": "Common Name",
+    "commonNamePlaceholder": "e.g., Jade Plant",
+    "scientificName": "Scientific Name",
+    "scientificNamePlaceholder": "e.g., Crassula ovata",
+    "roomPresets": "Room Presets",
+    "saveSpot": "Save Spot",
+    "location": "Location in Home / Garden",
+    "locationPlaceholder": "e.g., South Sill",
+    "waterEvery": "Water Every (Days)",
+    "fertilizeEvery": "Fertilize Every (days)",
+    "rotateEvery": "Rotate Every (days)",
+    "botanicalCategory": "Botanical Category",
+    "lightExposure": "Light Exposure",
+    "potMaterial": "Pot / Vessel Material",
+    "drainageLabel": "Container Has Bottom Drainage Hole",
+    "drainageDesc": "Recommended for healthy root aeration and preventing rot"
+  },
+  "garden": {
+    "eyebrow": "BOTANICAL CONSERVATORY",
+    "title": "My Garden",
+    "welcome": "Welcome, {{name}}",
+    "waterAll": "Water All ({{count}})",
+    "waterAllTitle": "Water All Plants",
+    "waterAllMessage_one": "Mark {{count}} plant needing water as watered?",
+    "waterAllMessage_other": "Mark all {{count}} plants needing water as watered?",
+    "waterAllConfirm": "Mark Watered",
+    "waterAllToast_one": "{{count}} plant marked as watered!",
+    "waterAllToast_other": "All {{count}} plants marked as watered!",
+    "wateredToast": "Marked \"{{name}}\" as watered!",
+    "undoWateredToast": "Undid watering for \"{{name}}\".",
+    "undoWaterAllToast_one": "Undid watering for {{count}} plant.",
+    "undoWaterAllToast_other": "Undid watering for {{count}} plants.",
+    "deleteTitle": "Remove Plant",
+    "deleteMessage": "Remove \"{{name}}\" and all its care logs?",
+    "deleteConfirm": "Remove",
+    "deleteToast": "Removed \"{{name}}\" from your garden."
+  },
+  "schedule": {
+    "eyebrow": "BOTANICAL AGENDA & CARE HORIZON",
+    "title": "Care Schedule",
+    "fertilizedToast": "Logged fertilizer feed for \"{{name}}\"!",
+    "rotatedToast": "Logged pot rotation for \"{{name}}\"!",
+    "wateredToast": "Marked \"{{name}}\" as watered!",
+    "undoWateredToast": "Undid watering for \"{{name}}\".",
+    "waterAllTitle": "Water All Plants",
+    "waterAllMessage_one": "Mark {{count}} plant needing water as watered?",
+    "waterAllMessage_other": "Mark all {{count}} plants needing water as watered?",
+    "waterAllConfirm": "Mark Watered",
+    "waterAllToast_one": "{{count}} plant marked as watered!",
+    "waterAllToast_other": "All {{count}} plants marked as watered!",
+    "undoWaterAllToast_one": "Undid watering for {{count}} plant.",
+    "undoWaterAllToast_other": "Undid watering for {{count}} plants.",
+    "agendaEmpty": "No plants scheduled for care on this day",
+    "tasksScheduled_one": "{{count}} care task scheduled",
+    "tasksScheduled_other": "{{count}} care tasks scheduled",
+    "waterAllBtn": "Water All",
+    "restDayTitle": "Rest Day for Your Garden",
+    "restDayText": "All plants are on track for {{day}}.",
+    "logFeed": "Log Feed",
+    "logRotate": "Log Rotate",
+    "markWatered": "Mark Watered",
+    "waterEarly": "Water Early",
+    "legend": {
+      "watering": "Watering",
+      "care": "Care",
+      "propagation": "Propagation"
+    },
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "weekdays": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    "months": [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ],
+    "shortMonths": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "actionVerb": {
+      "refreshWater": "Refresh Water",
+      "soakAndDry": "Soak & Dry",
+      "water": "Water"
+    },
+    "actionPill": {
+      "overdue": "Overdue · {{verb}} Now",
+      "dueToday": "Due Today for {{verb}}",
+      "tomorrow": "{{verb}} Tomorrow",
+      "dueIn_one": "Due in {{count}} day",
+      "dueIn_other": "Due in {{count}} days"
+    },
+    "eventTypes": {
+      "water": "Watered",
+      "fertilize": "Fertilized",
+      "repot": "Repotted",
+      "prune": "Pruned",
+      "propagation": "Propagation Log",
+      "ai_scan": "AI Health Scan",
+      "note": "Garden Note"
+    }
+  },
+  "scan": {
+    "eyebrow": "AI BOTANIST & SCANNER",
+    "title": "Add or Scan Plant",
+    "subtitle": "Identify a new plant or run a context-aware AI Health Scan combining leaf photos with your care timeline.",
+    "quotaLeft": "{{remaining}} / {{limit}} free AI scans left today",
+    "modeIdentify": "1. Identify & Add Plant",
+    "modeDiagnose": "2. AI Health Scan",
+    "photo": {
+      "step1": "STEP 1 · SPECIMEN PHOTO",
+      "step2": "STEP 2 · LEAF OR PLANT PHOTO",
+      "emptyTitle": "Snap a leaf photo or choose a sample below",
+      "emptySub": "Auto-resized & compressed to ≤1024×1024 via expo-image-manipulator",
+      "optimized": "Optimized ≤1024px: {{dimensions}}",
+      "camera": "Camera",
+      "library": "Photo Library"
+    },
+    "identify": {
+      "step2": "STEP 2 · BOTANICAL NAME OR VISUAL CLUES",
+      "searchPlaceholder": "e.g., Crassula ovata, Jade Plant, Avocado seed, Monstera...",
+      "analyzing": "Analyzing Specimen...",
+      "runButton": "Run AI Plant Identification",
+      "match": "{{percent}}% Match",
+      "idealLight": "Ideal Light:",
+      "baseWatering": "Base Watering:",
+      "everyDays": "Every {{days}} days",
+      "substrate": "Substrate:",
+      "step3": "STEP 3 · SAVE SPECIMEN TO MY GARDEN",
+      "indoorLabel": "Indoor Specimen",
+      "indoorDesc": "Toggle off if grown outdoors on a patio or garden bed",
+      "drainageDesc": "Critical for preventing anaerobic root rot in succulents",
+      "saveButton": "Add to My Garden & Open Notebook"
+    },
+    "diagnose": {
+      "contextTitle": "AI Prompt Context",
+      "contextSubtitle": "This specimen history is automatically included with your scan so the AI can cross-reference watering and container details.",
+      "contextSpecies": "Species: {{common}} ({{scientific}}, {{family}})",
+      "contextContainer": "Container: {{pot}} • {{drainage}}",
+      "hasDrainage": "Has drainage hole",
+      "noDrainage": "NO drainage hole",
+      "contextTimeline": "Care Timeline: {{count}} logged events (Last watered: {{date}})",
+      "step3": "STEP 3 · SYMPTOMS & AI HEALTH SCAN",
+      "symptomsLabel": "Visual Symptoms / Observations (Optional)",
+      "symptomsPlaceholder": "Describe any yellowing, wrinkling, stretching, spots, or root growth...",
+      "symptoms": [
+        "Yellowing lower leaves",
+        "Soft or mushy leaves",
+        "Stretched / leggy stems",
+        "Brown crispy leaf tips"
+      ],
+      "analyzing": "Cross-Referencing Photo & Care Logs...",
+      "runButton": "Run AI Health & Condition Scan"
+    }
+  },
+  "plantDetail": {
+    "tabs": {
+      "overview": "Overview",
+      "journal": "Journal",
+      "health": "Health"
+    },
+    "notFoundTitle": "Plant not found",
+    "notFoundAction": "Return to My Garden",
+    "deleteTitle": "Delete Plant",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\" ({{species}}) and its care history?",
+    "deleteConfirm": "Delete",
+    "deleteLogTitle": "Delete Care Log",
+    "deleteLogMessage": "Are you sure you want to delete the log \"{{title}}\"?",
+    "deleteLogConfirm": "Delete",
+    "deleteLogToast": "Removed log \"{{title}}\".",
+    "wateredToast": "Watered \"{{name}}\"!",
+    "undoWateredToast": "Undid watering for \"{{name}}\".",
+    "editDetails": "Edit Details",
+    "deletePlant": "Delete Plant",
+    "updatedPlantToast": "Updated \"{{name}}\" details!",
+    "updatedLogToast": "Updated log \"{{title}}\"!",
+    "hero": {
+      "garden": "Garden",
+      "healthScan": "Health Scan",
+      "indoor": "Indoor",
+      "outdoor": "Outdoor"
+    },
+    "specs": {
+      "eyebrow": "SPECIMEN CARE PROFILE",
+      "containerAndDrainage": "Container & Drainage",
+      "drainageYes": "Drainage Hole ✓",
+      "drainageNo": "No Drainage Hole",
+      "currentExposure": "Current Exposure",
+      "idealLight": "Ideal Light",
+      "recommendedSoil": "Recommended Soil"
+    },
+    "journal": {
+      "timelineTitle": "Chronological Notebook Timeline",
+      "emptyTitle": "Your care journal is ready",
+      "emptySubtitle": "Log a watering, repotting, or growth observation above to start building this specimen's timeline."
+    },
+    "gallery": {
+      "aiScan": "AI Health Scan",
+      "baselinePhoto": "Baseline Photo"
+    },
+    "growth": {
+      "rootLength": "Root Length",
+      "stemHeight": "Stem Height",
+      "leafCount": "Leaf Count",
+      "unitCm": "cm",
+      "unitLeaves": "leaves"
+    }
+  },
+  "profile": {
+    "eyebrow": "GARDENER ACCOUNT & CLOUD",
+    "title": "Profile & Sync",
+    "appearance": {
+      "eyebrow": "APPEARANCE",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark",
+      "toast": "Theme set to {{label}}.",
+      "footnote": "Choose Light, Dark (Night Conservatory), or match your device system setting."
+    },
+    "language": {
+      "eyebrow": "LANGUAGE",
+      "system": "System",
+      "en": "English",
+      "ru": "Русский",
+      "toast": "Language set to {{label}}.",
+      "footnote": "Choose English, Russian, or match your device system language."
+    },
+    "dataAndAccount": {
+      "eyebrow": "DATA & ACCOUNT",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service",
+      "resetTitle": "Reset to Sample Garden",
+      "resetSubtitle": "Restore the default sample conservatory on this device",
+      "resetMessage": "Replace your current local garden with the sample conservatory? This cannot be undone.",
+      "resetConfirm": "Reset",
+      "resetToast": "Restored the sample conservatory.",
+      "signOut": "Sign Out",
+      "signOutMessage": "Sign out of your FloraLog cloud account?",
+      "deleteAccount": "Delete Account",
+      "deleteAccountSubtitle": "Permanently remove your cloud account and all synced data"
+    }
+  }
+}
