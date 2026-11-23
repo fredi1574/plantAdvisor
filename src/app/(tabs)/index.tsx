@@ -1,6 +1,12 @@
 import { router } from 'expo-router';
-import { LayoutGrid, LayoutList, MapPin, Sprout } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import {
+  Droplets,
+  LayoutGrid,
+  LayoutList,
+  MapPin,
+  Sprout,
+} from 'lucide-react-native';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,7 +24,11 @@ import {
 } from '@/components/garden/propagation-readiness-bar';
 import { SwipeablePlantCard } from '@/components/garden/swipeable-plant-card';
 import { EditPlantModal } from '@/components/modals/edit-plant-modal';
-import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
+import { OnboardingModal } from '@/components/modals/onboarding-modal';
+import {
+  AnimatedEntrance,
+  SpringPressable,
+} from '@/components/ui/animated-wrappers';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -61,8 +71,21 @@ export default function MyGardenScreen() {
   const syncError = usePlantStore((s) => s.syncError);
   const syncWithSupabase = usePlantStore((s) => s.syncWithSupabase);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
+  const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
   const undoWatering = usePlantStore((s) => s.undoWatering);
   const deletePlant = usePlantStore((s) => s.deletePlant);
+  const hasCompletedOnboarding = usePlantStore((s) => s.hasCompletedOnboarding);
+  const completeOnboarding = usePlantStore((s) => s.completeOnboarding);
+
+  const [isStoreHydrated, setIsStoreHydrated] = useState(() =>
+    usePlantStore.persist.hasHydrated()
+  );
+  useEffect(() => {
+    if (isStoreHydrated) return;
+    return usePlantStore.persist.onFinishHydration(() => {
+      setIsStoreHydrated(true);
+    });
+  }, [isStoreHydrated]);
 
   const localPhotoCount = useMemo(
     () => countLocalOnlyPhotos(plants, entries),
@@ -160,6 +183,41 @@ export default function MyGardenScreen() {
       floweringCount,
     };
   }, [plants]);
+
+  const handleWaterAllThirsty = () => {
+    if (stats.needsWaterCount === 0) return;
+    confirmAction({
+      title: 'Water All Thirsty Plants',
+      message: `Mark all ${stats.needsWaterCount} ${
+        stats.needsWaterCount === 1 ? 'plant' : 'plants'
+      } needing water as watered?`,
+      confirmLabel: 'Mark Watered',
+      onConfirm: () => {
+        const count = waterAllNeedingWater();
+        if (count > 0) {
+          const undoSnapshot = usePlantStore.getState().lastWateringUndo;
+          showToast(
+            `All ${count} ${count === 1 ? 'plant' : 'plants'} marked as watered!`,
+            {
+              action: undoSnapshot
+                ? {
+                    label: 'Undo',
+                    onPress: () => {
+                      const restored = undoWatering(undoSnapshot);
+                      showToast(
+                        `Undid watering for ${restored} ${
+                          restored === 1 ? 'plant' : 'plants'
+                        }.`
+                      );
+                    },
+                  }
+                : undefined,
+            }
+          );
+        }
+      },
+    });
+  };
 
   const handleDeletePlant = (plant: UserPlant) => {
     confirmAction({
@@ -401,6 +459,47 @@ export default function MyGardenScreen() {
             onToggleGroupByLocation={() => setGroupByLocation((prev) => !prev)}
           />
 
+          {filter === 'needs_water' && filteredPlants.length > 0 && (
+            <View
+              style={[
+                styles.thirstyBanner,
+                {
+                  backgroundColor: palette.waterAlertBg,
+                  borderColor: palette.waterAlertBorder,
+                },
+              ]}>
+              <View style={styles.thirstyBannerLeft}>
+                <Droplets size={15} color={palette.waterBlue} />
+                <Text
+                  style={[
+                    styles.thirstyBannerText,
+                    { color: palette.waterAlertText },
+                  ]}>
+                  {filteredPlants.length}{' '}
+                  {filteredPlants.length === 1 ? 'plant needs' : 'plants need'}{' '}
+                  water
+                </Text>
+              </View>
+              <SpringPressable
+                onPress={handleWaterAllThirsty}
+                accessibilityRole="button"
+                accessibilityLabel="Water all thirsty plants"
+                style={[
+                  styles.waterAllBtn,
+                  { backgroundColor: palette.waterBlue },
+                ]}>
+                <Droplets size={13} color={palette.textInverse} />
+                <Text
+                  style={[
+                    styles.waterAllBtnText,
+                    { color: palette.textInverse },
+                  ]}>
+                  Water All
+                </Text>
+              </SpringPressable>
+            </View>
+          )}
+
           {isPropagationBench && filteredPlants.length > 0 && (
             <View
               style={[
@@ -472,6 +571,17 @@ export default function MyGardenScreen() {
           showToast(`Updated "${updatedName}" details! 🌿`)
         }
         onRequestDelete={handleDeletePlant}
+      />
+
+      <OnboardingModal
+        visible={isStoreHydrated && !hasCompletedOnboarding}
+        onStartScan={() => {
+          completeOnboarding();
+          router.push('/(tabs)/scan');
+        }}
+        onExploreSample={() => {
+          completeOnboarding();
+        }}
       />
     </SafeAreaView>
   );
@@ -557,6 +667,38 @@ const styles = StyleSheet.create({
   },
   propBenchText: {
     flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  thirstyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  thirstyBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flex: 1,
+  },
+  thirstyBannerText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  waterAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+  },
+  waterAllBtnText: {
     fontSize: 12,
     fontWeight: '700',
   },

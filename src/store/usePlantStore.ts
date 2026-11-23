@@ -64,6 +64,7 @@ export const usePlantStore = create<PlantStoreState>()(
         notificationPrefs: state.notificationPrefs,
         adaptiveCarePrefs: state.adaptiveCarePrefs,
         roomPresets: state.roomPresets,
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

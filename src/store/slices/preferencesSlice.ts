@@ -19,6 +19,7 @@ export const createPreferencesSlice: PlantSliceCreator<PreferencesSlice> = (
   notificationPrefs: DEFAULT_NOTIFICATION_PREFERENCES,
   adaptiveCarePrefs: DEFAULT_ADAPTIVE_CARE_PREFS,
   roomPresets: DEFAULT_ROOM_PRESETS,
+  hasCompletedOnboarding: false,
 
   setNotificationPrefs: async (prefs) => {
     const nextPrefs: NotificationPreferences = {
@@ -74,6 +75,10 @@ export const createPreferencesSlice: PlantSliceCreator<PreferencesSlice> = (
     set((state) => ({
       roomPresets: state.roomPresets.filter((p) => p.id !== presetId),
     }));
+  },
+
+  completeOnboarding: () => {
+    set({ hasCompletedOnboarding: true });
   },
 
   rescheduleAllNotifications: async () => {

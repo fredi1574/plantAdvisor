@@ -127,10 +127,12 @@ export interface PreferencesSlice {
   notificationPrefs: NotificationPreferences;
   adaptiveCarePrefs: AdaptiveCarePreferences;
   roomPresets: RoomPreset[];
+  hasCompletedOnboarding: boolean;
   setNotificationPrefs: (prefs: Partial<NotificationPreferences>) => Promise<void>;
   setAdaptiveCarePrefs: (prefs: Partial<AdaptiveCarePreferences>) => void;
   addRoomPreset: (preset: Omit<RoomPreset, 'id'>) => RoomPreset;
   deleteRoomPreset: (presetId: string) => void;
+  completeOnboarding: () => void;
   rescheduleAllNotifications: () => Promise<void>;
 }
 
