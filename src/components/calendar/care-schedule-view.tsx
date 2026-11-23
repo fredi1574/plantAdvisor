@@ -3,7 +3,6 @@ import { StyleSheet, View } from 'react-native';
 
 import { CareMonthCalendar } from '@/components/calendar/care-month-calendar';
 import { DayAgendaCard } from '@/components/calendar/day-agenda-card';
-import { UpcomingTimelineCard } from '@/components/calendar/upcoming-timeline-card';
 import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
 import { Spacing } from '@/constants/theme';
 import {
@@ -24,7 +23,7 @@ interface CareScheduleViewProps {
 }
 
 /**
- * Coordinates the selected day agenda, upcoming 2-week timeline rail, and month heatmap calendar.
+ * Coordinates the selected day agenda and month heatmap calendar.
  */
 export function CareScheduleView({
   plants,
@@ -76,27 +75,6 @@ export function CareScheduleView({
     return timeline[0];
   }, [timelineByDate, selectedDateKey, historicalMap, timeline]);
 
-  const upcomingTimelineDays = useMemo(
-    () =>
-      timeline
-        .slice(0, 14)
-        .filter(
-          (d) =>
-            d.dateKey !== selectedDaySchedule?.dateKey &&
-            d.projectedTasks.length > 0
-        ),
-    [timeline, selectedDaySchedule?.dateKey]
-  );
-
-  const upcomingTaskCount = useMemo(
-    () =>
-      upcomingTimelineDays.reduce(
-        (acc, day) => acc + day.projectedTasks.length,
-        0
-      ),
-    [upcomingTimelineDays]
-  );
-
   const plantLookup = useMemo(() => {
     const map: Record<string, UserPlant> = {};
     for (const plant of plants) {
@@ -121,16 +99,7 @@ export function CareScheduleView({
         </AnimatedEntrance>
       )}
 
-      <AnimatedEntrance index={1} animateLayout>
-        <UpcomingTimelineCard
-          upcomingDays={upcomingTimelineDays}
-          totalTaskCount={upcomingTaskCount}
-          onSelectDate={setSelectedDateKey}
-          onCompleteTask={onCompleteTask}
-        />
-      </AnimatedEntrance>
-
-      <AnimatedEntrance index={2}>
+      <AnimatedEntrance index={1}>
         <CareMonthCalendar
           calendarMonth={calendarMonth}
           selectedDateKey={selectedDaySchedule?.dateKey}
