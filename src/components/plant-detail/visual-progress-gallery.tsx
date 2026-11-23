@@ -1,12 +1,11 @@
 import { Image } from 'expo-image';
-import { Columns2, Images } from 'lucide-react-native';
+import { Columns2 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Chip } from '@/components/ui/chip';
 import { PhotoLightboxModal } from '@/components/ui/photo-lightbox-modal';
-import { SurfaceCard } from '@/components/ui/surface-card';
-import { BorderWidth, Radius, Spacing } from '@/constants/theme';
+import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import type { HealthAssessment, NotebookEntry } from '@/types/plant';
 
@@ -101,14 +100,11 @@ export function VisualProgressGallery({
   const latest = photos[photos.length - 1];
 
   return (
-    <SurfaceCard variant="glass">
+    <View style={styles.section}>
       <View style={styles.headerRow}>
-        <View style={styles.titleRow}>
-          <Images size={16} color={palette.primary} strokeWidth={2.2} />
-          <Text style={[styles.title, { color: palette.textPrimary }]}>
-            Visual Progress ({photos.length})
-          </Text>
-        </View>
+        <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+          VISUAL PROGRESS ({photos.length})
+        </Text>
 
         {canCompare && (
           <Chip
@@ -181,7 +177,7 @@ export function VisualProgressGallery({
               style={[
                 styles.thumbCard,
                 {
-                  backgroundColor: palette.bgSubtle,
+                  backgroundColor: palette.bgSurface,
                   borderColor: palette.borderSubtle,
                 },
               ]}>
@@ -215,25 +211,22 @@ export function VisualProgressGallery({
         }
         onClose={() => setPreviewItem(null)}
       />
-    </SurfaceCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  section: {
+    gap: Spacing.sm + 2,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.sm,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '700',
+  eyebrow: {
+    ...Typography.eyebrow,
   },
   stripContent: {
     gap: Spacing.sm,

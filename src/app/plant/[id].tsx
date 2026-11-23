@@ -287,9 +287,7 @@ export default function PlantDetailNotebookScreen() {
                       <Stethoscope size={14} color={color} />
                     )}
                     <Text style={[styles.segmentBtnText, { color }]}>
-                      {tab.key === 'journal' && plantEntries.length > 0
-                        ? `${tab.label} (${plantEntries.length})`
-                        : tab.label}
+                      {tab.label}
                     </Text>
                     {tab.key === 'health' && healthAlertDot && !isSelected && (
                       <View

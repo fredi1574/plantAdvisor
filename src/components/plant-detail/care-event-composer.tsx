@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Camera, Image as ImageIcon, X } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   CareMetricsFields,
@@ -29,50 +29,50 @@ const getQuickActions = (
   defaultNotes: string;
   color: string;
 }[] => [
-  {
-    type: 'water',
-    label: 'Log Water',
-    defaultTitle: 'Thorough Watering',
-    defaultNotes: 'Watered after checking substrate dryness.',
-    color: palette.waterBlue,
-  },
-  {
-    type: 'propagation',
-    label: 'Prop Milestone',
-    defaultTitle: 'Propagation Growth Check',
-    defaultNotes: 'Logged new root/shoot elongation milestone.',
-    color: palette.accentTerracotta,
-  },
-  {
-    type: 'fertilize',
-    label: 'Fertilize',
-    defaultTitle: 'Diluted Nutrient Feed',
-    defaultNotes: 'Applied balanced liquid fertilizer at 1/2 strength.',
-    color: palette.primary,
-  },
-  {
-    type: 'prune',
-    label: 'Prune',
-    defaultTitle: 'Canopy & Leaf Pruning',
-    defaultNotes: 'Removed spent lower foliage and pinched apical tip.',
-    color: palette.primaryMuted,
-  },
-  {
-    type: 'repot',
-    label: 'Repot',
-    defaultTitle: 'Substrate & Pot Refresh',
-    defaultNotes: 'Checked root health and refreshed gritty aerated substrate.',
-    color: palette.accentTerracotta,
-  },
-  {
-    type: 'note',
-    label: 'Add Note',
-    defaultTitle: 'Botanical Observation Note',
-    defaultNotes:
-      'Leaves looking turgid and well-oriented toward window light.',
-    color: palette.textSecondary,
-  },
-];
+    {
+      type: 'water',
+      label: 'Log Water',
+      defaultTitle: 'Thorough Watering',
+      defaultNotes: 'Watered after checking substrate dryness.',
+      color: palette.waterBlue,
+    },
+    {
+      type: 'propagation',
+      label: 'Prop Milestone',
+      defaultTitle: 'Propagation Growth Check',
+      defaultNotes: 'Logged new root/shoot elongation milestone.',
+      color: palette.accentTerracotta,
+    },
+    {
+      type: 'fertilize',
+      label: 'Fertilize',
+      defaultTitle: 'Diluted Nutrient Feed',
+      defaultNotes: 'Applied balanced liquid fertilizer at 1/2 strength.',
+      color: palette.primary,
+    },
+    {
+      type: 'prune',
+      label: 'Prune',
+      defaultTitle: 'Canopy & Leaf Pruning',
+      defaultNotes: 'Removed spent lower foliage and pinched apical tip.',
+      color: palette.primaryMuted,
+    },
+    {
+      type: 'repot',
+      label: 'Repot',
+      defaultTitle: 'Substrate & Pot Refresh',
+      defaultNotes: 'Checked root health and refreshed gritty aerated substrate.',
+      color: palette.accentTerracotta,
+    },
+    {
+      type: 'note',
+      label: 'Add Note',
+      defaultTitle: 'Botanical Observation Note',
+      defaultNotes:
+        'Leaves looking turgid and well-oriented toward window light.',
+      color: palette.textSecondary,
+    },
+  ];
 
 interface CareEventComposerProps {
   plant: UserPlant;
@@ -149,7 +149,7 @@ export function CareEventComposer({
       <View style={styles.headerRow}>
         <Text
           style={[styles.sectionHeaderTitle, { color: palette.textPrimary }]}>
-          Quick-Log Care or Propagation Milestone
+          Quick-Log
         </Text>
         <Chip
           label={showDetailedLog ? 'Hide Details' : 'Photo & Metrics'}
@@ -240,7 +240,10 @@ export function CareEventComposer({
         </SurfaceCard>
       )}
 
-      <View style={styles.quickActionsGrid}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.quickActionsRow}>
         {quickActions.map((qa) => {
           const isSelected = selectedQuickType === qa.type;
           return (
@@ -256,16 +259,16 @@ export function CareEventComposer({
               style={
                 isSelected
                   ? {
-                      borderColor: qa.color,
-                      backgroundColor: palette.bgPrimary,
-                    }
+                    borderColor: qa.color,
+                    backgroundColor: palette.bgPrimary,
+                  }
                   : undefined
               }
               textStyle={{ color: palette.textPrimary }}
             />
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -318,9 +321,10 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 10,
   },
-  quickActionsGrid: {
+  quickActionsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: Spacing.sm,
+    paddingVertical: Spacing.half,
   },
 });
