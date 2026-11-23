@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <mask id="main-leaf-vein">
+      <rect width="512" height="512" fill="white" />
+      <path
+        d="M 264 224 Q 294 190 332 152"
+        fill="none"
+        stroke="black"
+        stroke-width="10"
+        stroke-linecap="round"
+      />
+    </mask>
+    <mask id="left-leaf-vein">
+      <rect width="512" height="512" fill="white" />
+      <path
+        d="M 248 244 Q 220 216 186 184"
+        fill="none"
+        stroke="black"
+        stroke-width="9"
+        stroke-linecap="round"
+      />
+    </mask>
+  </defs>
+
+  <g transform="translate(-4, 0)">
+    <!-- Central stem -->
+    <path
+      d="M 256 292 L 256 238"
+      fill="none"
+      stroke="#2D5A3C"
+      stroke-width="16"
+      stroke-linecap="round"
+    />
+
+    <!-- Left companion leaf -->
+    <path
+      d="M 256 252 C 256 196 214 156 154 152 C 156 212 200 250 256 252 Z"
+      fill="#4E7A5B"
+      mask="url(#left-leaf-vein)"
+    />
+
+    <!-- Right primary leaf -->
+    <path
+      d="M 256 232 C 254 166 298 118 368 114 C 366 184 318 230 256 232 Z"
+      fill="#2D5A3C"
+      mask="url(#main-leaf-vein)"
+    />
+
+    <!-- Terracotta pot rim -->
+    <rect
+      x="172"
+      y="290"
+      width="168"
+      height="28"
+      rx="12"
+      fill="#C86D51"
+    />
+
+    <!-- Terracotta pot body -->
+    <path
+      d="M 186 326 L 326 326 L 310 396 C 308 406 300 412 290 412 L 222 412 C 212 412 204 406 202 396 Z"
+      fill="#C86D51"
+    />
+  </g>
+</svg>
