@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { Camera, Image as ImageIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -65,8 +66,9 @@ export function PhotoCaptureCard({
   imageDimensions,
   onImageSelected,
   onError,
-  stepLabel = 'STEP 1 · SPECIMEN PHOTO',
+  stepLabel,
 }: PhotoCaptureCardProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
 
   const handlePickPhoto = async (source: ImagePickSource) => {
@@ -94,7 +96,7 @@ export function PhotoCaptureCard({
   return (
     <View style={styles.section}>
       <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-        {stepLabel}
+        {stepLabel ?? t('scan.photo.step1')}
       </Text>
 
       {imageUri ? (
@@ -119,7 +121,7 @@ export function PhotoCaptureCard({
                   styles.compressionBadgeText,
                   { color: palette.textInverse },
                 ]}>
-                Optimized ≤1024px: {imageDimensions}
+                {t('scan.photo.optimized', { dimensions: imageDimensions })}
               </Text>
             </View>
           )}
@@ -146,10 +148,10 @@ export function PhotoCaptureCard({
           </View>
           <Text
             style={[styles.emptyPreviewTitle, { color: palette.textPrimary }]}>
-            Snap a leaf photo or choose a sample below
+            {t('scan.photo.emptyTitle')}
           </Text>
           <Text style={[styles.emptyPreviewSub, { color: palette.textMuted }]}>
-            Auto-resized & compressed to ≤1024×1024 via expo-image-manipulator
+            {t('scan.photo.emptySub')}
           </Text>
         </View>
       )}
@@ -169,7 +171,7 @@ export function PhotoCaptureCard({
           <Camera size={16} color={palette.primary} />
           <Text
             style={[styles.secondaryMediaBtnText, { color: palette.primary }]}>
-            Camera
+            {t('scan.photo.camera')}
           </Text>
         </SpringPressable>
 
@@ -187,7 +189,7 @@ export function PhotoCaptureCard({
           <ImageIcon size={16} color={palette.primary} />
           <Text
             style={[styles.secondaryMediaBtnText, { color: palette.primary }]}>
-            Photo Library
+            {t('scan.photo.library')}
           </Text>
         </SpringPressable>
       </View>

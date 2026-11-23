@@ -8,6 +8,7 @@ import {
   Plus,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -22,6 +23,7 @@ import {
 } from '@/constants/plantOptions';
 import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { localizeLocation } from '@/i18n/plantDisplay';
 import { triggerLightHaptic } from '@/services/haptics';
 import { pickPlantImage } from '@/services/imagePicker';
 import { usePlantStore } from '@/store/usePlantStore';
@@ -76,6 +78,7 @@ function EditPlantFormSheet({
   onSaved,
   onRequestDelete,
 }: EditPlantFormSheetProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const updatePlant = usePlantStore((s) => s.updatePlant);
   const roomPresets = usePlantStore((s) => s.roomPresets);
@@ -173,10 +176,10 @@ function EditPlantFormSheet({
   return (
     <BottomSheetModal
       visible={visible}
-      eyebrow="BOTANICAL SPECIMEN"
-      title="Edit Plant Details"
+      eyebrow={t('editPlant.eyebrow')}
+      title={t('editPlant.title')}
       headerIcon={<Pencil size={16} color={palette.primary} />}
-      saveLabel="Save Changes"
+      saveLabel={t('editPlant.saveLabel')}
       closeAccessibilityLabel="Close edit plant modal"
       deleteAccessibilityLabel={`Delete ${plant.nickname}`}
       onClose={onClose}
@@ -204,7 +207,7 @@ function EditPlantFormSheet({
         />
         <View style={styles.photoActionsCol}>
           <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-            Specimen Photo
+            {t('editPlant.specimenPhoto')}
           </Text>
           <View style={styles.photoButtonsRow}>
             <Pressable
@@ -219,7 +222,7 @@ function EditPlantFormSheet({
               ]}>
               <Camera size={14} color={palette.primary} />
               <Text style={[styles.photoBtnText, { color: palette.primary }]}>
-                Camera
+                {t('editPlant.camera')}
               </Text>
             </Pressable>
             <Pressable
@@ -234,7 +237,7 @@ function EditPlantFormSheet({
               ]}>
               <ImageIcon size={14} color={palette.primary} />
               <Text style={[styles.photoBtnText, { color: palette.primary }]}>
-                Library
+                {t('editPlant.library')}
               </Text>
             </Pressable>
           </View>
@@ -243,41 +246,41 @@ function EditPlantFormSheet({
 
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          Plant Nickname
+          {t('editPlant.nickname')}
         </Text>
         <BotanicalInput
           surface="primary"
           compact={false}
           value={nickname}
           onChangeText={setNickname}
-          placeholder="e.g., Sunny Window Jade"
+          placeholder={t('editPlant.nicknamePlaceholder')}
         />
       </View>
 
       <View style={styles.twoColRow}>
         <View style={[styles.fieldGroup, styles.flex]}>
           <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-            Common Name
+            {t('editPlant.commonName')}
           </Text>
           <BotanicalInput
             surface="primary"
             compact={false}
             value={commonName}
             onChangeText={setCommonName}
-            placeholder="e.g., Jade Plant"
+            placeholder={t('editPlant.commonNamePlaceholder')}
           />
         </View>
 
         <View style={[styles.fieldGroup, styles.flex]}>
           <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-            Scientific Name
+            {t('editPlant.scientificName')}
           </Text>
           <BotanicalInput
             surface="primary"
             compact={false}
             value={scientificName}
             onChangeText={setScientificName}
-            placeholder="e.g., Crassula ovata"
+            placeholder={t('editPlant.scientificNamePlaceholder')}
             style={styles.italicInput}
           />
         </View>
@@ -287,7 +290,7 @@ function EditPlantFormSheet({
         <View style={styles.fieldGroup}>
           <View style={styles.presetHeaderRow}>
             <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-              Room Presets
+              {t('editPlant.roomPresets')}
             </Text>
             <SpringPressable
               onPress={() => {
@@ -314,7 +317,7 @@ function EditPlantFormSheet({
               <BookmarkPlus size={12} color={palette.primary} />
               <Text
                 style={[styles.savePresetBtnText, { color: palette.primary }]}>
-                Save Spot
+                {t('editPlant.saveSpot')}
               </Text>
             </SpringPressable>
           </View>
@@ -329,7 +332,11 @@ function EditPlantFormSheet({
               return (
                 <Chip
                   key={preset.id}
-                  label={`${preset.name} • ${preset.isIndoor ? 'Indoor' : 'Outdoor'}`}
+                  label={`${localizeLocation(preset.name, i18n.language)} • ${
+                    preset.isIndoor
+                      ? t('plantDetail.hero.indoor')
+                      : t('plantDetail.hero.outdoor')
+                  }`}
                   variant="subtle"
                   size="sm"
                   selected={isSelected}
@@ -350,20 +357,20 @@ function EditPlantFormSheet({
       <View style={styles.twoColRow}>
         <View style={[styles.fieldGroup, styles.locationCol]}>
           <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-            Location in Home / Garden
+            {t('editPlant.location')}
           </Text>
           <BotanicalInput
             surface="primary"
             compact={false}
             value={location}
             onChangeText={setLocation}
-            placeholder="e.g., South Sill"
+            placeholder={t('editPlant.locationPlaceholder')}
           />
         </View>
 
         <View style={[styles.fieldGroup, styles.flex]}>
           <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-            Water Every (Days)
+            {t('editPlant.waterEvery')}
           </Text>
           <View
             style={[
@@ -408,7 +415,7 @@ function EditPlantFormSheet({
       <View style={styles.twoColRow}>
         <View style={[styles.fieldGroup, styles.flex]}>
           <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-            Fertilize Every (days)
+            {t('editPlant.fertilizeEvery')}
           </Text>
           <BotanicalInput
             surface="primary"
@@ -421,7 +428,7 @@ function EditPlantFormSheet({
         </View>
         <View style={[styles.fieldGroup, styles.flex]}>
           <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-            Rotate Every (days)
+            {t('editPlant.rotateEvery')}
           </Text>
           <BotanicalInput
             surface="primary"
@@ -436,13 +443,13 @@ function EditPlantFormSheet({
 
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          Botanical Category
+          {t('editPlant.botanicalCategory')}
         </Text>
         <View style={styles.chipRow}>
           {PLANT_TYPE_OPTIONS.map((pt) => (
             <Chip
               key={pt.key}
-              label={pt.label}
+              label={t(`plantOptions.plantType.${pt.key}`)}
               variant="subtle"
               selected={plantType === pt.key}
               selectedStyle="solid"
@@ -454,13 +461,13 @@ function EditPlantFormSheet({
 
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          Light Exposure
+          {t('editPlant.lightExposure')}
         </Text>
         <View style={styles.chipRow}>
           {LIGHT_EXPOSURE_OPTIONS.map((le) => (
             <Chip
               key={le.key}
-              label={le.label}
+              label={t(`plantOptions.lightExposure.${le.key}`)}
               variant="subtle"
               selected={lightExposure === le.key}
               selectedStyle="solid"
@@ -472,13 +479,13 @@ function EditPlantFormSheet({
 
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          Pot / Vessel Material
+          {t('editPlant.potMaterial')}
         </Text>
         <View style={styles.chipRow}>
           {POT_MATERIAL_OPTIONS.map((pm) => (
             <Chip
               key={pm.key}
-              label={pm.label}
+              label={t(`plantOptions.potMaterial.${pm.key}`)}
               variant="subtle"
               selected={potMaterial === pm.key}
               selectedStyle="solid"
@@ -489,8 +496,8 @@ function EditPlantFormSheet({
       </View>
 
       <SwitchRow
-        label="Container Has Bottom Drainage Hole"
-        description="Recommended for healthy root aeration and preventing rot"
+        label={t('editPlant.drainageLabel')}
+        description={t('editPlant.drainageDesc')}
         value={hasDrainageHole}
         onValueChange={setHasDrainageHole}
       />

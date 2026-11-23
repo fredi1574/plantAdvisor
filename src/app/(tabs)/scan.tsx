@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { Sparkles, Sprout, Stethoscope } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   ScrollView,
@@ -44,13 +45,14 @@ type ScanWorkflowMode = 'identify' | 'diagnose';
 
 const MODE_OPTIONS: {
   key: ScanWorkflowMode;
-  label: string;
+  labelKey: string;
 }[] = [
-  { key: 'identify', label: '1. Identify & Add Plant' },
-  { key: 'diagnose', label: '2. AI Health Scan' },
+  { key: 'identify', labelKey: 'scan.modeIdentify' },
+  { key: 'diagnose', labelKey: 'scan.modeDiagnose' },
 ];
 
 export default function ScanScreen() {
+  const { t } = useTranslation();
   const palette = usePalette();
   const reducedMotion = useReducedMotion();
   const params = useLocalSearchParams<{ mode?: string; plantId?: string }>();
@@ -158,7 +160,7 @@ export default function ScanScreen() {
           <View style={styles.headerBlock}>
             <View style={styles.eyebrowRow}>
               <Text style={[styles.eyebrow, { color: palette.primary }]}>
-                AI BOTANIST & SCANNER
+                {t('scan.eyebrow')}
               </Text>
               {aiQuota ? (
                 <Pressable
@@ -175,8 +177,10 @@ export default function ScanScreen() {
                   <Sparkles size={11} color={quotaColors.text} />
                   <Text
                     style={[styles.quotaPillText, { color: quotaColors.text }]}>
-                    {aiQuota.remaining} / {aiQuota.limit} free AI scans left
-                    today
+                    {t('scan.quotaLeft', {
+                      remaining: aiQuota.remaining,
+                      limit: aiQuota.limit,
+                    })}
                   </Text>
                 </Pressable>
               ) : null}
@@ -186,12 +190,11 @@ export default function ScanScreen() {
                 styles.headerTitle,
                 { color: palette.textPrimary, fontFamily: Fonts?.serif },
               ]}>
-              Add or Scan Plant
+              {t('scan.title')}
             </Text>
             <Text
               style={[styles.headerSubtitle, { color: palette.textSecondary }]}>
-              Identify a new plant or run a context-aware AI Health Scan
-              combining leaf photos with your care timeline.
+              {t('scan.subtitle')}
             </Text>
           </View>
 
@@ -247,7 +250,7 @@ export default function ScanScreen() {
                     <Stethoscope size={16} color={color} />
                   )}
                   <Text style={[styles.segmentBtnText, { color }]}>
-                    {option.label}
+                    {t(option.labelKey)}
                   </Text>
                 </Pressable>
               );

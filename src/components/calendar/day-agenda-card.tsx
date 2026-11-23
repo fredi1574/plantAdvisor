@@ -2,13 +2,13 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import {
   CheckCircle2,
-  Droplet,
   Droplets,
   FlaskConical,
   RotateCw,
   Sprout,
 } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/animated-wrappers';
 import { BorderWidth, Fonts, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { localizeCommonName, localizeLocation } from '@/i18n/plantDisplay';
 import {
   getCareEventTypeLabel,
   type DayCareSchedule,
@@ -40,9 +41,10 @@ export function DayAgendaCard({
   onCompleteTask,
   onWaterAllDueToday,
 }: DayAgendaCardProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const waterTasksDueToday = schedule.projectedTasks.filter(
-    (t) => t.taskKind === 'water'
+    (task) => task.taskKind === 'water'
   );
 
   return (
@@ -58,12 +60,10 @@ export function DayAgendaCard({
           </Text>
           <Text style={[styles.dayAgendaSub, { color: palette.textSecondary }]}>
             {schedule.projectedTasks.length === 0
-              ? 'No plants scheduled for care on this day'
-              : `${schedule.projectedTasks.length} ${
-                  schedule.projectedTasks.length === 1
-                    ? 'care task'
-                    : 'care tasks'
-                } scheduled`}
+              ? t('schedule.agendaEmpty')
+              : t('schedule.tasksScheduled', {
+                  count: schedule.projectedTasks.length,
+                })}
           </Text>
         </View>
 
@@ -84,7 +84,7 @@ export function DayAgendaCard({
                   styles.waterAllInlineBtnText,
                   { color: palette.textInverse },
                 ]}>
-                Water All
+                {t('schedule.waterAllBtn')}
               </Text>
             </SpringPressable>
           )}
@@ -102,10 +102,10 @@ export function DayAgendaCard({
           ]}>
           <CheckCircle2 size={22} color={palette.primary} />
           <Text style={[styles.restDayTitle, { color: palette.textPrimary }]}>
-            Rest Day for Your Garden
+            {t('schedule.restDayTitle')}
           </Text>
           <Text style={[styles.restDayText, { color: palette.textSecondary }]}>
-            All plants are on track for {schedule.fullLabel}.
+            {t('schedule.restDayText', { day: schedule.fullLabel })}
           </Text>
         </View>
       ) : (
@@ -169,28 +169,11 @@ function AgendaTaskItem({
   task: ProjectedPlantCareTask;
   onComplete: () => void;
 }) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
-  const { plant, isOverdue, isDueToday, actionLabel, taskKind } = task;
+  const { plant, isOverdue, isDueToday, taskKind } = task;
   const isPropagation = plant.species.plantType === 'propagation';
   const isSucculent = plant.species.plantType === 'succulent';
-
-  const pillColors = isOverdue
-    ? {
-        bg: palette.criticalBg,
-        border: palette.criticalBorder,
-        text: palette.criticalText,
-      }
-    : isDueToday
-      ? {
-          bg: palette.waterAlertBg,
-          border: palette.waterAlertBorder,
-          text: palette.waterAlertText,
-        }
-      : {
-          bg: palette.primarySoft,
-          border: palette.primaryBorder,
-          text: palette.primary,
-        };
 
   const buttonBg =
     taskKind === 'fertilize'
@@ -203,12 +186,12 @@ function AgendaTaskItem({
 
   const buttonLabel =
     taskKind === 'fertilize'
-      ? 'Log Feed'
+      ? t('schedule.logFeed')
       : taskKind === 'rotate'
-        ? 'Log Rotate'
+        ? t('schedule.logRotate')
         : isDueToday || isOverdue
-          ? 'Mark Watered'
-          : 'Water Early';
+          ? t('schedule.markWatered')
+          : t('schedule.waterEarly');
 
   return (
     <View
@@ -253,28 +236,9 @@ function AgendaTaskItem({
           <Text
             style={[styles.taskSpecies, { color: palette.textSecondary }]}
             numberOfLines={1}>
-            {plant.species.commonName} · {plant.location}
+            {localizeCommonName(plant.species.commonName, i18n.language)} ·{' '}
+            {localizeLocation(plant.location, i18n.language)}
           </Text>
-
-          <View
-            style={[
-              styles.actionPill,
-              {
-                backgroundColor: pillColors.bg,
-                borderColor: pillColors.border,
-              },
-            ]}>
-            {taskKind === 'fertilize' ? (
-              <FlaskConical size={11} color={pillColors.text} />
-            ) : taskKind === 'rotate' ? (
-              <RotateCw size={11} color={pillColors.text} />
-            ) : (
-              <Droplet size={11} color={pillColors.text} />
-            )}
-            <Text style={[styles.actionPillText, { color: pillColors.text }]}>
-              {actionLabel}
-            </Text>
-          </View>
         </View>
       </Pressable>
 

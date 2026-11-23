@@ -9,6 +9,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -41,6 +42,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { usePlantStore } from '@/store/usePlantStore';
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const palette = usePalette();
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
@@ -57,9 +59,9 @@ export default function ProfileScreen() {
 
   const handleSignOut = () => {
     confirmAction({
-      title: 'Sign Out',
-      message: 'Sign out of your FloraLog cloud account?',
-      confirmLabel: 'Sign Out',
+      title: t('profile.dataAndAccount.signOut'),
+      message: t('profile.dataAndAccount.signOutMessage'),
+      confirmLabel: t('profile.dataAndAccount.signOut'),
       destructive: true,
       onConfirm: async () => {
         await signOut();
@@ -70,15 +72,14 @@ export default function ProfileScreen() {
 
   const handleResetToSampleGarden = () => {
     confirmAction({
-      title: 'Reset to Sample Garden',
-      message:
-        'Replace your current local garden with the sample conservatory? This cannot be undone.',
-      confirmLabel: 'Reset',
+      title: t('profile.dataAndAccount.resetTitle'),
+      message: t('profile.dataAndAccount.resetMessage'),
+      confirmLabel: t('profile.dataAndAccount.resetConfirm'),
       destructive: true,
       onConfirm: () => {
         resetToSeedData();
         triggerSuccessHaptic();
-        showToast('Restored the sample conservatory.');
+        showToast(t('profile.dataAndAccount.resetToast'));
       },
     });
   };
@@ -97,8 +98,8 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={styles.maxContainer}>
           <ScreenHeader
-            eyebrow="GARDENER ACCOUNT & CLOUD"
-            title="Profile & Sync"
+            eyebrow={t('profile.eyebrow')}
+            title={t('profile.title')}
             icon={<Sprout size={16} color={palette.primary} />}
           />
 
@@ -118,7 +119,7 @@ export default function ProfileScreen() {
 
           <View style={styles.section}>
             <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-              DATA &amp; ACCOUNT
+              {t('profile.dataAndAccount.eyebrow')}
             </Text>
 
             <View
@@ -132,7 +133,7 @@ export default function ProfileScreen() {
               <Pressable
                 onPress={() => setLegalDoc('privacy')}
                 accessibilityRole="button"
-                accessibilityLabel="Privacy Policy"
+                accessibilityLabel={t('profile.dataAndAccount.privacyPolicy')}
                 style={({ pressed }) => [
                   styles.settingsRow,
                   pressed && { backgroundColor: palette.bgSubtle },
@@ -144,7 +145,7 @@ export default function ProfileScreen() {
                       styles.settingsRowTitle,
                       { color: palette.textPrimary },
                     ]}>
-                    Privacy Policy
+                    {t('profile.dataAndAccount.privacyPolicy')}
                   </Text>
                 </View>
                 <ChevronRight size={15} color={palette.textMuted} />
@@ -160,7 +161,7 @@ export default function ProfileScreen() {
               <Pressable
                 onPress={() => setLegalDoc('terms')}
                 accessibilityRole="button"
-                accessibilityLabel="Terms of Service"
+                accessibilityLabel={t('profile.dataAndAccount.termsOfService')}
                 style={({ pressed }) => [
                   styles.settingsRow,
                   pressed && { backgroundColor: palette.bgSubtle },
@@ -172,7 +173,7 @@ export default function ProfileScreen() {
                       styles.settingsRowTitle,
                       { color: palette.textPrimary },
                     ]}>
-                    Terms of Service
+                    {t('profile.dataAndAccount.termsOfService')}
                   </Text>
                 </View>
                 <ChevronRight size={15} color={palette.textMuted} />
@@ -188,7 +189,7 @@ export default function ProfileScreen() {
               <Pressable
                 onPress={handleResetToSampleGarden}
                 accessibilityRole="button"
-                accessibilityLabel="Reset to Sample Garden"
+                accessibilityLabel={t('profile.dataAndAccount.resetTitle')}
                 style={({ pressed }) => [
                   styles.settingsRow,
                   pressed && { backgroundColor: palette.bgSubtle },
@@ -201,14 +202,14 @@ export default function ProfileScreen() {
                         styles.settingsRowTitle,
                         { color: palette.textPrimary },
                       ]}>
-                      Reset to Sample Garden
+                      {t('profile.dataAndAccount.resetTitle')}
                     </Text>
                     <Text
                       style={[
                         styles.settingsRowSub,
                         { color: palette.textSecondary },
                       ]}>
-                      Restore the default sample conservatory on this device
+                      {t('profile.dataAndAccount.resetSubtitle')}
                     </Text>
                   </View>
                 </View>
@@ -226,7 +227,7 @@ export default function ProfileScreen() {
                   <Pressable
                     onPress={handleSignOut}
                     accessibilityRole="button"
-                    accessibilityLabel="Sign Out"
+                    accessibilityLabel={t('profile.dataAndAccount.signOut')}
                     style={({ pressed }) => [
                       styles.settingsRow,
                       pressed && { backgroundColor: palette.bgSubtle },
@@ -238,7 +239,7 @@ export default function ProfileScreen() {
                           styles.settingsRowTitle,
                           { color: palette.textPrimary },
                         ]}>
-                        Sign Out
+                        {t('profile.dataAndAccount.signOut')}
                       </Text>
                     </View>
                     <ChevronRight size={15} color={palette.textMuted} />
@@ -253,7 +254,9 @@ export default function ProfileScreen() {
                   <Pressable
                     onPress={() => setIsDeleteModalOpen(true)}
                     accessibilityRole="button"
-                    accessibilityLabel="Delete Account"
+                    accessibilityLabel={t(
+                      'profile.dataAndAccount.deleteAccount'
+                    )}
                     style={({ pressed }) => [
                       styles.settingsRow,
                       pressed && { backgroundColor: palette.criticalBg },
@@ -265,7 +268,7 @@ export default function ProfileScreen() {
                           styles.settingsRowTitle,
                           { color: palette.criticalText },
                         ]}>
-                        Delete Account
+                        {t('profile.dataAndAccount.deleteAccount')}
                       </Text>
                     </View>
                     <ChevronRight size={15} color={palette.criticalText} />

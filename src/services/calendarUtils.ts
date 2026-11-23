@@ -4,6 +4,7 @@
  * month calendar grids, and maps historical notebook entries to dates.
  */
 
+import i18n from '@/i18n';
 import type { CareEventType, NotebookEntry, UserPlant } from '@/types/plant';
 import { DAY_MS, getDaysUntilNextWater, toLocalDateKey } from '@/utils/watering';
 
@@ -125,18 +126,28 @@ export function getLocalDayStart(baseDate: Date, offsetDays: number = 0): Date {
  * Builds a human-friendly header label for a date relative to today.
  */
 export function formatAgendaDayLabel(date: Date, daysFromToday: number): string {
-  const dayName = WEEKDAY_LABELS[date.getDay()];
-  const monthName = SHORT_MONTHS[date.getMonth()];
+  const weekdays = i18n.t('schedule.weekdays', {
+    returnObjects: true,
+  }) as string[];
+  const shortMonths = i18n.t('schedule.shortMonths', {
+    returnObjects: true,
+  }) as string[];
+  const dayName =
+    (Array.isArray(weekdays) ? weekdays[date.getDay()] : undefined) ??
+    WEEKDAY_LABELS[date.getDay()];
+  const monthName =
+    (Array.isArray(shortMonths) ? shortMonths[date.getMonth()] : undefined) ??
+    SHORT_MONTHS[date.getMonth()];
   const dayNum = date.getDate();
 
   if (daysFromToday === 0) {
-    return `Today · ${dayName}, ${monthName} ${dayNum}`;
+    return `${i18n.t('schedule.today')} · ${dayName}, ${monthName} ${dayNum}`;
   }
   if (daysFromToday === 1) {
-    return `Tomorrow · ${dayName}, ${monthName} ${dayNum}`;
+    return `${i18n.t('schedule.tomorrow')} · ${dayName}, ${monthName} ${dayNum}`;
   }
   if (daysFromToday === -1) {
-    return `Yesterday · ${dayName}, ${monthName} ${dayNum}`;
+    return `${i18n.t('schedule.yesterday')} · ${dayName}, ${monthName} ${dayNum}`;
   }
   return `${dayName}, ${monthName} ${dayNum}`;
 }
@@ -153,21 +164,21 @@ export function getCareActionPillLabel(
   const isPropagation = plant.species.plantType === 'propagation';
 
   const verb = isPropagation
-    ? 'Refresh Water'
+    ? i18n.t('schedule.actionVerb.refreshWater')
     : isSucculent
-      ? 'Soak & Dry'
-      : 'Water';
+      ? i18n.t('schedule.actionVerb.soakAndDry')
+      : i18n.t('schedule.actionVerb.water');
 
   if (isOverdue) {
-    return `Overdue · ${verb} Now`;
+    return i18n.t('schedule.actionPill.overdue', { verb });
   }
   if (daysFromToday === 0) {
-    return `Due Today for ${verb}`;
+    return i18n.t('schedule.actionPill.dueToday', { verb });
   }
   if (daysFromToday === 1) {
-    return `${verb} Tomorrow`;
+    return i18n.t('schedule.actionPill.tomorrow', { verb });
   }
-  return `Due in ${daysFromToday} days`;
+  return i18n.t('schedule.actionPill.dueIn', { count: daysFromToday });
 }
 
 /**
@@ -429,8 +440,14 @@ export function buildCalendarMonthGrid(
     weeks.push(cells.slice(i, i + 7));
   }
 
+  const months = i18n.t('schedule.months', {
+    returnObjects: true,
+  }) as string[];
+  const monthName =
+    (Array.isArray(months) ? months[month] : undefined) ?? MONTH_NAMES[month];
+
   return {
-    monthName: MONTH_NAMES[month],
+    monthName,
     year: String(year),
     yearNum: year,
     monthNum: month,
@@ -475,23 +492,9 @@ export function buildFallbackDaySchedule(
  * Returns human-friendly label for a care event type.
  */
 export function getCareEventTypeLabel(eventType: CareEventType): string {
-  switch (eventType) {
-    case 'water':
-      return 'Watered';
-    case 'fertilize':
-      return 'Fertilized';
-    case 'repot':
-      return 'Repotted';
-    case 'prune':
-      return 'Pruned';
-    case 'propagation':
-      return 'Propagation Log';
-    case 'ai_scan':
-      return 'AI Health Scan';
-    case 'note':
-    default:
-      return 'Garden Note';
-  }
+  return i18n.t(`schedule.eventTypes.${eventType}`, {
+    defaultValue: i18n.t('schedule.eventTypes.note'),
+  });
 }
 
 export function getMonthlyCareSummary(

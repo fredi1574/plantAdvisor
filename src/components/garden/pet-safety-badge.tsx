@@ -1,5 +1,6 @@
 import { AlertTriangle, ShieldCheck } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -21,6 +22,7 @@ export function PetSafetyBadge({
   showDetails = false,
   compact = false,
 }: PetSafetyBadgeProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
 
   if (!petSafety) {
@@ -50,15 +52,16 @@ export function PetSafetyBadge({
       : palette.attentionBorder;
 
   const targetList: string[] = [];
-  if (petSafety.isToxicToCats) targetList.push('Cats');
-  if (petSafety.isToxicToDogs) targetList.push('Dogs');
+  if (petSafety.isToxicToCats) targetList.push(t('badges.petSafety.cats'));
+  if (petSafety.isToxicToDogs) targetList.push(t('badges.petSafety.dogs'));
+
+  const targets =
+    targetList.length > 0 ? targetList.join(' & ') : t('badges.petSafety.pets');
+  const level = t(`badges.petSafety.level.${petSafety.toxicityLevel}`);
 
   const label = isSafe
-    ? 'Pet Safe (Cats & Dogs)'
-    : `Toxic to ${targetList.length > 0 ? targetList.join(' & ') : 'Pets'} · ${
-        petSafety.toxicityLevel.charAt(0).toUpperCase() +
-        petSafety.toxicityLevel.slice(1)
-      }`;
+    ? t('badges.petSafety.safe')
+    : t('badges.petSafety.toxicTo', { targets, level });
 
   return (
     <View
@@ -92,7 +95,9 @@ export function PetSafetyBadge({
         <View style={styles.detailsBox}>
           {!isSafe && petSafety.toxicPrinciples ? (
             <Text style={[styles.principleText, { color: palette.textPrimary }]}>
-              Compound: {petSafety.toxicPrinciples}
+              {t('badges.petSafety.compound', {
+                value: petSafety.toxicPrinciples,
+              })}
             </Text>
           ) : null}
           {petSafety.safetyNotes ? (

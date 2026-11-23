@@ -1,5 +1,6 @@
 import { Info, Stethoscope, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Modal,
@@ -32,6 +33,7 @@ import {
   Typography,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { localizeCommonName } from '@/i18n/plantDisplay';
 import {
   AiQuotaExceededError,
   diagnosePlantHealth,
@@ -76,7 +78,14 @@ export function HealthDiagnosisFlow({
   onQuotaExceeded,
   onError,
 }: HealthDiagnosisFlowProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
+  const symptomChipsRaw = t('scan.diagnose.symptoms', {
+    returnObjects: true,
+  }) as string[];
+  const symptomChips = Array.isArray(symptomChipsRaw)
+    ? symptomChipsRaw
+    : SYMPTOM_CHIPS;
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
   const saveHealthAssessment = usePlantStore((s) => s.saveHealthAssessment);
@@ -286,8 +295,7 @@ export function HealthDiagnosisFlow({
                     styles.modalSubtitle,
                     { color: palette.textSecondary },
                   ]}>
-                  This specimen history is automatically included with your scan
-                  so the AI can cross-reference watering and container details.
+                  {t('scan.diagnose.contextSubtitle')}
                 </Text>
 
                 <View
@@ -303,30 +311,43 @@ export function HealthDiagnosisFlow({
                       styles.contextSummaryItem,
                       { color: palette.textPrimary },
                     ]}>
-                    • Species: {selectedPlant.species.commonName} (
-                    {selectedPlant.species.scientificName},{' '}
-                    {selectedPlant.species.family})
+                    •{' '}
+                    {t('scan.diagnose.contextSpecies', {
+                      common: localizeCommonName(
+                        selectedPlant.species.commonName,
+                        i18n.language
+                      ),
+                      scientific: selectedPlant.species.scientificName,
+                      family: selectedPlant.species.family,
+                    })}
                   </Text>
                   <Text
                     style={[
                       styles.contextSummaryItem,
                       { color: palette.textPrimary },
                     ]}>
-                    • Container: {selectedPlant.potMaterial.replace('_', ' ')} •{' '}
-                    {selectedPlant.hasDrainageHole
-                      ? 'Has drainage hole'
-                      : 'NO drainage hole'}
+                    •{' '}
+                    {t('scan.diagnose.contextContainer', {
+                      pot: t(
+                        `plantOptions.potMaterial.${selectedPlant.potMaterial}`
+                      ),
+                      drainage: selectedPlant.hasDrainageHole
+                        ? t('scan.diagnose.hasDrainage')
+                        : t('scan.diagnose.noDrainage'),
+                    })}
                   </Text>
                   <Text
                     style={[
                       styles.contextSummaryItem,
                       { color: palette.textPrimary },
                     ]}>
-                    • Care Timeline: {selectedPlantLogs.length} logged{' '}
-                    {selectedPlantLogs.length === 1 ? 'event' : 'events'} (Last
-                    watered:{' '}
-                    {new Date(selectedPlant.lastWateredAt).toLocaleDateString()}
-                    )
+                    •{' '}
+                    {t('scan.diagnose.contextTimeline', {
+                      count: selectedPlantLogs.length,
+                      date: new Date(
+                        selectedPlant.lastWateredAt
+                      ).toLocaleDateString(i18n.language),
+                    })}
                   </Text>
                 </View>
               </View>
@@ -344,7 +365,7 @@ export function HealthDiagnosisFlow({
 
       <View style={styles.stepBlock}>
         <PhotoCaptureCard
-          stepLabel="STEP 2 · LEAF OR PLANT PHOTO"
+          stepLabel={t('scan.photo.step2')}
           imageUri={imageUri}
           imageDimensions={imageDimensions}
           onImageSelected={onImageSelected}
@@ -369,12 +390,12 @@ export function HealthDiagnosisFlow({
 
       <View style={styles.stepBlock}>
         <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-          STEP 3 · SYMPTOMS &amp; AI HEALTH SCAN
+          {t('scan.diagnose.step3')}
         </Text>
 
         <View style={styles.fieldGroup}>
           <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-            Visual Symptoms / Observations (Optional)
+            {t('scan.diagnose.symptomsLabel')}
           </Text>
           <BotanicalInput
             surface="surface"
@@ -384,10 +405,10 @@ export function HealthDiagnosisFlow({
             multiline
             numberOfLines={3}
             style={styles.observationInput}
-            placeholder="Describe any yellowing, wrinkling, stretching, spots, or root growth..."
+            placeholder={t('scan.diagnose.symptomsPlaceholder')}
           />
           <View style={styles.presetRow}>
-            {SYMPTOM_CHIPS.map((symptom) => (
+            {symptomChips.map((symptom) => (
               <Chip
                 key={symptom}
                 label={`+ ${symptom}`}
@@ -428,8 +449,8 @@ export function HealthDiagnosisFlow({
               { color: palette.textInverse },
             ]}>
             {isLoading
-              ? 'Cross-Referencing Photo & Care Logs...'
-              : 'Run AI Health & Condition Scan'}
+              ? t('scan.diagnose.analyzing')
+              : t('scan.diagnose.runButton')}
           </Text>
         </SpringPressable>
       </View>

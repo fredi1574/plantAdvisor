@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { Columns2 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Chip } from '@/components/ui/chip';
@@ -39,6 +40,7 @@ export function VisualProgressGallery({
   plantPhotoUri,
   acquiredAt,
 }: VisualProgressGalleryProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const [compareMode, setCompareMode] = useState(false);
   const [previewItem, setPreviewItem] = useState<ProgressPhotoItem | null>(
@@ -69,7 +71,7 @@ export function VisualProgressGallery({
           id: `ha-${ha.id}`,
           uri: ha.imageUri,
           timestamp: ha.createdAt,
-          label: 'AI Health Scan',
+          label: t('plantDetail.gallery.aiScan'),
           source: 'assessment',
         });
       }
@@ -80,7 +82,7 @@ export function VisualProgressGallery({
         id: 'profile-photo',
         uri: plantPhotoUri,
         timestamp: acquiredAt ?? new Date().toISOString(),
-        label: 'Baseline Photo',
+        label: t('plantDetail.gallery.baselinePhoto'),
         source: 'profile',
       });
     }
@@ -89,7 +91,7 @@ export function VisualProgressGallery({
       (a, b) =>
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
-  }, [entries, assessments, plantPhotoUri, acquiredAt]);
+  }, [entries, assessments, plantPhotoUri, acquiredAt, t]);
 
   if (photos.length === 0) {
     return null;

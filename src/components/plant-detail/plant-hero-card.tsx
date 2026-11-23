@@ -9,6 +9,7 @@ import {
   Sun,
 } from 'lucide-react-native';
 import React, { useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -26,6 +27,7 @@ import {
   Typography,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { localizeCommonName, localizeLocation } from '@/i18n/plantDisplay';
 import { triggerLightHaptic } from '@/services/haptics';
 import type { UserPlant } from '@/types/plant';
 
@@ -46,6 +48,7 @@ export function PlantHeroCard({
   onBack,
   onHealthScan,
 }: PlantHeroCardProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const insets = useContext(SafeAreaInsetsContext);
   const topInset = insets?.top ?? 0;
@@ -101,7 +104,9 @@ export function PlantHeroCard({
               pressed && { opacity: 0.78 },
             ]}>
             <ArrowLeft size={16} color="#FFFFFF" />
-            <Text style={styles.floatingNavText}>Garden</Text>
+            <Text style={styles.floatingNavText}>
+              {t('plantDetail.hero.garden')}
+            </Text>
           </Pressable>
 
           <SpringPressable
@@ -110,7 +115,7 @@ export function PlantHeroCard({
               onHealthScan();
             }}
             accessibilityRole="button"
-            accessibilityLabel="Run Photo Health Scan"
+            accessibilityLabel={t('plantDetail.hero.healthScan')}
             style={[
               styles.floatingScanPill,
               { backgroundColor: palette.primary },
@@ -121,7 +126,7 @@ export function PlantHeroCard({
                 styles.floatingScanText,
                 { color: palette.textInverse },
               ]}>
-              Health Scan
+              {t('plantDetail.hero.healthScan')}
             </Text>
           </SpringPressable>
         </View>
@@ -141,7 +146,7 @@ export function PlantHeroCard({
               {plant.nickname}
             </Text>
             <Text style={styles.heroSpecies} numberOfLines={1}>
-              {plant.species.commonName} •{' '}
+              {localizeCommonName(plant.species.commonName, i18n.language)} •{' '}
               <Text style={styles.italicScientific}>
                 {plant.species.scientificName}
               </Text>
@@ -151,13 +156,16 @@ export function PlantHeroCard({
               <View style={styles.metaItem}>
                 <MapPin size={12} color="rgba(255,255,255,0.88)" />
                 <Text style={styles.bannerMetaText}>
-                  {plant.location} • {plant.isIndoor ? 'Indoor' : 'Outdoor'}
+                  {localizeLocation(plant.location, i18n.language)} •{' '}
+                  {plant.isIndoor
+                    ? t('plantDetail.hero.indoor')
+                    : t('plantDetail.hero.outdoor')}
                 </Text>
               </View>
               <View style={styles.metaItem}>
                 <Calendar size={11} color="rgba(255,255,255,0.75)" />
                 <Text style={styles.bannerMetaMuted}>
-                  {new Date(plant.acquiredAt).toLocaleDateString(undefined, {
+                  {new Date(plant.acquiredAt).toLocaleDateString(i18n.language, {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
@@ -187,6 +195,7 @@ export function PlantHeroCard({
  * for the Overview tab (replaces boxed spec cards).
  */
 export function PlantOverviewSpecs({ plant }: { plant: UserPlant }) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const showDrainageWarning =
     !plant.hasDrainageHole && plant.species.plantType === 'succulent';
@@ -199,29 +208,33 @@ export function PlantOverviewSpecs({ plant }: { plant: UserPlant }) {
           color={showDrainageWarning ? palette.attentionText : palette.primary}
         />
       ),
-      label: 'Container & Drainage',
-      value: `${plant.potMaterial.replace('_', ' ')} • ${
-        plant.hasDrainageHole ? 'Drainage Hole ✓' : 'No Drainage Hole'
+      label: t('plantDetail.specs.containerAndDrainage'),
+      value: `${t(`plantOptions.potMaterial.${plant.potMaterial}`)} • ${
+        plant.hasDrainageHole
+          ? t('plantDetail.specs.drainageYes')
+          : t('plantDetail.specs.drainageNo')
       }`,
       warning: showDrainageWarning,
     },
     {
       icon: <MapPin size={15} color={palette.primary} />,
-      label: 'Current Exposure',
-      value: `${plant.lightExposure.replace('_', ' ')} • ${
-        plant.isIndoor ? 'Indoor' : 'Outdoor'
+      label: t('plantDetail.specs.currentExposure'),
+      value: `${t(`plantOptions.lightExposure.${plant.lightExposure}`)} • ${
+        plant.isIndoor
+          ? t('plantDetail.hero.indoor')
+          : t('plantDetail.hero.outdoor')
       }`,
       warning: false,
     },
     {
       icon: <Sun size={15} color={palette.primary} />,
-      label: 'Ideal Light',
+      label: t('plantDetail.specs.idealLight'),
       value: plant.species.baselineCare.idealLight,
       warning: false,
     },
     {
       icon: <Layers size={15} color={palette.primary} />,
-      label: 'Recommended Soil',
+      label: t('plantDetail.specs.recommendedSoil'),
       value: plant.species.baselineCare.soilRecommendation,
       warning: false,
     },
@@ -230,7 +243,7 @@ export function PlantOverviewSpecs({ plant }: { plant: UserPlant }) {
   return (
     <View style={styles.specsSection}>
       <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-        SPECIMEN CARE PROFILE
+        {t('plantDetail.specs.eyebrow')}
       </Text>
 
       <View

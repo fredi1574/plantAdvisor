@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { BookmarkPlus, CheckCircle2, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { PetSafetyBadge } from '@/components/garden/pet-safety-badge';
@@ -20,6 +21,7 @@ import {
 } from '@/constants/plantOptions';
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { localizeCommonName, localizeLocation } from '@/i18n/plantDisplay';
 import { AiQuotaExceededError, identifyPlant } from '@/services/aiPlantService';
 import { triggerLightHaptic, triggerSuccessHaptic } from '@/services/haptics';
 import { usePlantStore } from '@/store/usePlantStore';
@@ -95,6 +97,7 @@ export function IdentifyPlantFlow({
   onQuotaExceeded,
   onError,
 }: IdentifyPlantFlowProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const addPlant = usePlantStore((s) => s.addPlant);
   const roomPresets = usePlantStore((s) => s.roomPresets);
@@ -191,7 +194,7 @@ export function IdentifyPlantFlow({
 
       <View style={styles.stepBlock}>
         <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-          STEP 2 · BOTANICAL NAME OR VISUAL CLUES
+          {t('scan.identify.step2')}
         </Text>
 
         <BotanicalInput
@@ -199,7 +202,7 @@ export function IdentifyPlantFlow({
           compact={false}
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="e.g., Crassula ovata, Jade Plant, Avocado seed, Monstera..."
+          placeholder={t('scan.identify.searchPlaceholder')}
           style={styles.textInput}
         />
 
@@ -225,7 +228,9 @@ export function IdentifyPlantFlow({
               styles.primaryActionBtnText,
               { color: palette.textInverse },
             ]}>
-            {isLoading ? 'Analyzing Specimen...' : 'Run AI Plant Identification'}
+            {isLoading
+              ? t('scan.identify.analyzing')
+              : t('scan.identify.runButton')}
           </Text>
         </SpringPressable>
       </View>
@@ -242,7 +247,7 @@ export function IdentifyPlantFlow({
                     styles.resultCommonName,
                     { color: palette.textPrimary },
                   ]}>
-                  {idResult.commonName}
+                  {localizeCommonName(idResult.commonName, i18n.language)}
                 </Text>
                 <Text
                   style={[
@@ -265,7 +270,9 @@ export function IdentifyPlantFlow({
                     styles.confidenceText,
                     { color: palette.thrivingText },
                   ]}>
-                  {Math.round(idResult.confidence * 100)}% Match
+                  {t('scan.identify.match', {
+                    percent: Math.round(idResult.confidence * 100),
+                  })}
                 </Text>
               </View>
             </View>
@@ -282,21 +289,23 @@ export function IdentifyPlantFlow({
               <Text
                 style={[styles.careSpecLine, { color: palette.textPrimary }]}>
                 <Text style={[styles.careSpecLabel, { color: palette.primary }]}>
-                  Ideal Light:{' '}
+                  {t('scan.identify.idealLight')}{' '}
                 </Text>
                 {idResult.baselineCare.idealLight}
               </Text>
               <Text
                 style={[styles.careSpecLine, { color: palette.textPrimary }]}>
                 <Text style={[styles.careSpecLabel, { color: palette.primary }]}>
-                  Base Watering:{' '}
+                  {t('scan.identify.baseWatering')}{' '}
                 </Text>
-                Every {idResult.baselineCare.baseWateringDays} days
+                {t('scan.identify.everyDays', {
+                  days: idResult.baselineCare.baseWateringDays,
+                })}
               </Text>
               <Text
                 style={[styles.careSpecLine, { color: palette.textPrimary }]}>
                 <Text style={[styles.careSpecLabel, { color: palette.primary }]}>
-                  Substrate:{' '}
+                  {t('scan.identify.substrate')}{' '}
                 </Text>
                 {idResult.baselineCare.soilRecommendation}
               </Text>
@@ -318,19 +327,19 @@ export function IdentifyPlantFlow({
 
           <View style={styles.stepBlock}>
             <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-              STEP 3 · SAVE SPECIMEN TO MY GARDEN
+              {t('scan.identify.step3')}
             </Text>
 
             <View style={styles.fieldGroup}>
               <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                Plant Nickname
+                {t('editPlant.nickname')}
               </Text>
               <BotanicalInput
                 surface="surface"
                 compact={false}
                 value={form.nickname}
                 onChangeText={(val) => updateForm('nickname', val)}
-                placeholder="e.g., Sunny Window Jade"
+                placeholder={t('editPlant.nicknamePlaceholder')}
                 style={styles.textInput}
               />
             </View>
@@ -339,7 +348,7 @@ export function IdentifyPlantFlow({
               <View style={styles.fieldLabelRow}>
                 <Text
                   style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                  Location in Home / Garden
+                  {t('editPlant.location')}
                 </Text>
                 <SpringPressable
                   onPress={() => {
@@ -369,7 +378,7 @@ export function IdentifyPlantFlow({
                       styles.savePresetBtnText,
                       { color: palette.primary },
                     ]}>
-                    Save Spot
+                    {t('editPlant.saveSpot')}
                   </Text>
                 </SpringPressable>
               </View>
@@ -385,7 +394,11 @@ export function IdentifyPlantFlow({
                     return (
                       <Chip
                         key={preset.id}
-                        label={`${preset.name} • ${preset.isIndoor ? 'Indoor' : 'Outdoor'}`}
+                        label={`${localizeLocation(preset.name, i18n.language)} • ${
+                          preset.isIndoor
+                            ? t('plantDetail.hero.indoor')
+                            : t('plantDetail.hero.outdoor')
+                        }`}
                         variant="subtle"
                         size="sm"
                         selected={isActivePreset}
@@ -409,20 +422,20 @@ export function IdentifyPlantFlow({
                 compact={false}
                 value={form.location}
                 onChangeText={(val) => updateForm('location', val)}
-                placeholder="e.g., South Living Room Sill"
+                placeholder={t('editPlant.locationPlaceholder')}
                 style={styles.textInput}
               />
             </View>
 
             <View style={styles.fieldGroup}>
               <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                Light Exposure
+                {t('editPlant.lightExposure')}
               </Text>
               <View style={styles.presetRow}>
                 {LIGHT_EXPOSURE_OPTIONS.map((opt) => (
                   <Chip
                     key={opt.key}
-                    label={opt.label}
+                    label={t(`plantOptions.lightExposure.${opt.key}`)}
                     variant="subtle"
                     size="md"
                     selected={form.lightExposure === opt.key}
@@ -434,8 +447,8 @@ export function IdentifyPlantFlow({
             </View>
 
             <SwitchRow
-              label="Indoor Specimen"
-              description="Toggle off if grown outdoors on a patio or garden bed"
+              label={t('scan.identify.indoorLabel')}
+              description={t('scan.identify.indoorDesc')}
               value={form.isIndoor}
               onValueChange={(val) => updateForm('isIndoor', val)}
               contained={false}
@@ -443,13 +456,13 @@ export function IdentifyPlantFlow({
 
             <View style={styles.fieldGroup}>
               <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                Pot / Vessel Material
+                {t('editPlant.potMaterial')}
               </Text>
               <View style={styles.presetRow}>
                 {POT_MATERIAL_OPTIONS.slice(0, 4).map((pm) => (
                   <Chip
                     key={pm.key}
-                    label={pm.label}
+                    label={t(`plantOptions.potMaterial.${pm.key}`)}
                     variant="subtle"
                     size="md"
                     selected={form.potMaterial === pm.key}
@@ -461,8 +474,8 @@ export function IdentifyPlantFlow({
             </View>
 
             <SwitchRow
-              label="Container Has Bottom Drainage Hole"
-              description="Critical for preventing anaerobic root rot in succulents"
+              label={t('editPlant.drainageLabel')}
+              description={t('scan.identify.drainageDesc')}
               value={form.hasDrainageHole}
               onValueChange={(val) => updateForm('hasDrainageHole', val)}
               contained={false}
@@ -484,7 +497,7 @@ export function IdentifyPlantFlow({
                   styles.primaryActionBtnText,
                   { color: palette.textInverse },
                 ]}>
-                Add to My Garden & Open Notebook
+                {t('scan.identify.saveButton')}
               </Text>
             </SpringPressable>
           </View>

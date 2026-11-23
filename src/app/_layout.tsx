@@ -1,3 +1,5 @@
+import '@/i18n';
+
 import {
   Fraunces_600SemiBold,
   Fraunces_700Bold,
@@ -22,6 +24,7 @@ import { BotanicalSplashScreen } from '@/components/ui/splash-screen';
 import { useIsDark, usePalette } from '@/hooks/use-theme';
 import { initializeNotifications } from '@/services/notificationService';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 import { usePlantStore } from '@/store/usePlantStore';
 
 export { AppErrorBoundary as ErrorBoundary };
@@ -35,6 +38,7 @@ export default function RootLayout() {
   const isDark = useIsDark();
   const initializeAuth = useAuthStore((s) => s.initializeAuth);
   const isInitialized = useAuthStore((s) => s.isInitialized);
+  useLanguageStore((s) => s.preference);
   const session = useAuthStore((s) => s.session);
   const user = useAuthStore((s) => s.user);
   const [fontsLoaded, fontError] = useFonts({

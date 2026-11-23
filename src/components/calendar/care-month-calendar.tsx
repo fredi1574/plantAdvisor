@@ -6,6 +6,7 @@ import {
   Sprout,
 } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -42,7 +43,10 @@ export function CareMonthCalendar({
   onNextMonth,
   onSelectDate,
 }: CareMonthCalendarProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
+  const weekdays = t('schedule.weekdays', { returnObjects: true }) as string[];
+  const weekdayList = Array.isArray(weekdays) ? weekdays : WEEKDAY_LABELS;
 
   return (
     <GlassCard>
@@ -96,7 +100,7 @@ export function CareMonthCalendar({
       </View>
 
       <View style={styles.weekdayRow}>
-        {WEEKDAY_LABELS.map((wd) => (
+        {weekdayList.map((wd) => (
           <Text
             key={wd}
             style={[styles.weekdayLabel, { color: palette.textMuted }]}>
@@ -244,7 +248,7 @@ export function CareMonthCalendar({
           ]}>
           <Droplets size={12} color={palette.waterAlertText} />
           <Text style={[styles.legendText, { color: palette.waterAlertText }]}>
-            Watering
+            {t('schedule.legend.watering')}
           </Text>
         </View>
         <View
@@ -257,7 +261,7 @@ export function CareMonthCalendar({
           ]}>
           <Sparkles size={12} color={palette.attentionText} />
           <Text style={[styles.legendText, { color: palette.attentionText }]}>
-            Care
+            {t('schedule.legend.care')}
           </Text>
         </View>
         <View
@@ -270,7 +274,7 @@ export function CareMonthCalendar({
           ]}>
           <Sprout size={12} color={palette.thrivingText} />
           <Text style={[styles.legendText, { color: palette.thrivingText }]}>
-            Propagation
+            {t('schedule.legend.propagation')}
           </Text>
         </View>
       </View>

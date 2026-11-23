@@ -7,6 +7,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -50,13 +51,14 @@ import type { NotebookEntry } from '@/types/plant';
 
 type DetailTab = 'overview' | 'journal' | 'health';
 
-const DETAIL_TABS: { key: DetailTab; label: string }[] = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'journal', label: 'Journal' },
-  { key: 'health', label: 'Health' },
+const DETAIL_TABS: { key: DetailTab; labelKey: string }[] = [
+  { key: 'overview', labelKey: 'plantDetail.tabs.overview' },
+  { key: 'journal', labelKey: 'plantDetail.tabs.journal' },
+  { key: 'health', labelKey: 'plantDetail.tabs.health' },
 ];
 
 export default function PlantDetailNotebookScreen() {
+  const { t } = useTranslation();
   const palette = usePalette();
   const reducedMotion = useReducedMotion();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -133,13 +135,13 @@ export default function PlantDetailNotebookScreen() {
         style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}>
         <View style={styles.emptyState}>
           <Text style={[styles.emptyTitle, { color: palette.textPrimary }]}>
-            Plant not found
+            {t('plantDetail.notFoundTitle')}
           </Text>
           <Pressable
             onPress={() => router.replace('/(tabs)')}
             style={[styles.backBtnPill, { backgroundColor: palette.primary }]}>
             <Text style={[styles.backBtnText, { color: palette.textInverse }]}>
-              Return to My Garden
+              {t('plantDetail.notFoundAction')}
             </Text>
           </Pressable>
         </View>
@@ -149,9 +151,12 @@ export default function PlantDetailNotebookScreen() {
 
   const handleDeleteCurrentPlant = () => {
     confirmAction({
-      title: 'Delete Plant',
-      message: `Are you sure you want to delete "${plant.nickname}" (${plant.species.commonName}) and its care history?`,
-      confirmLabel: 'Delete',
+      title: t('plantDetail.deleteTitle'),
+      message: t('plantDetail.deleteMessage', {
+        name: plant.nickname,
+        species: plant.species.commonName,
+      }),
+      confirmLabel: t('plantDetail.deleteConfirm'),
       destructive: true,
       onConfirm: () => {
         deletePlant(plant.id);
@@ -166,13 +171,13 @@ export default function PlantDetailNotebookScreen() {
 
   const handleDeleteLogEntry = (entry: NotebookEntry) => {
     confirmAction({
-      title: 'Delete Care Log',
-      message: `Are you sure you want to delete the log "${entry.title}"?`,
-      confirmLabel: 'Delete',
+      title: t('plantDetail.deleteLogTitle'),
+      message: t('plantDetail.deleteLogMessage', { title: entry.title }),
+      confirmLabel: t('plantDetail.deleteLogConfirm'),
       destructive: true,
       onConfirm: () => {
         deleteCareEntry(entry.id);
-        showToast(`Removed log "${entry.title}".`);
+        showToast(t('plantDetail.deleteLogToast', { title: entry.title }));
       },
     });
   };
@@ -218,13 +223,17 @@ export default function PlantDetailNotebookScreen() {
           }
           onWaterNow={() => {
             const undoSnapshot = waterPlantNow(plant.id);
-            showToast(`Watered "${plant.nickname}"!`, {
+            showToast(t('plantDetail.wateredToast', { name: plant.nickname }), {
               action: undoSnapshot
                 ? {
-                    label: 'Undo',
+                    label: t('common.undo'),
                     onPress: () => {
                       undoWatering(undoSnapshot);
-                      showToast(`Undid watering for "${plant.nickname}".`);
+                      showToast(
+                        t('plantDetail.undoWateredToast', {
+                          name: plant.nickname,
+                        })
+                      );
                     },
                   }
                 : undefined,
@@ -287,7 +296,7 @@ export default function PlantDetailNotebookScreen() {
                       <Stethoscope size={14} color={color} />
                     )}
                     <Text style={[styles.segmentBtnText, { color }]}>
-                      {tab.label}
+                      {t(tab.labelKey)}
                     </Text>
                     {tab.key === 'health' && healthAlertDot && !isSelected && (
                       <View
@@ -341,7 +350,7 @@ export default function PlantDetailNotebookScreen() {
                         styles.bottomActionText,
                         { color: palette.primary },
                       ]}>
-                      Edit Details
+                      {t('plantDetail.editDetails')}
                     </Text>
                   </Pressable>
 
@@ -363,7 +372,7 @@ export default function PlantDetailNotebookScreen() {
                         styles.bottomActionText,
                         { color: palette.criticalText },
                       ]}>
-                      Delete Plant
+                      {t('plantDetail.deletePlant')}
                     </Text>
                   </Pressable>
                 </View>
@@ -402,7 +411,9 @@ export default function PlantDetailNotebookScreen() {
         visible={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSaved={(updatedName) =>
-          showToast(`Updated "${updatedName}" details! 🌿`)
+          showToast(
+            `${t('plantDetail.updatedPlantToast', { name: updatedName })} 🌿`
+          )
         }
         onRequestDelete={handleDeleteCurrentPlant}
       />
@@ -412,7 +423,9 @@ export default function PlantDetailNotebookScreen() {
         visible={Boolean(editingEntry)}
         onClose={() => setEditingEntry(null)}
         onSaved={(updatedTitle) =>
-          showToast(`Updated log "${updatedTitle}"! 🌿`)
+          showToast(
+            `${t('plantDetail.updatedLogToast', { title: updatedTitle })} 🌿`
+          )
         }
         onRequestDelete={handleDeleteLogEntry}
       />

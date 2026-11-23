@@ -8,6 +8,7 @@ import {
   Sprout,
 } from 'lucide-react-native';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -36,6 +37,7 @@ export function HealthStatusBadge({
   status,
   showDot = true,
 }: HealthStatusBadgeProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const theme = useMemo(
     () => getHealthBadgeTheme(palette)[status],
@@ -52,7 +54,7 @@ export function HealthStatusBadge({
         <View style={[styles.statusDot, { backgroundColor: theme.dot }]} />
       )}
       <Text style={[styles.healthText, { color: theme.text }]}>
-        {theme.label}
+        {t(`badges.health.${status}`)}
       </Text>
     </View>
   );
@@ -66,6 +68,7 @@ interface UrgencyBadgeProps {
  * Compact urgency badge for AI diagnostic action items (Immediate / Soon / Routine).
  */
 export function UrgencyBadge({ urgency }: UrgencyBadgeProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const theme = useMemo(
     () => getUrgencyBadgeTheme(palette)[urgency],
@@ -79,7 +82,7 @@ export function UrgencyBadge({ urgency }: UrgencyBadgeProps) {
         { backgroundColor: theme.bg, borderColor: theme.border },
       ]}>
       <Text style={[styles.urgencyText, { color: theme.text }]}>
-        {theme.label}
+        {t(`badges.urgency.${urgency}`)}
       </Text>
     </View>
   );

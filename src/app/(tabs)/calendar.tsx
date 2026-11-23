@@ -1,4 +1,5 @@
 import { CalendarDays } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,6 +22,7 @@ import {
 } from '@/store/usePlantStore';
 
 export default function CalendarScreen() {
+  const { t } = useTranslation();
   const palette = usePalette();
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
@@ -40,18 +42,20 @@ export default function CalendarScreen() {
   const handleCompleteTask = (task: ProjectedPlantCareTask) => {
     completeScheduledCareTask(task.plant.id, task.taskKind);
     if (task.taskKind === 'fertilize') {
-      showToast(`Logged fertilizer feed for "${task.plant.nickname}"!`);
+      showToast(t('schedule.fertilizedToast', { name: task.plant.nickname }));
     } else if (task.taskKind === 'rotate') {
-      showToast(`Logged pot rotation for "${task.plant.nickname}"!`);
+      showToast(t('schedule.rotatedToast', { name: task.plant.nickname }));
     } else {
       const undoSnapshot = usePlantStore.getState().lastWateringUndo;
-      showToast(`Marked "${task.plant.nickname}" as watered!`, {
+      showToast(t('schedule.wateredToast', { name: task.plant.nickname }), {
         action: undoSnapshot
           ? {
-              label: 'Undo',
+              label: t('common.undo'),
               onPress: () => {
                 undoWatering(undoSnapshot);
-                showToast(`Undid watering for "${task.plant.nickname}".`);
+                showToast(
+                  t('schedule.undoWateredToast', { name: task.plant.nickname })
+                );
               },
             }
           : undefined,
@@ -64,33 +68,26 @@ export default function CalendarScreen() {
     if (needsWaterCount === 0) return;
 
     confirmAction({
-      title: 'Water All Plants',
-      message: `Mark all ${needsWaterCount} ${
-        needsWaterCount === 1 ? 'plant' : 'plants'
-      } needing water as watered?`,
-      confirmLabel: 'Mark Watered',
+      title: t('schedule.waterAllTitle'),
+      message: t('schedule.waterAllMessage', { count: needsWaterCount }),
+      confirmLabel: t('schedule.waterAllConfirm'),
       onConfirm: () => {
         const count = waterAllNeedingWater();
         if (count > 0) {
           const undoSnapshot = usePlantStore.getState().lastWateringUndo;
-          showToast(
-            `All ${count} ${count === 1 ? 'plant' : 'plants'} marked as watered!`,
-            {
-              action: undoSnapshot
-                ? {
-                    label: 'Undo',
-                    onPress: () => {
-                      const restored = undoWatering(undoSnapshot);
-                      showToast(
-                        `Undid watering for ${restored} ${
-                          restored === 1 ? 'plant' : 'plants'
-                        }.`
-                      );
-                    },
-                  }
-                : undefined,
-            }
-          );
+          showToast(t('schedule.waterAllToast', { count }), {
+            action: undoSnapshot
+              ? {
+                  label: t('common.undo'),
+                  onPress: () => {
+                    const restored = undoWatering(undoSnapshot);
+                    showToast(
+                      t('schedule.undoWaterAllToast', { count: restored })
+                    );
+                  },
+                }
+              : undefined,
+          });
         }
       },
     });
@@ -115,8 +112,8 @@ export default function CalendarScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={styles.maxContainer}>
           <ScreenHeader
-            eyebrow="BOTANICAL AGENDA & CARE HORIZON"
-            title="Care Schedule"
+            eyebrow={t('schedule.eyebrow')}
+            title={t('schedule.title')}
             icon={<CalendarDays size={16} color={palette.primary} />}
           />
 

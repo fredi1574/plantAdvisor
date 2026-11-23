@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CareEventComposer } from '@/components/plant-detail/care-event-composer';
@@ -35,6 +36,7 @@ export function CareLogSection({
   onEditEntry,
   onDeleteEntry,
 }: CareLogSectionProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
 
   return (
@@ -49,7 +51,7 @@ export function CareLogSection({
             styles.sectionHeaderTitle,
             { color: palette.textPrimary, fontFamily: Fonts?.serifSemiBold },
           ]}>
-          Chronological Notebook Timeline
+          {t('plantDetail.journal.timelineTitle')}
         </Text>
         <View
           style={[
@@ -80,7 +82,7 @@ export function CareLogSection({
               styles.emptyTimelineTitle,
               { color: palette.textPrimary, fontFamily: Fonts?.serif },
             ]}>
-            Your care journal is ready
+            {t('plantDetail.journal.emptyTitle')}
           </Text>
           <Text
             style={[

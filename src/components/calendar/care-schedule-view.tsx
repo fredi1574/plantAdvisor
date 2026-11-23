@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { CareMonthCalendar } from '@/components/calendar/care-month-calendar';
@@ -31,6 +32,7 @@ export function CareScheduleView({
   onCompleteTask,
   onWaterAllDueToday,
 }: CareScheduleViewProps) {
+  const { i18n } = useTranslation();
   const [monthOffset, setMonthOffset] = useState(0);
 
   const projectionDays = useMemo(
@@ -40,7 +42,8 @@ export function CareScheduleView({
 
   const timeline = useMemo(
     () => getProjectedCareEvents(plants, entries, projectionDays),
-    [plants, entries, projectionDays]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [plants, entries, projectionDays, i18n.language]
   );
 
   const [selectedDateKey, setSelectedDateKey] = useState(
@@ -62,7 +65,8 @@ export function CareScheduleView({
 
   const calendarMonth = useMemo(
     () => buildCalendarMonthGrid(monthOffset, timelineByDate, historicalMap),
-    [monthOffset, timelineByDate, historicalMap]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [monthOffset, timelineByDate, historicalMap, i18n.language]
   );
 
   const selectedDaySchedule = useMemo<DayCareSchedule | undefined>(() => {
@@ -73,7 +77,8 @@ export function CareScheduleView({
       if (fallback) return fallback;
     }
     return timeline[0];
-  }, [timelineByDate, selectedDateKey, historicalMap, timeline]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timelineByDate, selectedDateKey, historicalMap, timeline, i18n.language]);
 
   const plantLookup = useMemo(() => {
     const map: Record<string, UserPlant> = {};

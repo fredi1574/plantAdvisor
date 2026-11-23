@@ -1,5 +1,6 @@
 import { Droplets } from "lucide-react-native";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -136,6 +137,7 @@ export function WateringProgressPill({
   onWaterNow,
   showInterval = false,
 }: WateringProgressPillProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const reducedMotion = useReducedMotion();
   const { displayFill, daysRemaining, isFilled } =
@@ -163,10 +165,10 @@ export function WateringProgressPill({
   if (isFilled) {
     const actionLabel =
       plant.species.plantType === "propagation"
-        ? "Refresh"
+        ? t("hydration.refresh")
         : daysRemaining === 0
-          ? "Water Today"
-          : `${Math.abs(daysRemaining)}d Overdue`;
+          ? t("hydration.waterToday")
+          : t("hydration.overdue", { count: Math.abs(daysRemaining) });
 
     return (
       <SpringPressable
@@ -228,8 +230,11 @@ export function WateringProgressPill({
           numberOfLines={1}
         >
           {showInterval
-            ? `${daysRemaining}d until water · every ${plant.customWateringIntervalDays}d`
-            : `${daysRemaining}d until water`}
+            ? t("hydration.untilWaterEvery", {
+                count: daysRemaining,
+                interval: plant.customWateringIntervalDays,
+              })
+            : t("hydration.untilWater", { count: daysRemaining })}
         </Text>
       </View>
     </View>

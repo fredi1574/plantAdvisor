@@ -7,6 +7,7 @@ import {
   Sprout,
 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -61,6 +62,7 @@ const HEALTH_PRIORITY: Record<HealthStatus, number> = {
 };
 
 export default function MyGardenScreen() {
+  const { t } = useTranslation();
   const palette = usePalette();
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
@@ -221,13 +223,13 @@ export default function MyGardenScreen() {
 
   const handleDeletePlant = (plant: UserPlant) => {
     confirmAction({
-      title: 'Delete Plant',
-      message: `Are you sure you want to delete "${plant.nickname}" (${plant.species.commonName}) and its care history?`,
-      confirmLabel: 'Delete',
+      title: t('garden.deleteTitle'),
+      message: t('garden.deleteMessage', { name: plant.nickname }),
+      confirmLabel: t('garden.deleteConfirm'),
       destructive: true,
       onConfirm: () => {
         deletePlant(plant.id);
-        showToast(`Removed "${plant.nickname}" from My Garden.`);
+        showToast(t('garden.deleteToast', { name: plant.nickname }));
       },
     });
   };
@@ -369,8 +371,8 @@ export default function MyGardenScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={styles.maxContainer}>
           <ScreenHeader
-            eyebrow="FLORALOG BOTANICAL NOTEBOOK"
-            title={`Welcome, ${userName}`}
+            eyebrow={t('garden.eyebrow')}
+            title={t('garden.welcome', { name: userName })}
             icon={<Sprout size={16} color={palette.primary} />}
             rightSlot={
               <View style={styles.headerControls}>

@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -177,6 +178,7 @@ function FloatingTabBar({
 }
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
   const palette = usePalette();
   const blurTargetsRef = useRef<Record<string, BlurTargetNode>>({});
 
@@ -200,7 +202,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Garden',
+          title: t('tabs.garden'),
           tabBarIcon: ({ focused, color, size }) => (
             <Sprout
               color={color}
@@ -214,7 +216,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="calendar"
         options={{
-          title: 'Schedule',
+          title: t('tabs.schedule'),
           tabBarIcon: ({ focused, color, size }) => (
             <CalendarDays
               color={color}
@@ -228,7 +230,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="scan"
         options={{
-          title: 'Scan',
+          title: t('tabs.scan'),
           tabBarIcon: ({ focused, color, size }) => (
             <Camera
               color={color}
@@ -242,7 +244,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Account',
+          title: t('tabs.account'),
           tabBarIcon: ({ focused, color, size }) => (
             <User
               color={color}
