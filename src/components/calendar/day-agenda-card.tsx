@@ -15,7 +15,6 @@ import {
   AnimatedEntrance,
   SpringPressable,
 } from '@/components/ui/animated-wrappers';
-import { GlassCard } from '@/components/ui/glass-card';
 import { BorderWidth, Fonts, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import {
@@ -47,7 +46,7 @@ export function DayAgendaCard({
   );
 
   return (
-    <GlassCard>
+    <View style={styles.section}>
       <View style={styles.dayAgendaHeader}>
         <View style={styles.flex}>
           <Text
@@ -94,8 +93,14 @@ export function DayAgendaCard({
       {schedule.projectedTasks.length === 0 &&
       schedule.completedEntries.length === 0 ? (
         <View
-          style={[styles.restDayBox, { backgroundColor: palette.bgPrimary }]}>
-          <CheckCircle2 size={24} color={palette.primary} />
+          style={[
+            styles.restDayBox,
+            {
+              backgroundColor: palette.bgSurface,
+              borderColor: palette.borderSubtle,
+            },
+          ]}>
+          <CheckCircle2 size={22} color={palette.primary} />
           <Text style={[styles.restDayTitle, { color: palette.textPrimary }]}>
             Rest Day for Your Garden
           </Text>
@@ -153,7 +158,7 @@ export function DayAgendaCard({
           })}
         </View>
       )}
-    </GlassCard>
+    </View>
   );
 }
 
@@ -206,7 +211,14 @@ function AgendaTaskItem({
           : 'Water Early';
 
   return (
-    <GlassCard variant="subtle" style={styles.taskCard}>
+    <View
+      style={[
+        styles.taskCard,
+        {
+          backgroundColor: palette.bgSurface,
+          borderColor: palette.borderSubtle,
+        },
+      ]}>
       <Pressable
         onPress={() =>
           router.push({
@@ -285,11 +297,14 @@ function AgendaTaskItem({
           {buttonLabel}
         </Text>
       </SpringPressable>
-    </GlassCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  section: {
+    gap: Spacing.md,
+  },
   flex: {
     flex: 1,
   },
@@ -300,8 +315,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   dayAgendaTitle: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 19,
+    fontWeight: '700',
   },
   dayAgendaSub: {
     fontSize: 12,
@@ -325,6 +340,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.md,
     borderRadius: Radius.lg,
+    borderWidth: BorderWidth.hairline,
     gap: 6,
   },
   restDayTitle: {
@@ -344,6 +360,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Spacing.sm + Spacing.half,
     padding: Spacing.sm + Spacing.half,
+    borderRadius: Radius.lg,
+    borderWidth: BorderWidth.hairline,
   },
   taskMainPressable: {
     flex: 1,

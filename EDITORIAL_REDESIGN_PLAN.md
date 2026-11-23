@@ -34,5 +34,5 @@ A focused plan to eliminate "card fatigue" on long screens by replacing stacked 
 ## 4. My Garden & Care Schedule (`src/app/(tabs)/index.tsx`, `src/app/(tabs)/calendar.tsx`)
 **Problem:** Controls and schedule lists compete visually with the primary content cards.
 
-- [ ] **Unbox `GardenControlsCard`:** Float the search bar and horizontal filter chips directly on the background canvas so the actual plant cards are the only elevated surfaces on My Garden.
-- [ ] **Editorial Care Schedule:** Keep the interactive month calendar in a soft container, and render the **Day Agenda** and **Upcoming Timeline** as open chronological lists with clean date headers instead of nested cards inside cards.
+- [x] **Unbox `GardenControlsCard`:** Float the search bar and horizontal filter chips directly on the background canvas so the actual plant cards are the only elevated surfaces on My Garden.
+- [x] **Editorial Care Schedule:** Keep the interactive month calendar in a soft container, and render the **Day Agenda** and **Upcoming Timeline** as open chronological lists with clean date headers instead of nested cards inside cards.

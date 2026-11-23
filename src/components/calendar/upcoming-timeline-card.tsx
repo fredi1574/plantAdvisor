@@ -12,7 +12,6 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
-import { GlassCard } from '@/components/ui/glass-card';
 import {
   BorderWidth,
   Fonts,
@@ -45,7 +44,14 @@ export function UpcomingTimelineCard({
   const palette = usePalette();
 
   return (
-    <GlassCard>
+    <View style={styles.section}>
+      <View
+        style={[
+          styles.sectionDivider,
+          { backgroundColor: palette.borderSubtle },
+        ]}
+      />
+
       <View style={styles.headerRow}>
         <View style={styles.titleGroup}>
           <Sparkles size={16} color={palette.primary} />
@@ -74,7 +80,13 @@ export function UpcomingTimelineCard({
 
       {upcomingDays.length === 0 ? (
         <View
-          style={[styles.emptyBox, { backgroundColor: palette.bgSubtle }]}>
+          style={[
+            styles.emptyBox,
+            {
+              backgroundColor: palette.bgSurface,
+              borderColor: palette.borderSubtle,
+            },
+          ]}>
           <CheckCircle2 size={20} color={palette.primaryMuted} />
           <Text style={[styles.emptyText, { color: palette.textSecondary }]}>
             No other care tasks scheduled in the next 2 weeks.
@@ -91,7 +103,7 @@ export function UpcomingTimelineCard({
                     style={[
                       styles.railDateBadge,
                       {
-                        backgroundColor: palette.bgSubtle,
+                        backgroundColor: palette.bgSurface,
                         borderColor: palette.borderSubtle,
                       },
                     ]}>
@@ -175,7 +187,7 @@ export function UpcomingTimelineCard({
                           style={[
                             styles.compactTaskRow,
                             {
-                              backgroundColor: palette.bgSubtle,
+                              backgroundColor: palette.bgSurface,
                               borderColor: palette.borderSubtle,
                             },
                           ]}>
@@ -253,11 +265,17 @@ export function UpcomingTimelineCard({
           })}
         </View>
       )}
-    </GlassCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  section: {
+    gap: Spacing.md,
+  },
+  sectionDivider: {
+    height: BorderWidth.hairline,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -289,6 +307,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.md,
     borderRadius: Radius.lg,
+    borderWidth: BorderWidth.hairline,
   },
   emptyText: {
     flex: 1,

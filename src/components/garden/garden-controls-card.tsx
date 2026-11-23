@@ -23,7 +23,6 @@ import {
 } from 'react-native';
 
 import { Chip } from '@/components/ui/chip';
-import { SurfaceCard } from '@/components/ui/surface-card';
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { triggerLightHaptic } from '@/services/haptics';
@@ -164,10 +163,16 @@ export function GardenControlsCard({
   );
 
   return (
-    <SurfaceCard style={styles.card}>
+    <View style={styles.container}>
       {hasPlants && (
         <View
-          style={[styles.searchBox, { backgroundColor: palette.bgSubtle }]}>
+          style={[
+            styles.searchBox,
+            {
+              backgroundColor: palette.bgSurface,
+              borderColor: palette.borderSubtle,
+            },
+          ]}>
           <Search size={15} color={palette.textMuted} />
           <TextInput
             value={searchQuery}
@@ -225,71 +230,65 @@ export function GardenControlsCard({
       </ScrollView>
 
       {hasPlants && (
-        <View
-          style={[styles.sortBar, { borderTopColor: palette.borderSubtle }]}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.sortRow}>
-            <View style={styles.sortLabelGroup}>
-              <ArrowUpDown size={13} color={palette.textSecondary} />
-              <Text
-                style={[styles.sortLabel, { color: palette.textSecondary }]}>
-                Sort:
-              </Text>
-            </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sortRow}>
+          <View style={styles.sortLabelGroup}>
+            <ArrowUpDown size={13} color={palette.textSecondary} />
+            <Text style={[styles.sortLabel, { color: palette.textSecondary }]}>
+              Sort:
+            </Text>
+          </View>
 
-            {SORT_OPTIONS.map((opt) => (
-              <Chip
-                key={opt.key}
-                label={opt.label}
-                variant="subtle"
-                selected={sortBy === opt.key}
-                onPress={() => {
-                  triggerLightHaptic();
-                  onSelectSort(opt.key);
-                }}
-              />
-            ))}
-
+          {SORT_OPTIONS.map((opt) => (
             <Chip
-              label="By Room"
+              key={opt.key}
+              label={opt.label}
               variant="subtle"
-              selected={groupByLocation}
-              selectedStyle="solid"
-              icon={
-                <MapPin
-                  size={12}
-                  color={
-                    groupByLocation
-                      ? palette.textInverse
-                      : palette.textSecondary
-                  }
-                />
-              }
+              selected={sortBy === opt.key}
               onPress={() => {
                 triggerLightHaptic();
-                onToggleGroupByLocation();
+                onSelectSort(opt.key);
               }}
             />
-          </ScrollView>
-        </View>
+          ))}
+
+          <Chip
+            label="By Room"
+            variant="subtle"
+            selected={groupByLocation}
+            selectedStyle="solid"
+            icon={
+              <MapPin
+                size={12}
+                color={
+                  groupByLocation ? palette.textInverse : palette.textSecondary
+                }
+              />
+            }
+            onPress={() => {
+              triggerLightHaptic();
+              onToggleGroupByLocation();
+            }}
+          />
+        </ScrollView>
       )}
-    </SurfaceCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    padding: Spacing.sm,
-    gap: Spacing.sm,
+  container: {
+    gap: Spacing.sm + 2,
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.full,
+    borderWidth: BorderWidth.hairline,
+    paddingHorizontal: Spacing.md + 2,
     paddingVertical: Platform.OS === 'ios' ? 9 : 4,
   },
   searchInput: {
@@ -317,10 +316,6 @@ const styles = StyleSheet.create({
   pressedScale: {
     opacity: 0.86,
     transform: [{ scale: 0.97 }],
-  },
-  sortBar: {
-    borderTopWidth: BorderWidth.hairline,
-    paddingTop: Spacing.xs,
   },
   sortRow: {
     flexDirection: 'row',
