@@ -5,6 +5,7 @@
  */
 
 import type { Session, Subscription, User } from '@supabase/supabase-js';
+import { Platform, TurboModuleRegistry } from 'react-native';
 import { create } from 'zustand';
 
 import {
@@ -47,6 +48,7 @@ interface AuthStoreState {
     needsEmailConfirmation?: boolean;
     error?: string;
   }>;
+  signInWithGoogle: () => Promise<{ ok: boolean; cancelled?: boolean; error?: string }>;
   updateProfile: (updates: {
     displayName?: string;
     avatarUrl?: string;
@@ -56,7 +58,38 @@ interface AuthStoreState {
   clearError: () => void;
 }
 
+type GoogleSigninModule = typeof import('@react-native-google-signin/google-signin');
+
 let authSubscription: Subscription | null = null;
+let googleConfigured = false;
+
+function getGoogleSigninModule(): GoogleSigninModule | null {
+  if (Platform.OS === 'web') return null;
+  if (!TurboModuleRegistry.get('RNGoogleSignin')) return null;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('@react-native-google-signin/google-signin') as GoogleSigninModule;
+  } catch {
+    return null;
+  }
+}
+
+function ensureGoogleConfigured(mod: GoogleSigninModule): string | null {
+  const webClientId = (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '').trim();
+  if (!webClientId || Platform.OS === 'web') return null;
+
+  if (!googleConfigured) {
+    const iosClientId = (process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? '').trim();
+    mod.GoogleSignin.configure({
+      webClientId,
+      ...(iosClientId ? { iosClientId } : {}),
+    });
+    googleConfigured = true;
+  }
+
+  return webClientId;
+}
 
 export const useAuthStore = create<AuthStoreState>((set, get) => ({
   session: null,
@@ -262,6 +295,97 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     }
   },
 
+  signInWithGoogle: async () => {
+    set({ isLoading: true, authError: null });
+
+    if (!supabase) {
+      const msg = 'Google Sign-In requires Supabase cloud configuration.';
+      set({ isLoading: false, authError: msg });
+      return { ok: false, error: msg };
+    }
+
+    const googleMod = getGoogleSigninModule();
+    if (!googleMod) {
+      const msg =
+        Platform.OS === 'web'
+          ? 'Google Sign-In is only available on mobile devices.'
+          : 'Google Sign-In requires an EAS build or development build (not supported in Expo Go).';
+      set({ isLoading: false, authError: msg });
+      return { ok: false, error: msg };
+    }
+
+    const webClientId = ensureGoogleConfigured(googleMod);
+    if (!webClientId) {
+      const msg = 'Google Sign-In is not configured yet.';
+      set({ isLoading: false, authError: msg });
+      return { ok: false, error: msg };
+    }
+
+    const { GoogleSignin, isErrorWithCode, isSuccessResponse, statusCodes } = googleMod;
+
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+
+      if (!isSuccessResponse(response)) {
+        set({ isLoading: false, authError: null });
+        return { ok: false, cancelled: true };
+      }
+
+      const idToken = response.data.idToken;
+      if (!idToken) {
+        const msg = 'Google Sign-In did not return an ID token.';
+        set({ isLoading: false, authError: msg });
+        return { ok: false, error: msg };
+      }
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+
+      if (error || !data.user) {
+        const msg = error?.message || 'Unable to sign in with Google.';
+        set({ isLoading: false, authError: msg });
+        return { ok: false, error: msg };
+      }
+
+      const profile = await fetchOrCreateUserProfile(data.user);
+      set({
+        session: data.session,
+        user: data.user,
+        profile,
+        isLoading: false,
+        authError: null,
+      });
+
+      void usePlantStore.getState().syncWithSupabase();
+      return { ok: true };
+    } catch (err) {
+      if (isErrorWithCode(err)) {
+        if (err.code === statusCodes.SIGN_IN_CANCELLED) {
+          set({ isLoading: false, authError: null });
+          return { ok: false, cancelled: true };
+        }
+        if (err.code === statusCodes.IN_PROGRESS) {
+          set({ isLoading: false });
+          return { ok: false, cancelled: true };
+        }
+        if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+          const msg =
+            'Google Play Services is unavailable or out of date on this device.';
+          set({ isLoading: false, authError: msg });
+          return { ok: false, error: msg };
+        }
+      }
+
+      const msg =
+        err instanceof Error ? err.message : 'Unable to sign in with Google.';
+      set({ isLoading: false, authError: msg });
+      return { ok: false, error: msg };
+    }
+  },
+
   updateProfile: async (updates) => {
     const currentUser = get().user;
     if (!currentUser) {
@@ -357,6 +481,10 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     set({ isLoading: true, authError: null });
     try {
       await clearLocalAuthSession();
+      if (googleConfigured) {
+        const googleMod = getGoogleSigninModule();
+        await googleMod?.GoogleSignin.signOut().catch(() => undefined);
+      }
       if (supabase) {
         await supabase.auth.signOut();
       }

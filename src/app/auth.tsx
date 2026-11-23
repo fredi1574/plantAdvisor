@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 export default function SignInScreen() {
   const signInWithEmail = useAuthStore((s) => s.signInWithEmail);
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const isLoading = useAuthStore((s) => s.isLoading);
   const authError = useAuthStore((s) => s.authError);
   const clearError = useAuthStore((s) => s.clearError);
@@ -37,6 +38,15 @@ export default function SignInScreen() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setLocalError(null);
+    clearError();
+    const result = await signInWithGoogle();
+    if (result.ok) {
+      router.replace('/(tabs)');
+    }
+  };
+
   return (
     <AuthScreenShell
       title="FloraLog"
@@ -45,6 +55,7 @@ export default function SignInScreen() {
       submitLabel="Enter My Garden"
       isLoading={isLoading}
       onSubmit={() => void handleSignIn()}
+      onGooglePress={() => void handleGoogleSignIn()}
       footerPrompt="Don't have an account?"
       footerActionLabel="Create account"
       onFooterAction={() => {

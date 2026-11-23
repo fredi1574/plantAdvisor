@@ -26,7 +26,18 @@ export async function fetchOrCreateUserProfile(
     const fallbackName =
       (typeof user.user_metadata?.display_name === 'string' &&
         user.user_metadata.display_name.trim()) ||
+      (typeof user.user_metadata?.full_name === 'string' &&
+        user.user_metadata.full_name.trim()) ||
+      (typeof user.user_metadata?.name === 'string' &&
+        user.user_metadata.name.trim()) ||
       (user.email ? user.email.split('@')[0] : 'Gardener');
+
+    const fallbackAvatarUrl =
+      (typeof user.user_metadata?.avatar_url === 'string' &&
+        user.user_metadata.avatar_url.trim()) ||
+      (typeof user.user_metadata?.picture === 'string' &&
+        user.user_metadata.picture.trim()) ||
+      undefined;
 
     const nowIso = new Date().toISOString();
     const { data: created, error: upsertError } = await supabase
@@ -36,6 +47,7 @@ export async function fetchOrCreateUserProfile(
           id: user.id,
           email: user.email ?? '',
           display_name: fallbackName,
+          ...(fallbackAvatarUrl ? { avatar_url: fallbackAvatarUrl } : {}),
           updated_at: nowIso,
         },
         { onConflict: 'id' }

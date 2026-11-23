@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 export default function SignUpScreen() {
   const signUpWithEmail = useAuthStore((s) => s.signUpWithEmail);
+  const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const isLoading = useAuthStore((s) => s.isLoading);
   const authError = useAuthStore((s) => s.authError);
   const clearError = useAuthStore((s) => s.clearError);
@@ -49,6 +50,16 @@ export default function SignUpScreen() {
     }
   };
 
+  const handleGoogleSignUp = async () => {
+    setLocalError(null);
+    setConfirmationSent(false);
+    clearError();
+    const result = await signInWithGoogle();
+    if (result.ok) {
+      router.replace('/(tabs)');
+    }
+  };
+
   const navigateToSignIn = () => {
     setLocalError(null);
     setConfirmationSent(false);
@@ -74,6 +85,7 @@ export default function SignUpScreen() {
       submitLabel="Create Account"
       isLoading={isLoading}
       onSubmit={() => void handleSignUp()}
+      onGooglePress={() => void handleGoogleSignUp()}
       footerPrompt="Already have an account?"
       footerActionLabel="Sign in"
       onFooterAction={navigateToSignIn}>

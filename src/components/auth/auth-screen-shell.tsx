@@ -32,6 +32,8 @@ interface AuthScreenShellProps {
   submitLabel: string;
   isLoading: boolean;
   onSubmit: () => void;
+  onGooglePress?: () => void;
+  googleLabel?: string;
   footerPrompt: string;
   footerActionLabel: string;
   onFooterAction: () => void;
@@ -50,6 +52,8 @@ export function AuthScreenShell({
   submitLabel,
   isLoading,
   onSubmit,
+  onGooglePress,
+  googleLabel = 'Continue with Google',
   footerPrompt,
   footerActionLabel,
   onFooterAction,
@@ -166,6 +170,68 @@ export function AuthScreenShell({
                   </>
                 )}
               </Pressable>
+
+              {onGooglePress && Platform.OS !== 'web' ? (
+                <>
+                  <View style={styles.dividerRow}>
+                    <View
+                      style={[
+                        styles.dividerLine,
+                        { backgroundColor: palette.borderSubtle },
+                      ]}
+                    />
+                    <Text
+                      style={[styles.dividerText, { color: palette.textMuted }]}>
+                      or
+                    </Text>
+                    <View
+                      style={[
+                        styles.dividerLine,
+                        { backgroundColor: palette.borderSubtle },
+                      ]}
+                    />
+                  </View>
+
+                  <Pressable
+                    onPress={onGooglePress}
+                    disabled={isLoading}
+                    accessibilityRole="button"
+                    accessibilityLabel={googleLabel}
+                    style={({ pressed }) => [
+                      styles.googleBtn,
+                      {
+                        backgroundColor: palette.bgPrimary,
+                        borderColor: palette.borderSubtle,
+                      },
+                      pressed && !isLoading && styles.submitBtnPressed,
+                      isLoading && styles.submitBtnDisabled,
+                    ]}>
+                    <View
+                      style={[
+                        styles.googleBadge,
+                        {
+                          backgroundColor: palette.primarySoft,
+                          borderColor: palette.primaryBorder,
+                        },
+                      ]}>
+                      <Text
+                        style={[
+                          styles.googleBadgeText,
+                          { color: palette.primary },
+                        ]}>
+                        G
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.googleBtnText,
+                        { color: palette.textPrimary },
+                      ]}>
+                      {googleLabel}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
             </View>
 
             <Pressable
@@ -340,6 +406,47 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     fontSize: 15,
+    fontWeight: '700',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 2,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  dividerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderRadius: 14,
+    paddingVertical: 12,
+    borderWidth: BorderWidth.hairline,
+  },
+  googleBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: BorderWidth.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleBadgeText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  googleBtnText: {
+    fontSize: 14,
     fontWeight: '700',
   },
   bottomSwitchBtn: {
