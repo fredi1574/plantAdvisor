@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import {
+  BookmarkPlus,
   Camera,
   Image as ImageIcon,
   Minus,
@@ -9,6 +10,7 @@ import {
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { SpringPressable } from '@/components/ui/animated-wrappers';
 import { BotanicalInput } from '@/components/ui/botanical-input';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 import { Chip } from '@/components/ui/chip';
@@ -20,6 +22,7 @@ import {
 } from '@/constants/plantOptions';
 import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { triggerLightHaptic } from '@/services/haptics';
 import { pickPlantImage } from '@/services/imagePicker';
 import { usePlantStore } from '@/store/usePlantStore';
 import type {
@@ -75,6 +78,8 @@ function EditPlantFormSheet({
 }: EditPlantFormSheetProps) {
   const palette = usePalette();
   const updatePlant = usePlantStore((s) => s.updatePlant);
+  const roomPresets = usePlantStore((s) => s.roomPresets);
+  const addRoomPreset = usePlantStore((s) => s.addRoomPreset);
 
   const [nickname, setNickname] = useState(plant.nickname);
   const [commonName, setCommonName] = useState(plant.species.commonName);
@@ -85,6 +90,7 @@ function EditPlantFormSheet({
     plant.species.plantType
   );
   const [location, setLocation] = useState(plant.location);
+  const [isIndoor, setIsIndoor] = useState(plant.isIndoor);
   const [wateringDays, setWateringDays] = useState(
     String(plant.customWateringIntervalDays)
   );
@@ -150,6 +156,7 @@ function EditPlantFormSheet({
       scientificName: scientificName.trim() || plant.species.scientificName,
       plantType,
       location: location.trim() || plant.location,
+      isIndoor,
       customWateringIntervalDays: intervalDays,
       fertilizeIntervalDays,
       rotateIntervalDays,
@@ -275,6 +282,70 @@ function EditPlantFormSheet({
           />
         </View>
       </View>
+
+      {roomPresets.length > 0 && (
+        <View style={styles.fieldGroup}>
+          <View style={styles.presetHeaderRow}>
+            <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
+              Room Presets
+            </Text>
+            <SpringPressable
+              onPress={() => {
+                const trimmed = location.trim();
+                if (!trimmed) return;
+                triggerLightHaptic();
+                addRoomPreset({
+                  name: trimmed,
+                  lightExposure,
+                  isIndoor,
+                });
+              }}
+              disabled={!location.trim()}
+              accessibilityRole="button"
+              accessibilityLabel="Save current location as room preset"
+              style={[
+                styles.savePresetBtn,
+                {
+                  backgroundColor: palette.primarySoft,
+                  borderColor: palette.primaryBorder,
+                },
+                !location.trim() && { opacity: 0.45 },
+              ]}>
+              <BookmarkPlus size={12} color={palette.primary} />
+              <Text
+                style={[styles.savePresetBtnText, { color: palette.primary }]}>
+                Save Spot
+              </Text>
+            </SpringPressable>
+          </View>
+          <View style={styles.presetChipsRow}>
+            {roomPresets.map((preset) => {
+              const isSelected =
+                location.trim().toLowerCase() ===
+                  preset.name.trim().toLowerCase() &&
+                lightExposure === preset.lightExposure &&
+                isIndoor === preset.isIndoor;
+
+              return (
+                <Chip
+                  key={preset.id}
+                  label={`${preset.name} • ${preset.isIndoor ? 'Indoor' : 'Outdoor'}`}
+                  variant="subtle"
+                  size="sm"
+                  selected={isSelected}
+                  selectedStyle="solid"
+                  onPress={() => {
+                    triggerLightHaptic();
+                    setLocation(preset.name);
+                    setLightExposure(preset.lightExposure);
+                    setIsIndoor(preset.isIndoor);
+                  }}
+                />
+              );
+            })}
+          </View>
+        </View>
+      )}
 
       <View style={styles.twoColRow}>
         <View style={[styles.fieldGroup, styles.locationCol]}>
@@ -474,6 +545,30 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  presetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  savePresetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: BorderWidth.hairline,
+    borderRadius: Radius.full,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  savePresetBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  presetChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs + 2,
   },
   italicInput: {
     fontStyle: 'italic',

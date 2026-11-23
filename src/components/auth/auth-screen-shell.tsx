@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { ArrowRight } from 'lucide-react-native';
-import React, { type ReactNode } from 'react';
+import React, { type ReactNode, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -13,6 +13,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  LegalInfoModal,
+  type LegalDocumentType,
+} from '@/components/modals/legal-info-modal';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import { BorderWidth, CardShadow, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
@@ -52,6 +56,7 @@ export function AuthScreenShell({
   children,
 }: AuthScreenShellProps) {
   const palette = usePalette();
+  const [legalDoc, setLegalDoc] = useState<LegalDocumentType | null>(null);
 
   return (
     <SafeAreaView
@@ -177,9 +182,39 @@ export function AuthScreenShell({
                 </Text>
               </Text>
             </Pressable>
+
+            <View style={styles.legalRow}>
+              <Pressable
+                onPress={() => setLegalDoc('privacy')}
+                accessibilityRole="button"
+                accessibilityLabel="Read Privacy Policy"
+                style={({ pressed }) => pressed && { opacity: 0.7 }}>
+                <Text style={[styles.legalLink, { color: palette.textMuted }]}>
+                  Privacy Policy
+                </Text>
+              </Pressable>
+              <Text style={[styles.legalDot, { color: palette.textMuted }]}>
+                •
+              </Text>
+              <Pressable
+                onPress={() => setLegalDoc('terms')}
+                accessibilityRole="button"
+                accessibilityLabel="Read Terms of Service"
+                style={({ pressed }) => pressed && { opacity: 0.7 }}>
+                <Text style={[styles.legalLink, { color: palette.textMuted }]}>
+                  Terms of Service
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <LegalInfoModal
+        visible={legalDoc !== null}
+        document={legalDoc ?? 'privacy'}
+        onClose={() => setLegalDoc(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -318,5 +353,20 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontWeight: '700',
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  legalLink: {
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  legalDot: {
+    fontSize: 12,
   },
 });

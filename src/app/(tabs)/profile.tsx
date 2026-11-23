@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
 import {
   ChevronRight,
+  FileText,
   LogOut,
   RotateCcw,
+  ShieldCheck,
   Sprout,
   Trash2,
 } from 'lucide-react-native';
@@ -11,11 +13,15 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DeleteAccountModal } from '@/components/modals/delete-account-modal';
+import {
+  LegalInfoModal,
+  type LegalDocumentType,
+} from '@/components/modals/legal-info-modal';
 import { AppearanceCard } from '@/components/profile/appearance-card';
 import { GuestCloudCard } from '@/components/profile/guest-cloud-card';
 import { NotificationsCard } from '@/components/profile/notifications-card';
-import { ProfileEditorCard } from '@/components/profile/profile-editor-card';
 import { ProfileOverviewCard } from '@/components/profile/profile-overview-card';
+import { RoomPresetsSection } from '@/components/profile/room-presets-section';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -46,6 +52,7 @@ export default function ProfileScreen() {
   const resetToSeedData = usePlantStore((s) => s.resetToSeedData);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [legalDoc, setLegalDoc] = useState<LegalDocumentType | null>(null);
   const { message: toast, showToast } = useToast(3200);
 
   const handleSignOut = () => {
@@ -98,22 +105,16 @@ export default function ProfileScreen() {
           {!user ? (
             <GuestCloudCard plantCount={plantCount} entryCount={entryCount} />
           ) : (
-            <>
-              <ProfileOverviewCard
-                user={user}
-                profile={profile}
-                onShowToast={showToast}
-              />
-              <ProfileEditorCard
-                user={user}
-                profile={profile}
-                onShowToast={showToast}
-              />
-            </>
+            <ProfileOverviewCard
+              user={user}
+              profile={profile}
+              onShowToast={showToast}
+            />
           )}
 
           <AppearanceCard onShowToast={showToast} />
           <NotificationsCard onShowToast={showToast} />
+          <RoomPresetsSection onShowToast={showToast} />
 
           <View style={styles.section}>
             <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
@@ -128,6 +129,62 @@ export default function ProfileScreen() {
                   borderColor: palette.borderSubtle,
                 },
               ]}>
+              <Pressable
+                onPress={() => setLegalDoc('privacy')}
+                accessibilityRole="button"
+                accessibilityLabel="Privacy Policy"
+                style={({ pressed }) => [
+                  styles.settingsRow,
+                  pressed && { backgroundColor: palette.bgSubtle },
+                ]}>
+                <View style={styles.settingsRowLeft}>
+                  <ShieldCheck size={16} color={palette.primary} />
+                  <Text
+                    style={[
+                      styles.settingsRowTitle,
+                      { color: palette.textPrimary },
+                    ]}>
+                    Privacy Policy
+                  </Text>
+                </View>
+                <ChevronRight size={15} color={palette.textMuted} />
+              </Pressable>
+
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: palette.borderSubtle },
+                ]}
+              />
+
+              <Pressable
+                onPress={() => setLegalDoc('terms')}
+                accessibilityRole="button"
+                accessibilityLabel="Terms of Service"
+                style={({ pressed }) => [
+                  styles.settingsRow,
+                  pressed && { backgroundColor: palette.bgSubtle },
+                ]}>
+                <View style={styles.settingsRowLeft}>
+                  <FileText size={16} color={palette.primary} />
+                  <Text
+                    style={[
+                      styles.settingsRowTitle,
+                      { color: palette.textPrimary },
+                    ]}>
+                    Terms of Service
+                  </Text>
+                </View>
+                <ChevronRight size={15} color={palette.textMuted} />
+              </Pressable>
+
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: palette.borderSubtle },
+                ]}
+              />
+
               <Pressable
                 onPress={handleResetToSampleGarden}
                 accessibilityRole="button"
@@ -232,6 +289,12 @@ export default function ProfileScreen() {
           }
           return res;
         }}
+      />
+
+      <LegalInfoModal
+        visible={legalDoc !== null}
+        document={legalDoc ?? 'privacy'}
+        onClose={() => setLegalDoc(null)}
       />
     </SafeAreaView>
   );
