@@ -1,5 +1,12 @@
-import { CloudRain, SlidersHorizontal, Snowflake } from 'lucide-react-native';
-import { useReducer } from 'react';
+import {
+  CloudRain,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+  Snowflake,
+} from 'lucide-react-native';
+import { useReducer, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BotanicalInput } from '@/components/ui/botanical-input';
@@ -10,7 +17,9 @@ import { usePalette } from '@/hooks/use-theme';
 import {
   computeAdaptiveWateringInterval,
   fetchOutdoorWeatherAdvisory,
+  searchWeatherLocations,
   type WeatherCareAdvisory,
+  type WeatherLocationResult,
 } from '@/services/careIntelligenceService';
 import {
   triggerLightHaptic,
@@ -68,6 +77,7 @@ export function PlantAdaptiveCareCard({
   plant,
   onShowToast,
 }: PlantAdaptiveCareCardProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const updatePlant = usePlantStore((s) => s.updatePlant);
   const adaptiveCarePrefs = usePlantStore((s) => s.adaptiveCarePrefs);
@@ -77,6 +87,10 @@ export function PlantAdaptiveCareCard({
     weatherFetchReducer,
     INITIAL_WEATHER_FETCH_STATE
   );
+  const [cityQuery, setCityQuery] = useState('');
+  const [cityResults, setCityResults] = useState<WeatherLocationResult[]>([]);
+  const [isSearchingCities, setIsSearchingCities] = useState(false);
+  const [citySearchTouched, setCitySearchTouched] = useState(false);
 
   const adaptiveInterval = computeAdaptiveWateringInterval(
     {
@@ -98,13 +112,13 @@ export function PlantAdaptiveCareCard({
     });
     triggerSuccessHaptic();
     onShowToast(
-      `Watering interval updated to every ${adaptiveInterval.suggestedIntervalDays} days.`
+      t('plantDetail.adaptiveCare.appliedToast', {
+        days: adaptiveInterval.suggestedIntervalDays,
+      })
     );
   };
 
-  const handleFetchWeather = async () => {
-    const lat = Number(adaptiveCarePrefs.latitude);
-    const lon = Number(adaptiveCarePrefs.longitude);
+  const handleFetchWeatherForCoords = async (lat: number, lon: number) => {
     if (
       Number.isNaN(lat) ||
       Number.isNaN(lon) ||
@@ -115,7 +129,7 @@ export function PlantAdaptiveCareCard({
     ) {
       dispatchWeather({
         type: 'FETCH_ERROR',
-        error: 'Enter valid latitude (-90..90) and longitude (-180..180).',
+        error: t('plantDetail.adaptiveCare.weatherError'),
       });
       return;
     }
@@ -131,9 +145,51 @@ export function PlantAdaptiveCareCard({
         error:
           err instanceof Error
             ? err.message
-            : 'Unable to fetch Open-Meteo forecast.',
+            : t('plantDetail.adaptiveCare.weatherError'),
       });
     }
+  };
+
+  const handleFetchWeather = async () => {
+    await handleFetchWeatherForCoords(
+      Number(adaptiveCarePrefs.latitude),
+      Number(adaptiveCarePrefs.longitude)
+    );
+  };
+
+  const handleSearchCities = async () => {
+    const trimmed = cityQuery.trim();
+    if (trimmed.length < 2) {
+      setCityResults([]);
+      return;
+    }
+    setIsSearchingCities(true);
+    setCitySearchTouched(true);
+    try {
+      const results = await searchWeatherLocations(trimmed, i18n.language);
+      setCityResults(results);
+    } catch {
+      setCityResults([]);
+    } finally {
+      setIsSearchingCities(false);
+    }
+  };
+
+  const handleSelectCity = (loc: WeatherLocationResult) => {
+    triggerLightHaptic();
+    const latStr = loc.latitude.toFixed(2);
+    const lonStr = loc.longitude.toFixed(2);
+    const hemisphere = loc.latitude < 0 ? 'southern' : 'northern';
+    setAdaptiveCarePrefs({
+      cityName: loc.displayLabel,
+      latitude: latStr,
+      longitude: lonStr,
+      hemisphere,
+    });
+    setCityQuery('');
+    setCityResults([]);
+    setCitySearchTouched(false);
+    void handleFetchWeatherForCoords(loc.latitude, loc.longitude);
   };
 
   return (
@@ -142,14 +198,14 @@ export function PlantAdaptiveCareCard({
         <View style={styles.titleRow}>
           <SlidersHorizontal size={16} color={palette.primary} />
           <Text style={[styles.title, { color: palette.textPrimary }]}>
-            Adaptive Care Intelligence
+            {t('plantDetail.adaptiveCare.title')}
           </Text>
         </View>
         <Chip
           label={
             adaptiveCarePrefs.hemisphere === 'northern'
-              ? 'N. Hemisphere'
-              : 'S. Hemisphere'
+              ? t('plantDetail.adaptiveCare.northHemisphere')
+              : t('plantDetail.adaptiveCare.southHemisphere')
           }
           variant="subtle"
           onPress={() =>
@@ -184,7 +240,9 @@ export function PlantAdaptiveCareCard({
           onPress={handleApplyAdaptiveInterval}
           style={[styles.applyBtn, { backgroundColor: palette.primary }]}>
           <Text style={[styles.applyBtnText, { color: palette.textInverse }]}>
-            Apply {adaptiveInterval.suggestedIntervalDays}-Day Interval
+            {t('plantDetail.adaptiveCare.applyBtn', {
+              days: adaptiveInterval.suggestedIntervalDays,
+            })}
           </Text>
         </Pressable>
       )}
@@ -200,37 +258,84 @@ export function PlantAdaptiveCareCard({
               <CloudRain size={15} color={palette.waterBlue} />
               <Text
                 style={[styles.weatherTitle, { color: palette.textPrimary }]}>
-                Outdoor Forecast (Open-Meteo)
+                {t('plantDetail.adaptiveCare.weatherTitle')}
               </Text>
             </View>
             <Chip
-              label={weather.advisory ? 'Refresh' : 'Check Weather'}
+              label={
+                weather.advisory
+                  ? t('plantDetail.adaptiveCare.refreshWeather')
+                  : t('plantDetail.adaptiveCare.checkWeather')
+              }
               variant="primarySoft"
               loading={weather.isLoading}
               onPress={() => void handleFetchWeather()}
             />
           </View>
 
-          <View style={styles.coordRow}>
-            <BotanicalInput
-              surface="subtle"
-              value={adaptiveCarePrefs.latitude}
-              onChangeText={(value) => setAdaptiveCarePrefs({ latitude: value })}
-              placeholder="Lat"
-              keyboardType="numeric"
-              style={styles.coordInput}
-            />
-            <BotanicalInput
-              surface="subtle"
-              value={adaptiveCarePrefs.longitude}
-              onChangeText={(value) =>
-                setAdaptiveCarePrefs({ longitude: value })
-              }
-              placeholder="Lon"
-              keyboardType="numeric"
-              style={styles.coordInput}
-            />
+          <View style={styles.selectedCityRow}>
+            <MapPin size={13} color={palette.primary} />
+            <Text
+              style={[styles.selectedCityText, { color: palette.textPrimary }]}
+              numberOfLines={1}>
+              {adaptiveCarePrefs.cityName ||
+                `${adaptiveCarePrefs.latitude}, ${adaptiveCarePrefs.longitude}`}
+            </Text>
           </View>
+
+          <View style={styles.citySearchRow}>
+            <BotanicalInput
+              surface="subtle"
+              value={cityQuery}
+              onChangeText={(val) => {
+                setCityQuery(val);
+                if (!val.trim()) {
+                  setCityResults([]);
+                  setCitySearchTouched(false);
+                }
+              }}
+              onSubmitEditing={() => void handleSearchCities()}
+              returnKeyType="search"
+              placeholder={t('plantDetail.adaptiveCare.citySearchPlaceholder')}
+              style={styles.citySearchInput}
+            />
+            <Pressable
+              onPress={() => void handleSearchCities()}
+              accessibilityRole="button"
+              accessibilityLabel="Search city"
+              style={({ pressed }) => [
+                styles.citySearchBtn,
+                {
+                  backgroundColor: palette.primarySoft,
+                  borderColor: palette.primaryBorder,
+                },
+                pressed && { opacity: 0.78 },
+              ]}>
+              <Search size={15} color={palette.primary} />
+            </Pressable>
+          </View>
+
+          {isSearchingCities ? (
+            <Text style={[styles.factorText, { color: palette.textMuted }]}>
+              {t('plantDetail.adaptiveCare.searchingCities')}
+            </Text>
+          ) : cityResults.length > 0 ? (
+            <View style={styles.cityChipsRow}>
+              {cityResults.map((loc) => (
+                <Chip
+                  key={loc.id}
+                  label={loc.displayLabel}
+                  variant="subtle"
+                  size="sm"
+                  onPress={() => handleSelectCity(loc)}
+                />
+              ))}
+            </View>
+          ) : citySearchTouched ? (
+            <Text style={[styles.factorText, { color: palette.textMuted }]}>
+              {t('plantDetail.adaptiveCare.noCitiesFound')}
+            </Text>
+          ) : null}
 
           {weather.error ? (
             <Text style={[styles.factorText, { color: palette.criticalText }]}>
@@ -339,12 +444,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  coordRow: {
+  selectedCityRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  selectedCityText: {
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  citySearchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.xs,
   },
-  coordInput: {
+  citySearchInput: {
     flex: 1,
+  },
+  citySearchBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: Radius.md,
+    borderWidth: BorderWidth.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cityChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
   },
   alertBox: {
     borderWidth: BorderWidth.hairline,

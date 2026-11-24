@@ -1,6 +1,6 @@
 import { CalendarDays } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CareScheduleView } from '@/components/calendar/care-schedule-view';
@@ -16,6 +16,7 @@ import { usePalette } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
 import type { ProjectedPlantCareTask } from '@/services/calendarUtils';
 import { confirmAction } from '@/services/dialogs';
+import { triggerLightHaptic } from '@/services/haptics';
 import {
   doesPlantNeedWatering,
   usePlantStore,
@@ -26,6 +27,8 @@ export default function CalendarScreen() {
   const palette = usePalette();
   const plants = usePlantStore((s) => s.plants);
   const entries = usePlantStore((s) => s.entries);
+  const isSyncing = usePlantStore((s) => s.isSyncing);
+  const syncWithSupabase = usePlantStore((s) => s.syncWithSupabase);
   const completeScheduledCareTask = usePlantStore(
     (s) => s.completeScheduledCareTask
   );
@@ -109,7 +112,24 @@ export default function CalendarScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isSyncing}
+            onRefresh={() => {
+              triggerLightHaptic();
+              void (async () => {
+                await syncWithSupabase();
+                const latestError = usePlantStore.getState().syncError;
+                if (latestError) {
+                  showToast(latestError);
+                }
+              })();
+            }}
+            tintColor={palette.primary}
+            colors={[palette.primary]}
+          />
+        }>
         <View style={styles.maxContainer}>
           <ScreenHeader
             eyebrow={t('schedule.eyebrow')}

@@ -1,5 +1,6 @@
-import { Sprout, TrendingUp } from 'lucide-react-native';
+import { Sprout } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   StyleSheet,
   Text,
@@ -17,8 +18,7 @@ import Svg, {
 } from 'react-native-svg';
 
 import { Chip } from '@/components/ui/chip';
-import { SurfaceCard } from '@/components/ui/surface-card';
-import { BorderWidth, Radius, Spacing } from '@/constants/theme';
+import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import type { NotebookEntry, PlantType } from '@/types/plant';
 
@@ -26,14 +26,26 @@ type MetricKey = 'rootLengthCm' | 'stemHeightCm' | 'leafCount';
 
 interface MetricConfig {
   key: MetricKey;
-  label: string;
-  unit: string;
+  labelKey: string;
+  unitKey: string;
 }
 
 const METRICS: MetricConfig[] = [
-  { key: 'rootLengthCm', label: 'Root Length', unit: 'cm' },
-  { key: 'stemHeightCm', label: 'Stem Height', unit: 'cm' },
-  { key: 'leafCount', label: 'Leaf Count', unit: 'leaves' },
+  {
+    key: 'rootLengthCm',
+    labelKey: 'plantDetail.growth.rootLength',
+    unitKey: 'plantDetail.growth.unitCm',
+  },
+  {
+    key: 'stemHeightCm',
+    labelKey: 'plantDetail.growth.stemHeight',
+    unitKey: 'plantDetail.growth.unitCm',
+  },
+  {
+    key: 'leafCount',
+    labelKey: 'plantDetail.growth.leafCount',
+    unitKey: 'plantDetail.growth.unitLeaves',
+  },
 ];
 
 const SOIL_TRANSITION_TARGET_CM = 10;
@@ -49,16 +61,17 @@ interface ChartPoint {
   value: number;
 }
 
-function formatShortDate(iso: string): string {
+function formatShortDate(iso: string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 export function GrowthTrendChart({
   entries,
   plantType,
 }: GrowthTrendChartProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const [chartWidth, setChartWidth] = useState(300);
 
@@ -78,7 +91,7 @@ export function GrowthTrendChart({
       if (!entry.metrics) continue;
       const ts = new Date(entry.timestamp).getTime();
       if (Number.isNaN(ts)) continue;
-      const dateLabel = formatShortDate(entry.timestamp);
+      const dateLabel = formatShortDate(entry.timestamp, i18n.language);
 
       if (typeof entry.metrics.rootLengthCm === 'number') {
         map.rootLengthCm.push({
@@ -104,7 +117,7 @@ export function GrowthTrendChart({
     }
 
     return map;
-  }, [entries]);
+  }, [entries, i18n.language]);
 
   const availableMetrics = useMemo(
     () => METRICS.filter((m) => seriesByMetric[m.key].length > 0),
@@ -178,20 +191,26 @@ export function GrowthTrendChart({
   const rootProgressRatio = Math.min(1, rootCm / SOIL_TRANSITION_TARGET_CM);
   const rootReadinessText =
     rootCm >= SOIL_TRANSITION_TARGET_CM
-      ? `Taproot ${rootCm.toFixed(1)} / ${SOIL_TRANSITION_TARGET_CM} cm — Ready for soil transition!`
+      ? t('plantDetail.growth.taprootReady', {
+          current: rootCm.toFixed(1),
+          target: SOIL_TRANSITION_TARGET_CM,
+        })
       : rootCm >= 8
-        ? `Taproot ${rootCm.toFixed(1)} / ${SOIL_TRANSITION_TARGET_CM} cm — almost ready for soil transition`
-        : `Taproot ${rootCm.toFixed(1)} / ${SOIL_TRANSITION_TARGET_CM} cm — developing root system`;
+        ? t('plantDetail.growth.taprootAlmost', {
+            current: rootCm.toFixed(1),
+            target: SOIL_TRANSITION_TARGET_CM,
+          })
+        : t('plantDetail.growth.taprootDeveloping', {
+            current: rootCm.toFixed(1),
+            target: SOIL_TRANSITION_TARGET_CM,
+          });
 
   return (
-    <SurfaceCard variant="glass">
+    <View style={styles.section}>
       <View style={styles.headerRow}>
-        <View style={styles.titleRow}>
-          <TrendingUp size={16} color={palette.primary} strokeWidth={2.2} />
-          <Text style={[styles.title, { color: palette.textPrimary }]}>
-            Growth Analytics
-          </Text>
-        </View>
+        <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
+          {t('plantDetail.growth.eyebrow')}
+        </Text>
         <View
           style={[
             styles.statBadge,
@@ -201,7 +220,7 @@ export function GrowthTrendChart({
             },
           ]}>
           <Text style={[styles.statBadgeText, { color: palette.primary }]}>
-            {latestVal} {activeMetric.unit}
+            {latestVal} {t(activeMetric.unitKey)}
             {activePoints.length > 1 && deltaVal !== 0
               ? ` (${deltaVal > 0 ? '+' : ''}${Number(deltaVal.toFixed(1))})`
               : ''}
@@ -214,7 +233,7 @@ export function GrowthTrendChart({
           {availableMetrics.map((metric) => (
             <Chip
               key={metric.key}
-              label={metric.label}
+              label={t(metric.labelKey)}
               variant="subtle"
               selected={metric.key === activeMetric.key}
               selectedStyle="solid"
@@ -340,24 +359,22 @@ export function GrowthTrendChart({
           </View>
         </View>
       )}
-    </SurfaceCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  section: {
+    gap: Spacing.sm + 2,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: Spacing.sm,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '700',
+  eyebrow: {
+    ...Typography.eyebrow,
   },
   statBadge: {
     borderRadius: Radius.full,

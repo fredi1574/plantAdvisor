@@ -260,6 +260,59 @@ export function analyzeWeatherForecast(
   };
 }
 
+export interface WeatherLocationResult {
+  id: number;
+  name: string;
+  country?: string;
+  admin1?: string;
+  latitude: number;
+  longitude: number;
+  displayLabel: string;
+}
+
+export async function searchWeatherLocations(
+  query: string,
+  language = 'en'
+): Promise<WeatherLocationResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+
+  const lang = language.startsWith('ru') ? 'ru' : 'en';
+  const url =
+    `https://geocoding-api.open-meteo.com/v1/search` +
+    `?name=${encodeURIComponent(trimmed)}` +
+    `&count=5&language=${lang}&format=json`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Open-Meteo geocoding failed (${response.status})`);
+  }
+
+  const json = (await response.json()) as {
+    results?: {
+      id: number;
+      name: string;
+      country?: string;
+      admin1?: string;
+      latitude: number;
+      longitude: number;
+    }[];
+  };
+
+  return (json.results ?? []).map((item) => {
+    const parts = [item.name, item.admin1, item.country].filter(Boolean);
+    return {
+      id: item.id,
+      name: item.name,
+      country: item.country,
+      admin1: item.admin1,
+      latitude: item.latitude,
+      longitude: item.longitude,
+      displayLabel: parts.join(', '),
+    };
+  });
+}
+
 export async function fetchOutdoorWeatherAdvisory(
   latitude: number,
   longitude: number
