@@ -6,7 +6,9 @@ import {
   getLatestRootLengthCm,
   PropagationReadinessBar,
 } from '@/components/garden/propagation-readiness-bar';
+import { computePlantGrowthMilestones } from '@/components/plant-detail/plant-hero-card';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
+import { searchWeatherLocations } from '@/services/careIntelligenceService';
 import { usePlantStore } from '@/store/usePlantStore';
 import type { NotebookEntry } from '@/types/plant';
 
@@ -141,5 +143,99 @@ describe('Propagation Bench View (PropagationReadinessBar)', () => {
     expect(screen.getByText('Roots: 5.4 / 5 cm')).toBeTruthy();
     expect(screen.getByText('Ready to pot!')).toBeTruthy();
     expect(screen.getByRole('progressbar')).toBeTruthy();
+  });
+});
+
+describe('Watering Snooze +2d (snoozePlantWatering & undoWatering)', () => {
+  beforeEach(() => {
+    usePlantStore.getState().resetToSeedData();
+  });
+
+  it('pushes lastWateredAt forward by +2 days without creating a fake care log and supports Undo', () => {
+    const initialPlant = usePlantStore.getState().plants[0];
+    const beforeIso = initialPlant.lastWateredAt;
+    const beforeEntryCount = usePlantStore.getState().entries.length;
+
+    const snapshot = usePlantStore
+      .getState()
+      .snoozePlantWatering(initialPlant.id, 2);
+    expect(snapshot).not.toBeNull();
+    expect(usePlantStore.getState().entries.length).toBe(beforeEntryCount);
+
+    const updatedIso = usePlantStore.getState().plants[0].lastWateredAt;
+    const diffDays = Math.round(
+      (new Date(updatedIso).getTime() - new Date(beforeIso).getTime()) /
+        (24 * 60 * 60 * 1000)
+    );
+    expect(diffDays).toBe(2);
+
+    const restored = usePlantStore.getState().undoWatering(snapshot);
+    expect(restored).toBe(1);
+    expect(usePlantStore.getState().plants[0].lastWateredAt).toBe(beforeIso);
+  });
+});
+
+describe('Plant Age & Growth Milestones (computePlantGrowthMilestones)', () => {
+  it('computes age in days/months and positive root/stem/leaf deltas from care logs', () => {
+    const nowMs = new Date('2026-11-24T00:00:00.000Z').getTime();
+    const acquiredAt = '2026-09-10T00:00:00.000Z';
+    const logs: NotebookEntry[] = [
+      {
+        id: 'g1',
+        plantId: 'p1',
+        eventType: 'propagation',
+        timestamp: '2026-09-20T00:00:00.000Z',
+        title: 'First root',
+        notes: '',
+        metrics: { rootLengthCm: 1.5, leafCount: 2 },
+      },
+      {
+        id: 'g2',
+        plantId: 'p1',
+        eventType: 'propagation',
+        timestamp: '2026-11-15T00:00:00.000Z',
+        title: 'Strong root growth',
+        notes: '',
+        metrics: { rootLengthCm: 6.2, leafCount: 5 },
+      },
+    ];
+
+    const result = computePlantGrowthMilestones(acquiredAt, logs, nowMs);
+    expect(result.ageDays).toBe(75);
+    expect(result.ageMonths).toBe(2);
+    expect(result.rootDeltaCm).toBe(4.7);
+    expect(result.leafDelta).toBe(3);
+    expect(result.stemDeltaCm).toBeNull();
+  });
+});
+
+describe('Open-Meteo City Search (searchWeatherLocations)', () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('parses geocoding results into displayLabel and coordinates', async () => {
+    globalThis.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        results: [
+          {
+            id: 2950159,
+            name: 'Berlin',
+            admin1: 'State of Berlin',
+            country: 'Germany',
+            latitude: 52.52437,
+            longitude: 13.41053,
+          },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+
+    const results = await searchWeatherLocations('Berlin', 'en');
+    expect(results).toHaveLength(1);
+    expect(results[0].displayLabel).toBe('Berlin, State of Berlin, Germany');
+    expect(results[0].latitude).toBeCloseTo(52.52, 1);
   });
 });

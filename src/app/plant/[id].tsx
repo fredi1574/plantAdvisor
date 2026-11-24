@@ -67,6 +67,7 @@ export default function PlantDetailNotebookScreen() {
   const entries = usePlantStore((s) => s.entries);
   const healthAssessments = usePlantStore((s) => s.healthAssessments);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
+  const snoozePlantWatering = usePlantStore((s) => s.snoozePlantWatering);
   const undoWatering = usePlantStore((s) => s.undoWatering);
   const deletePlant = usePlantStore((s) => s.deletePlant);
   const deleteCareEntry = usePlantStore((s) => s.deleteCareEntry);
@@ -208,6 +209,7 @@ export default function PlantDetailNotebookScreen() {
         showsVerticalScrollIndicator={false}>
         <PlantHeroCard
           plant={plant}
+          entries={plantEntries}
           onBack={() => {
             if (router.canGoBack()) {
               router.back();
@@ -238,6 +240,30 @@ export default function PlantDetailNotebookScreen() {
                   }
                 : undefined,
             });
+          }}
+          onSnooze={() => {
+            const undoSnapshot = snoozePlantWatering(plant.id, 2);
+            showToast(
+              t('plantDetail.snoozedToast', {
+                name: plant.nickname,
+                days: 2,
+              }),
+              {
+                action: undoSnapshot
+                  ? {
+                      label: t('common.undo'),
+                      onPress: () => {
+                        undoWatering(undoSnapshot);
+                        showToast(
+                          t('plantDetail.undoSnoozedToast', {
+                            name: plant.nickname,
+                          })
+                        );
+                      },
+                    }
+                  : undefined,
+              }
+            );
           }}
         />
 

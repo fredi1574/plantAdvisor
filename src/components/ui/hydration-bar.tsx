@@ -1,4 +1,4 @@
-import { Droplets } from "lucide-react-native";
+import { Clock, Droplets } from "lucide-react-native";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
@@ -124,6 +124,7 @@ interface WateringProgressPillProps {
     "nickname" | "lastWateredAt" | "customWateringIntervalDays" | "species"
   >;
   onWaterNow: () => void;
+  onSnooze?: () => void;
   showInterval?: boolean;
 }
 
@@ -135,6 +136,7 @@ interface WateringProgressPillProps {
 export function WateringProgressPill({
   plant,
   onWaterNow,
+  onSnooze,
   showInterval = false,
 }: WateringProgressPillProps) {
   const { t } = useTranslation();
@@ -171,27 +173,57 @@ export function WateringProgressPill({
           : t("hydration.overdue", { count: Math.abs(daysRemaining) });
 
     return (
-      <SpringPressable
-        onPress={(e) => {
-          e.stopPropagation();
-          onWaterNow();
-        }}
-        style={[
-          styles.pillBase,
-          styles.waterActionPill,
-          { backgroundColor: palette.waterBlue },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={`Water ${plant.nickname} now`}
-      >
-        <Droplets size={13} color={palette.textInverse} />
-        <Text
-          style={[styles.waterActionText, { color: palette.textInverse }]}
-          numberOfLines={1}
+      <View style={styles.actionSplitRow}>
+        <SpringPressable
+          onPress={(e) => {
+            e.stopPropagation();
+            onWaterNow();
+          }}
+          style={[
+            styles.pillBase,
+            styles.waterActionPill,
+            styles.waterActionFlex,
+            { backgroundColor: palette.waterBlue },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={`Water ${plant.nickname} now`}
         >
-          {actionLabel}
-        </Text>
-      </SpringPressable>
+          <Droplets size={13} color={palette.textInverse} />
+          <Text
+            style={[styles.waterActionText, { color: palette.textInverse }]}
+            numberOfLines={1}
+          >
+            {actionLabel}
+          </Text>
+        </SpringPressable>
+
+        {onSnooze ? (
+          <SpringPressable
+            onPress={(e) => {
+              e.stopPropagation();
+              onSnooze();
+            }}
+            style={[
+              styles.pillBase,
+              styles.snoozePill,
+              {
+                backgroundColor: palette.bgSubtle,
+                borderColor: palette.borderSubtle,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Snooze ${plant.nickname} watering by 2 days`}
+          >
+            <Clock size={12} color={palette.textSecondary} />
+            <Text
+              style={[styles.snoozeText, { color: palette.textSecondary }]}
+              numberOfLines={1}
+            >
+              {t("hydration.snoozeShort")}
+            </Text>
+          </SpringPressable>
+        ) : null}
+      </View>
     );
   }
 
@@ -269,6 +301,27 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.sm,
+  },
+  actionSplitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  waterActionFlex: {
+    flex: 1,
+  },
+  snoozePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    borderWidth: 1,
+  },
+  snoozeText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   waterActionText: {
     ...Typography.caption,

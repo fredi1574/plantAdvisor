@@ -5,10 +5,11 @@ import {
   Droplets,
   Layers,
   MapPin,
+  Sprout,
   Stethoscope,
   Sun,
 } from 'lucide-react-native';
-import React, { useContext } from 'react';
+import React, { useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
@@ -29,11 +30,57 @@ import {
 import { usePalette } from '@/hooks/use-theme';
 import { localizeCommonName, localizeLocation } from '@/i18n/plantDisplay';
 import { triggerLightHaptic } from '@/services/haptics';
-import type { UserPlant } from '@/types/plant';
+import type { NotebookEntry, UserPlant } from '@/types/plant';
+import { DAY_MS } from '@/utils/watering';
+
+export interface PlantGrowthMilestones {
+  ageDays: number;
+  ageMonths: number;
+  rootDeltaCm: number | null;
+  stemDeltaCm: number | null;
+  leafDelta: number | null;
+}
+
+export function computePlantGrowthMilestones(
+  acquiredAt: string,
+  entries: NotebookEntry[] = [],
+  nowMs: number = Date.now()
+): PlantGrowthMilestones {
+  const acquiredMs = new Date(acquiredAt).getTime();
+  const ageDays = Number.isNaN(acquiredMs)
+    ? 0
+    : Math.max(0, Math.floor((nowMs - acquiredMs) / DAY_MS));
+  const ageMonths = Math.floor(ageDays / 30);
+
+  const sorted = [...entries].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
+  const computeDelta = (
+    pick: (entry: NotebookEntry) => number | undefined
+  ): number | null => {
+    const vals = sorted
+      .map(pick)
+      .filter((v): v is number => typeof v === 'number' && !Number.isNaN(v));
+    if (vals.length < 2) return null;
+    const delta = vals[vals.length - 1] - vals[0];
+    return delta > 0 ? Number(delta.toFixed(1)) : null;
+  };
+
+  return {
+    ageDays,
+    ageMonths,
+    rootDeltaCm: computeDelta((e) => e.metrics?.rootLengthCm),
+    stemDeltaCm: computeDelta((e) => e.metrics?.stemHeightCm),
+    leafDelta: computeDelta((e) => e.metrics?.leafCount),
+  };
+}
 
 interface PlantHeroCardProps {
   plant: UserPlant;
+  entries?: NotebookEntry[];
   onWaterNow: () => void;
+  onSnooze?: () => void;
   onBack: () => void;
   onHealthScan: () => void;
 }
@@ -44,7 +91,9 @@ interface PlantHeroCardProps {
  */
 export function PlantHeroCard({
   plant,
+  entries = [],
   onWaterNow,
+  onSnooze,
   onBack,
   onHealthScan,
 }: PlantHeroCardProps) {
@@ -53,6 +102,45 @@ export function PlantHeroCard({
   const insets = useContext(SafeAreaInsetsContext);
   const topInset = insets?.top ?? 0;
   const healthStatus = plant.latestHealthAssessment?.healthStatus ?? 'thriving';
+
+  const milestones = useMemo(
+    () => computePlantGrowthMilestones(plant.acquiredAt, entries),
+    [plant.acquiredAt, entries]
+  );
+
+  const milestoneChips = useMemo(() => {
+    const list: string[] = [];
+    if (milestones.ageMonths >= 1) {
+      list.push(
+        t('plantDetail.hero.ageMonths', { count: milestones.ageMonths })
+      );
+    } else if (milestones.ageDays >= 1) {
+      list.push(t('plantDetail.hero.ageDays', { count: milestones.ageDays }));
+    }
+    if (milestones.rootDeltaCm !== null) {
+      list.push(
+        t('plantDetail.hero.growthRootDelta', {
+          sign: '+',
+          delta: milestones.rootDeltaCm,
+        })
+      );
+    } else if (milestones.stemDeltaCm !== null) {
+      list.push(
+        t('plantDetail.hero.growthStemDelta', {
+          sign: '+',
+          delta: milestones.stemDeltaCm,
+        })
+      );
+    } else if (milestones.leafDelta !== null) {
+      list.push(
+        t('plantDetail.hero.growthLeafDelta', {
+          sign: '+',
+          count: Math.round(milestones.leafDelta),
+        })
+      );
+    }
+    return list;
+  }, [milestones, t]);
 
   return (
     <View style={styles.heroOuter}>
@@ -68,6 +156,8 @@ export function PlantHeroCard({
           source={{ uri: plant.photoUri }}
           style={styles.bannerPhoto}
           contentFit="cover"
+          transition={180}
+          cachePolicy="memory-disk"
           accessibilityLabel={`${plant.nickname} photo`}
         />
 
@@ -179,9 +269,34 @@ export function PlantHeroCard({
 
       <View style={styles.hydrationStripOuter}>
         <View style={styles.hydrationStripInner}>
+          {milestoneChips.length > 0 && (
+            <View style={styles.milestoneChipsRow}>
+              {milestoneChips.map((chipLabel) => (
+                <View
+                  key={chipLabel}
+                  style={[
+                    styles.milestoneChip,
+                    {
+                      backgroundColor: palette.primarySoft,
+                      borderColor: palette.primaryBorder,
+                    },
+                  ]}>
+                  <Sprout size={11} color={palette.primary} />
+                  <Text
+                    style={[
+                      styles.milestoneChipText,
+                      { color: palette.primary },
+                    ]}>
+                    {chipLabel}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
           <WateringProgressPill
             plant={plant}
             onWaterNow={onWaterNow}
+            onSnooze={onSnooze}
             showInterval
           />
         </View>
@@ -429,6 +544,25 @@ const styles = StyleSheet.create({
   hydrationStripInner: {
     width: '100%',
     maxWidth: MaxContentWidth,
+    gap: Spacing.sm,
+  },
+  milestoneChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs + 2,
+  },
+  milestoneChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm + 2,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    borderWidth: BorderWidth.hairline,
+  },
+  milestoneChipText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   specsSection: {
     gap: Spacing.sm,

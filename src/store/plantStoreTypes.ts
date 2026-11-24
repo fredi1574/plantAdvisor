@@ -66,6 +66,7 @@ export interface UpdateCareEntryPayload {
 
 export interface AdaptiveCarePreferences {
   hemisphere: Hemisphere;
+  cityName?: string;
   latitude: string;
   longitude: string;
 }
@@ -80,7 +81,7 @@ export interface RoomPreset {
 export interface WateringUndoItem {
   plantId: string;
   previousLastWateredAt: string;
-  createdEntryId: string;
+  createdEntryId?: string;
 }
 
 export interface WateringUndoSnapshot {
@@ -116,6 +117,7 @@ export const DEFAULT_ROOM_PRESETS: RoomPreset[] = [
 
 export const DEFAULT_ADAPTIVE_CARE_PREFS: AdaptiveCarePreferences = {
   hemisphere: 'northern',
+  cityName: 'New York, United States',
   latitude: '40.71',
   longitude: '-74.01',
 };
@@ -166,6 +168,10 @@ export interface CareLogSlice {
   waterPlantNow: (
     plantId: string,
     notes?: string
+  ) => WateringUndoSnapshot | null;
+  snoozePlantWatering: (
+    plantId: string,
+    days?: number
   ) => WateringUndoSnapshot | null;
   undoWatering: (snapshot?: WateringUndoSnapshot | null) => number;
   completeScheduledCareTask: (plantId: string, kind: ProjectedTaskKind) => void;

@@ -8,7 +8,14 @@ import {
 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -43,7 +50,9 @@ import {
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
+import { localizeLocation } from '@/i18n/plantDisplay';
 import { confirmAction } from '@/services/dialogs';
+import { triggerLightHaptic } from '@/services/haptics';
 import { countLocalOnlyPhotos } from '@/store/syncQueue';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
@@ -55,6 +64,10 @@ import type { HealthStatus, UserPlant } from '@/types/plant';
 
 type ViewMode = 'list' | 'grid';
 
+type GardenFeedItem =
+  | { kind: 'plant'; plant: UserPlant }
+  | { kind: 'location_group'; location: string; items: UserPlant[] };
+
 const HEALTH_PRIORITY: Record<HealthStatus, number> = {
   critical: 0,
   needs_attention: 1,
@@ -62,7 +75,7 @@ const HEALTH_PRIORITY: Record<HealthStatus, number> = {
 };
 
 export default function MyGardenScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
@@ -73,6 +86,7 @@ export default function MyGardenScreen() {
   const syncError = usePlantStore((s) => s.syncError);
   const syncWithSupabase = usePlantStore((s) => s.syncWithSupabase);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
+  const snoozePlantWatering = usePlantStore((s) => s.snoozePlantWatering);
   const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
   const undoWatering = usePlantStore((s) => s.undoWatering);
   const deletePlant = usePlantStore((s) => s.deletePlant);
@@ -134,13 +148,28 @@ export default function MyGardenScreen() {
 
   const handleQuickWater = (plant: UserPlant) => {
     const undoSnapshot = waterPlantNow(plant.id);
-    showToast(`Watered "${plant.nickname}"!`, {
+    showToast(t('garden.wateredToast', { name: plant.nickname }), {
       action: undoSnapshot
         ? {
-            label: 'Undo',
+            label: t('common.undo'),
             onPress: () => {
               undoWatering(undoSnapshot);
-              showToast(`Undid watering for "${plant.nickname}".`);
+              showToast(t('garden.undoWateredToast', { name: plant.nickname }));
+            },
+          }
+        : undefined,
+    });
+  };
+
+  const handleSnoozePlant = (plant: UserPlant) => {
+    const undoSnapshot = snoozePlantWatering(plant.id, 2);
+    showToast(t('garden.snoozedToast', { name: plant.nickname, days: 2 }), {
+      action: undoSnapshot
+        ? {
+            label: t('common.undo'),
+            onPress: () => {
+              undoWatering(undoSnapshot);
+              showToast(t('garden.undoSnoozedToast', { name: plant.nickname }));
             },
           }
         : undefined,
@@ -153,7 +182,7 @@ export default function MyGardenScreen() {
     (user?.user_metadata?.name as string)?.trim() ||
     (user?.user_metadata?.full_name as string)?.trim() ||
     user?.email?.split('@')[0]?.trim() ||
-    'Gardener';
+    t('common.gardener');
 
   const stats: GardenStats = useMemo(() => {
     let needsWaterCount = 0;
@@ -189,33 +218,26 @@ export default function MyGardenScreen() {
   const handleWaterAllThirsty = () => {
     if (stats.needsWaterCount === 0) return;
     confirmAction({
-      title: 'Water All Thirsty Plants',
-      message: `Mark all ${stats.needsWaterCount} ${
-        stats.needsWaterCount === 1 ? 'plant' : 'plants'
-      } needing water as watered?`,
-      confirmLabel: 'Mark Watered',
+      title: t('garden.waterAllTitle'),
+      message: t('garden.waterAllMessage', { count: stats.needsWaterCount }),
+      confirmLabel: t('garden.waterAllConfirm'),
       onConfirm: () => {
         const count = waterAllNeedingWater();
         if (count > 0) {
           const undoSnapshot = usePlantStore.getState().lastWateringUndo;
-          showToast(
-            `All ${count} ${count === 1 ? 'plant' : 'plants'} marked as watered!`,
-            {
-              action: undoSnapshot
-                ? {
-                    label: 'Undo',
-                    onPress: () => {
-                      const restored = undoWatering(undoSnapshot);
-                      showToast(
-                        `Undid watering for ${restored} ${
-                          restored === 1 ? 'plant' : 'plants'
-                        }.`
-                      );
-                    },
-                  }
-                : undefined,
-            }
-          );
+          showToast(t('garden.waterAllToast', { count }), {
+            action: undoSnapshot
+              ? {
+                  label: t('common.undo'),
+                  onPress: () => {
+                    const restored = undoWatering(undoSnapshot);
+                    showToast(
+                      t('garden.undoWaterAllToast', { count: restored })
+                    );
+                  },
+                }
+              : undefined,
+          });
         }
       },
     });
@@ -296,29 +318,32 @@ export default function MyGardenScreen() {
     }));
   }, [filteredPlants]);
 
-  const renderPlantCollection = (items: UserPlant[]) => {
-    if (viewMode === 'list') {
-      return (
-        <View style={styles.listStack}>
-          {items.map((plant, idx) => (
-            <AnimatedEntrance key={plant.id} index={idx} animateLayout>
-              <SwipeablePlantCard
-                plant={plant}
-                onPress={() => router.push(`/plant/${plant.id}`)}
-                onWaterNow={() => handleQuickWater(plant)}
-                onEdit={setEditingPlant}
-                onDelete={handleDeletePlant}
-                showPropagationProgress={isPropagationBench}
-                latestRootLengthCm={
-                  latestRootLengthByPlantId.get(plant.id) ?? null
-                }
-              />
-            </AnimatedEntrance>
-          ))}
-        </View>
-      );
+  const feedData = useMemo<GardenFeedItem[]>(() => {
+    if (plants.length === 0 || filteredPlants.length === 0) return [];
+    if (groupByLocation) {
+      return plantsByLocation.map((group) => ({
+        kind: 'location_group',
+        location: group.location,
+        items: group.items,
+      }));
     }
+    return filteredPlants.map((plant) => ({ kind: 'plant', plant }));
+  }, [plants.length, filteredPlants, groupByLocation, plantsByLocation]);
 
+  const numColumns = !groupByLocation && viewMode === 'grid' ? 2 : 1;
+
+  const handleRefresh = () => {
+    triggerLightHaptic();
+    void (async () => {
+      await syncWithSupabase();
+      const latestError = usePlantStore.getState().syncError;
+      if (latestError) {
+        showToast(latestError);
+      }
+    })();
+  };
+
+  const renderGridBlock = (items: UserPlant[]) => {
     const rows: UserPlant[][] = [];
     for (let i = 0; i < items.length; i += 2) {
       rows.push(items.slice(i, i + 2));
@@ -352,6 +377,142 @@ export default function MyGardenScreen() {
     );
   };
 
+  const renderListHeader = () => (
+    <View style={styles.headerStack}>
+      <ScreenHeader
+        eyebrow={t('garden.eyebrow')}
+        title={t('garden.welcome', { name: userName })}
+        icon={<Sprout size={16} color={palette.primary} />}
+        rightSlot={
+          <View style={styles.headerControls}>
+            <View
+              style={[
+                styles.viewToggleGroup,
+                {
+                  backgroundColor: palette.bgSurface,
+                  borderColor: palette.borderSubtle,
+                },
+              ]}>
+              <Pressable
+                onPress={() => setViewMode('list')}
+                style={[
+                  styles.viewToggleBtn,
+                  viewMode === 'list' && {
+                    backgroundColor: palette.primary,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: viewMode === 'list' }}
+                accessibilityLabel="List view">
+                <LayoutList
+                  size={16}
+                  color={
+                    viewMode === 'list'
+                      ? palette.textInverse
+                      : palette.textSecondary
+                  }
+                />
+              </Pressable>
+              <Pressable
+                onPress={() => setViewMode('grid')}
+                style={[
+                  styles.viewToggleBtn,
+                  viewMode === 'grid' && {
+                    backgroundColor: palette.primary,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: viewMode === 'grid' }}
+                accessibilityLabel="Two-column grid view">
+                <LayoutGrid
+                  size={16}
+                  color={
+                    viewMode === 'grid'
+                      ? palette.textInverse
+                      : palette.textSecondary
+                  }
+                />
+              </Pressable>
+            </View>
+          </View>
+        }
+      />
+
+      <GardenControlsCard
+        hasPlants={plants.length > 0}
+        stats={stats}
+        searchQuery={searchQuery}
+        filter={filter}
+        sortBy={sortBy}
+        groupByLocation={groupByLocation}
+        onChangeSearch={setSearchQuery}
+        onSelectFilter={setFilter}
+        onSelectSort={setSortBy}
+        onToggleGroupByLocation={() => setGroupByLocation((prev) => !prev)}
+      />
+
+      {filter === 'needs_water' && filteredPlants.length > 0 && (
+        <View
+          style={[
+            styles.thirstyBanner,
+            {
+              backgroundColor: palette.waterAlertBg,
+              borderColor: palette.waterAlertBorder,
+            },
+          ]}>
+          <View style={styles.thirstyBannerLeft}>
+            <Droplets size={15} color={palette.waterBlue} />
+            <Text
+              style={[
+                styles.thirstyBannerText,
+                { color: palette.waterAlertText },
+              ]}>
+              {t('garden.thirstyBanner', { count: filteredPlants.length })}
+            </Text>
+          </View>
+          <SpringPressable
+            onPress={handleWaterAllThirsty}
+            accessibilityRole="button"
+            accessibilityLabel="Water all thirsty plants"
+            style={[
+              styles.waterAllBtn,
+              { backgroundColor: palette.waterBlue },
+            ]}>
+            <Droplets size={13} color={palette.textInverse} />
+            <Text
+              style={[
+                styles.waterAllBtnText,
+                { color: palette.textInverse },
+              ]}>
+              {t('garden.waterAllBtn')}
+            </Text>
+          </SpringPressable>
+        </View>
+      )}
+
+      {isPropagationBench && filteredPlants.length > 0 && (
+        <View
+          style={[
+            styles.propBenchBanner,
+            {
+              backgroundColor: palette.primarySoft,
+              borderColor: palette.primaryBorder,
+            },
+          ]}>
+          <Sprout size={15} color={palette.primary} />
+          <Text
+            style={[styles.propBenchText, { color: palette.textPrimary }]}>
+            {t('garden.propBenchBanner', {
+              ready: propagationReadyCount,
+              total: filteredPlants.length,
+              target: PROPAGATION_READY_ROOT_CM,
+            })}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: palette.bgPrimary }]}
@@ -365,212 +526,160 @@ export default function MyGardenScreen() {
         onDismiss={dismissToast}
       />
 
-      <ScrollView
+      <SyncStatusBanner
+        floating
+        visible={Boolean(user) && !feedbackMessage}
+        isSyncing={isSyncing}
+        pendingSyncCount={pendingSyncCount}
+        localPhotoCount={localPhotoCount}
+        syncError={syncError}
+        onSyncNow={() => {
+          void (async () => {
+            await syncWithSupabase();
+            const latestError = usePlantStore.getState().syncError;
+            showToast(
+              latestError ? latestError : t('garden.syncedToast')
+            );
+          })();
+        }}
+      />
+
+      <FlatList
+        key={groupByLocation ? 'grouped' : viewMode}
+        data={feedData}
+        numColumns={numColumns}
+        keyExtractor={(item) =>
+          item.kind === 'plant' ? item.plant.id : `loc-${item.location}`
+        }
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        <View style={styles.maxContainer}>
-          <ScreenHeader
-            eyebrow={t('garden.eyebrow')}
-            title={t('garden.welcome', { name: userName })}
-            icon={<Sprout size={16} color={palette.primary} />}
-            rightSlot={
-              <View style={styles.headerControls}>
-                <View
-                  style={[
-                    styles.viewToggleGroup,
-                    {
-                      backgroundColor: palette.bgSurface,
-                      borderColor: palette.borderSubtle,
-                    },
-                  ]}>
-                  <Pressable
-                    onPress={() => setViewMode('list')}
+        columnWrapperStyle={numColumns === 2 ? styles.flatGridRow : undefined}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isSyncing}
+            onRefresh={handleRefresh}
+            tintColor={palette.primary}
+            colors={[palette.primary]}
+          />
+        }
+        ListHeaderComponent={renderListHeader()}
+        ListHeaderComponentStyle={styles.maxWidthWrap}
+        ListEmptyComponent={
+          <View style={styles.maxWidthWrap}>
+            {plants.length === 0 ? (
+              <GardenEmptyState
+                variant="empty-garden"
+                onAction={() => router.push('/(tabs)/scan')}
+              />
+            ) : (
+              <GardenEmptyState
+                variant="no-matches"
+                onAction={() => {
+                  setFilter('all');
+                  setSearchQuery('');
+                }}
+              />
+            )}
+          </View>
+        }
+        renderItem={({ item, index }) => {
+          if (item.kind === 'location_group') {
+            return (
+              <View style={[styles.maxWidthWrap, styles.locationGroup]}>
+                <View style={styles.locationHeaderRow}>
+                  <MapPin size={14} color={palette.primary} />
+                  <Text
                     style={[
-                      styles.viewToggleBtn,
-                      viewMode === 'list' && {
-                        backgroundColor: palette.primary,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: viewMode === 'list' }}
-                    accessibilityLabel="List view">
-                    <LayoutList
-                      size={16}
-                      color={
-                        viewMode === 'list'
-                          ? palette.textInverse
-                          : palette.textSecondary
-                      }
-                    />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setViewMode('grid')}
+                      styles.locationTitle,
+                      { color: palette.textPrimary },
+                    ]}>
+                    {localizeLocation(item.location, i18n.language)}
+                  </Text>
+                  <Text
                     style={[
-                      styles.viewToggleBtn,
-                      viewMode === 'grid' && {
-                        backgroundColor: palette.primary,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: viewMode === 'grid' }}
-                    accessibilityLabel="Two-column grid view">
-                    <LayoutGrid
-                      size={16}
-                      color={
-                        viewMode === 'grid'
-                          ? palette.textInverse
-                          : palette.textSecondary
-                      }
-                    />
-                  </Pressable>
+                      styles.locationCount,
+                      { color: palette.textMuted },
+                    ]}>
+                    ({item.items.length})
+                  </Text>
                 </View>
-              </View>
-            }
-          />
 
-          <SyncStatusBanner
-            visible={Boolean(user)}
-            isSyncing={isSyncing}
-            pendingSyncCount={pendingSyncCount}
-            localPhotoCount={localPhotoCount}
-            syncError={syncError}
-            onSyncNow={() => {
-              void (async () => {
-                await syncWithSupabase();
-                const latestError = usePlantStore.getState().syncError;
-                showToast(
-                  latestError
-                    ? latestError
-                    : 'Garden synced with Supabase cloud!'
-                );
-              })();
-            }}
-          />
-
-          <GardenControlsCard
-            hasPlants={plants.length > 0}
-            stats={stats}
-            searchQuery={searchQuery}
-            filter={filter}
-            sortBy={sortBy}
-            groupByLocation={groupByLocation}
-            onChangeSearch={setSearchQuery}
-            onSelectFilter={setFilter}
-            onSelectSort={setSortBy}
-            onToggleGroupByLocation={() => setGroupByLocation((prev) => !prev)}
-          />
-
-          {filter === 'needs_water' && filteredPlants.length > 0 && (
-            <View
-              style={[
-                styles.thirstyBanner,
-                {
-                  backgroundColor: palette.waterAlertBg,
-                  borderColor: palette.waterAlertBorder,
-                },
-              ]}>
-              <View style={styles.thirstyBannerLeft}>
-                <Droplets size={15} color={palette.waterBlue} />
-                <Text
-                  style={[
-                    styles.thirstyBannerText,
-                    { color: palette.waterAlertText },
-                  ]}>
-                  {filteredPlants.length}{' '}
-                  {filteredPlants.length === 1 ? 'plant needs' : 'plants need'}{' '}
-                  water
-                </Text>
-              </View>
-              <SpringPressable
-                onPress={handleWaterAllThirsty}
-                accessibilityRole="button"
-                accessibilityLabel="Water all thirsty plants"
-                style={[
-                  styles.waterAllBtn,
-                  { backgroundColor: palette.waterBlue },
-                ]}>
-                <Droplets size={13} color={palette.textInverse} />
-                <Text
-                  style={[
-                    styles.waterAllBtnText,
-                    { color: palette.textInverse },
-                  ]}>
-                  Water All
-                </Text>
-              </SpringPressable>
-            </View>
-          )}
-
-          {isPropagationBench && filteredPlants.length > 0 && (
-            <View
-              style={[
-                styles.propBenchBanner,
-                {
-                  backgroundColor: palette.primarySoft,
-                  borderColor: palette.primaryBorder,
-                },
-              ]}>
-              <Sprout size={15} color={palette.primary} />
-              <Text
-                style={[styles.propBenchText, { color: palette.textPrimary }]}>
-                Propagation Bench • {propagationReadyCount} of{' '}
-                {filteredPlants.length} ready to pot (≥{PROPAGATION_READY_ROOT_CM}{' '}
-                cm roots)
-              </Text>
-            </View>
-          )}
-
-          {plants.length === 0 ? (
-            <GardenEmptyState
-              variant="empty-garden"
-              onAction={() => router.push('/(tabs)/scan')}
-            />
-          ) : filteredPlants.length === 0 ? (
-            <GardenEmptyState
-              variant="no-matches"
-              onAction={() => {
-                setFilter('all');
-                setSearchQuery('');
-              }}
-            />
-          ) : groupByLocation ? (
-            <View style={styles.locationGroups}>
-              {plantsByLocation.map((group) => (
-                <View key={group.location} style={styles.locationGroup}>
-                  <View style={styles.locationHeaderRow}>
-                    <MapPin size={14} color={palette.primary} />
-                    <Text
-                      style={[
-                        styles.locationTitle,
-                        { color: palette.textPrimary },
-                      ]}>
-                      {group.location}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.locationCount,
-                        { color: palette.textMuted },
-                      ]}>
-                      ({group.items.length})
-                    </Text>
+                {viewMode === 'grid' ? (
+                  renderGridBlock(item.items)
+                ) : (
+                  <View style={styles.listStack}>
+                    {item.items.map((plant, idx) => (
+                      <AnimatedEntrance
+                        key={plant.id}
+                        index={idx}
+                        animateLayout>
+                        <SwipeablePlantCard
+                          plant={plant}
+                          onPress={() => router.push(`/plant/${plant.id}`)}
+                          onWaterNow={() => handleQuickWater(plant)}
+                          onSnooze={() => handleSnoozePlant(plant)}
+                          onEdit={setEditingPlant}
+                          onDelete={handleDeletePlant}
+                          showPropagationProgress={isPropagationBench}
+                          latestRootLengthCm={
+                            latestRootLengthByPlantId.get(plant.id) ?? null
+                          }
+                        />
+                      </AnimatedEntrance>
+                    ))}
                   </View>
-                  {renderPlantCollection(group.items)}
-                </View>
-              ))}
+                )}
+              </View>
+            );
+          }
+
+          if (numColumns === 2) {
+            return (
+              <View style={styles.gridItemCell}>
+                <PlantGridCard
+                  plant={item.plant}
+                  onPress={() => router.push(`/plant/${item.plant.id}`)}
+                  onWaterNow={() => handleQuickWater(item.plant)}
+                  onLongPress={() => setEditingPlant(item.plant)}
+                  showPropagationProgress={isPropagationBench}
+                  latestRootLengthCm={
+                    latestRootLengthByPlantId.get(item.plant.id) ?? null
+                  }
+                />
+              </View>
+            );
+          }
+
+          return (
+            <View style={styles.maxWidthWrap}>
+              <AnimatedEntrance index={index} animateLayout>
+                <SwipeablePlantCard
+                  plant={item.plant}
+                  onPress={() => router.push(`/plant/${item.plant.id}`)}
+                  onWaterNow={() => handleQuickWater(item.plant)}
+                  onSnooze={() => handleSnoozePlant(item.plant)}
+                  onEdit={setEditingPlant}
+                  onDelete={handleDeletePlant}
+                  showPropagationProgress={isPropagationBench}
+                  latestRootLengthCm={
+                    latestRootLengthByPlantId.get(item.plant.id) ?? null
+                  }
+                />
+              </AnimatedEntrance>
             </View>
-          ) : (
-            renderPlantCollection(filteredPlants)
-          )}
-        </View>
-      </ScrollView>
+          );
+        }}
+      />
 
       <EditPlantModal
         visible={Boolean(editingPlant)}
         plant={editingPlant}
         onClose={() => setEditingPlant(null)}
         onSaved={(updatedName) =>
-          showToast(`Updated "${updatedName}" details! 🌿`)
+          showToast(
+            `${t('plantDetail.updatedPlantToast', { name: updatedName })} 🌿`
+          )
         }
         onRequestDelete={handleDeletePlant}
       />
@@ -600,12 +709,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: BottomTabInset + Spacing.xl,
-    alignItems: 'center',
+    gap: Spacing.md,
   },
-  maxContainer: {
+  maxWidthWrap: {
     width: '100%',
     maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+  },
+  headerStack: {
     gap: Spacing.md,
+  },
+  flatGridRow: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    gap: Spacing.md,
+  },
+  gridItemCell: {
+    flex: 1,
   },
   headerControls: {
     flexDirection: 'row',

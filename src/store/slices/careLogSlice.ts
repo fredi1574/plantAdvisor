@@ -18,6 +18,7 @@ import type { NotebookEntry, UserPlant } from '@/types/plant';
 import { createEntityId } from '@/utils/ids';
 import {
   buildDefaultWateringCopy,
+  DAY_MS,
   doesPlantNeedWatering,
 } from '@/utils/watering';
 
@@ -246,6 +247,57 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
       return snapshot;
     },
 
+    snoozePlantWatering: (plantId, days = 2) => {
+      const target = get().plants.find((p) => p.id === plantId);
+      if (!target) return null;
+
+      const previousLastWateredAt = target.lastWateredAt;
+      const baseMs = new Date(previousLastWateredAt).getTime();
+      const safeBaseMs = Number.isNaN(baseMs) ? Date.now() : baseMs;
+      const snoozedIso = new Date(safeBaseMs + days * DAY_MS).toISOString();
+
+      let updatedPlantRef: UserPlant | null = null;
+      const snapshot: WateringUndoSnapshot = {
+        items: [
+          {
+            plantId,
+            previousLastWateredAt,
+          },
+        ],
+      };
+
+      set((state) => {
+        const nextOps = mergePendingOps(state.pendingOps, {
+          kind: 'upsert_plant',
+          id: plantId,
+        });
+
+        return {
+          plants: state.plants.map((p) => {
+            if (p.id !== plantId) return p;
+            const updated = { ...p, lastWateredAt: snoozedIso };
+            updatedPlantRef = updated;
+            return updated;
+          }),
+          lastWateringUndo: snapshot,
+          hasGuestEdits: state.ownerUserId === null ? true : state.hasGuestEdits,
+          pendingOps: nextOps,
+          pendingSyncCount: nextOps.length,
+        };
+      });
+
+      triggerLightHaptic();
+
+      void (async () => {
+        if (updatedPlantRef) {
+          await reschedulePlantAndDigest(get, updatedPlantRef as UserPlant);
+        }
+        await get().flushPendingSync();
+      })();
+
+      return snapshot;
+    },
+
     undoWatering: (snapshot) => {
       const targetSnapshot = snapshot ?? get().lastWateringUndo;
       if (!targetSnapshot || targetSnapshot.items.length === 0) return 0;
@@ -254,7 +306,9 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
       const entryIdsToRemove = new Set<string>();
       for (const item of targetSnapshot.items) {
         restoreByPlantId.set(item.plantId, item.previousLastWateredAt);
-        entryIdsToRemove.add(item.createdEntryId);
+        if (item.createdEntryId) {
+          entryIdsToRemove.add(item.createdEntryId);
+        }
       }
 
       set((state) => {
@@ -264,10 +318,12 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
             kind: 'upsert_plant',
             id: item.plantId,
           });
-          nextOps = mergePendingOps(nextOps, {
-            kind: 'delete_entry',
-            id: item.createdEntryId,
-          });
+          if (item.createdEntryId) {
+            nextOps = mergePendingOps(nextOps, {
+              kind: 'delete_entry',
+              id: item.createdEntryId,
+            });
+          }
         }
 
         return {
@@ -277,7 +333,10 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
               ? { ...p, lastWateredAt: prevWatered }
               : p;
           }),
-          entries: state.entries.filter((e) => !entryIdsToRemove.has(e.id)),
+          entries:
+            entryIdsToRemove.size > 0
+              ? state.entries.filter((e) => !entryIdsToRemove.has(e.id))
+              : state.entries,
           lastWateringUndo:
             state.lastWateringUndo === targetSnapshot
               ? null

@@ -171,11 +171,13 @@ describe('usePlantStore mutations', () => {
 
     usePlantStore.getState().setAdaptiveCarePrefs({
       hemisphere: 'southern',
+      cityName: 'Sydney, Australia',
       latitude: '-33.86',
       longitude: '151.21',
     });
     expect(usePlantStore.getState().adaptiveCarePrefs).toEqual({
       hemisphere: 'southern',
+      cityName: 'Sydney, Australia',
       latitude: '-33.86',
       longitude: '151.21',
     });

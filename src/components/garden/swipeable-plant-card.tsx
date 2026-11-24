@@ -4,6 +4,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 
 import { PlantStatusPhoto } from "@/components/garden/plant-status-photo";
@@ -19,19 +20,14 @@ import {
   Spacing,
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
+import { localizeCommonName, localizeLocation } from "@/i18n/plantDisplay";
 import type { UserPlant } from "@/types/plant";
-
-const PLANT_TYPE_LABELS: Record<UserPlant["species"]["plantType"], string> = {
-  succulent: "Succulent",
-  propagation: "Propagation",
-  foliage: "Foliage",
-  flowering: "Flowering",
-};
 
 interface SwipeablePlantCardProps {
   plant: UserPlant;
   onPress: () => void;
   onWaterNow: () => void;
+  onSnooze?: () => void;
   onEdit: (plant: UserPlant) => void;
   onDelete: (plant: UserPlant) => void;
   showPropagationProgress?: boolean;
@@ -42,11 +38,13 @@ export function SwipeablePlantCard({
   plant,
   onPress,
   onWaterNow,
+  onSnooze,
   onEdit,
   onDelete,
   showPropagationProgress = false,
   latestRootLengthCm = null,
 }: SwipeablePlantCardProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const healthStatus = plant.latestHealthAssessment?.healthStatus ?? "thriving";
   const healthTheme = getHealthBadgeTheme(palette)[healthStatus];
@@ -57,14 +55,14 @@ export function SwipeablePlantCard({
       borderRadius={Radius.lg}
       onPress={onPress}
       leftAction={{
-        label: "Edit",
+        label: t("common.edit"),
         icon: <Pencil size={18} color={palette.textInverse} />,
         backgroundColor: palette.primary,
         accessibilityLabel: `Edit ${plant.nickname}`,
         onTrigger: () => onEdit(plant),
       }}
       rightAction={{
-        label: "Delete",
+        label: t("common.delete"),
         icon: <Trash2 size={18} color={palette.textInverse} />,
         backgroundColor: palette.criticalDot,
         accessibilityLabel: `Delete ${plant.nickname}`,
@@ -107,7 +105,7 @@ export function SwipeablePlantCard({
                 style={[styles.speciesLine, { color: palette.textSecondary }]}
                 numberOfLines={1}
               >
-                {plant.species.commonName} •{" "}
+                {localizeCommonName(plant.species.commonName, i18n.language)} •{" "}
                 <Text style={styles.scientificItalic}>
                   {plant.species.scientificName}
                 </Text>
@@ -123,7 +121,7 @@ export function SwipeablePlantCard({
                   <Text
                     style={[styles.typeChipText, { color: palette.primary }]}
                   >
-                    {PLANT_TYPE_LABELS[plant.species.plantType]}
+                    {t(`plantOptions.plantType.${plant.species.plantType}`)}
                   </Text>
                 </View>
 
@@ -136,7 +134,7 @@ export function SwipeablePlantCard({
                     ]}
                     numberOfLines={1}
                   >
-                    {plant.location}
+                    {localizeLocation(plant.location, i18n.language)}
                   </Text>
                 </View>
               </View>
@@ -171,7 +169,9 @@ export function SwipeablePlantCard({
                 ]}
                 numberOfLines={1}
               >
-                <Text style={styles.diagnosisSnippetPrefix}>AI Note: </Text>
+                <Text style={styles.diagnosisSnippetPrefix}>
+                  {t("garden.aiNotePrefix")}
+                </Text>
                 {plant.latestHealthAssessment.diagnosisSummary}
               </Text>
             </View>
@@ -189,6 +189,7 @@ export function SwipeablePlantCard({
               <WateringProgressPill
                 plant={plant}
                 onWaterNow={onWaterNow}
+                onSnooze={onSnooze}
                 showInterval
               />
             </View>
@@ -197,7 +198,7 @@ export function SwipeablePlantCard({
               <Text
                 style={[styles.openNotebookText, { color: palette.primary }]}
               >
-                Notebook
+                {t("garden.notebookLink")}
               </Text>
               <ChevronRight size={15} color={palette.primary} />
             </View>
