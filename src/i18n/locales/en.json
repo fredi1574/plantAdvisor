@@ -7,13 +7,158 @@
     "edit": "Edit",
     "close": "Close",
     "confirm": "Confirm",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "or": "or",
+    "gardener": "Gardener",
+    "unspecifiedSpot": "Unspecified Spot"
   },
   "tabs": {
     "garden": "Garden",
     "schedule": "Schedule",
     "scan": "Scan",
     "account": "Account"
+  },
+  "auth": {
+    "signInTitle": "FloraLog",
+    "signInSubtitle": "Sign in to your botanical sanctuary",
+    "signInSubmit": "Enter My Garden",
+    "noAccountPrompt": "Don't have an account?",
+    "createAccountLink": "Create account",
+    "signUpTitle": "Create Account",
+    "signUpSubtitle": "Start your personal FloraLog plant journal",
+    "signUpSubmit": "Create Account",
+    "hasAccountPrompt": "Already have an account?",
+    "signInLink": "Sign in",
+    "continueWithGoogle": "Continue with Google",
+    "namePlaceholder": "Your name",
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Password",
+    "passwordMinPlaceholder": "Password (min. 6 chars)",
+    "invalidEmailError": "Please enter a valid email address.",
+    "shortPasswordError": "Password must be at least 6 characters.",
+    "verificationSent": "Verification link sent to {{email}}. Confirm your email, then sign in below.",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "continue": "Continue",
+    "identifyFirst": "Identify My First Plant",
+    "exploreSample": "Explore Sample Conservatory",
+    "slides": {
+      "welcome": {
+        "eyebrow": "WELCOME TO FLORALOG",
+        "title": "Your calm botanical notebook",
+        "body": "Track every houseplant, succulent, and propagation in one place—with adaptive watering schedules and chronological care logs."
+      },
+      "ai": {
+        "eyebrow": "AI BOTANIST & HEALTH SCANS",
+        "title": "Identify & diagnose in seconds",
+        "body": "Snap a leaf photo to auto-identify species with pet-safety warnings, or run context-aware health scans paired with your care history."
+      },
+      "care": {
+        "eyebrow": "EFFORTLESS CARE RHYTHM",
+        "title": "Never miss a watering day",
+        "body": "Get gentle on-device reminders, batch-water thirsty plants with instant Undo, and watch propagation roots grow ready for soil."
+      }
+    }
+  },
+  "deleteAccountModal": {
+    "title": "Delete Account Permanently?",
+    "subtitlePrefix": "This will permanently erase ",
+    "fallbackAccount": "your account",
+    "subtitleSuffix": ", including all saved plants, chronological care logs, AI health scans, and uploaded photos. This action cannot be undone.",
+    "typePrefix": "Type ",
+    "typeSuffix": " to confirm",
+    "confirmBtn": "Permanently Delete Account",
+    "deletingBtn": "Deleting Account...",
+    "defaultError": "Could not delete your account. Please try again."
+  },
+  "legal": {
+    "privacy": {
+      "title": "Privacy Policy",
+      "updatedAt": "Last updated: November 2026",
+      "sections": [
+        {
+          "heading": "1. Data We Collect",
+          "body": "FloraLog stores the plant profiles, care logs, room presets, and photos you choose to add. If you sign in, your email address and display name are stored in Supabase Auth to sync your garden across devices."
+        },
+        {
+          "heading": "2. Camera, Photos & AI Scans",
+          "body": "Camera and photo library permissions are used solely when you attach specimen photos or run an AI Plant Identification / Health Scan. Photos submitted for AI scans are sent securely to our Supabase Edge Function for analysis and are not sold or shared with third-party advertisers."
+        },
+        {
+          "heading": "3. On-Device Notifications",
+          "body": "Watering reminders and daily garden digests are scheduled 100% locally on your device using Expo Notifications. No push tracking tokens are collected."
+        },
+        {
+          "heading": "4. Account & Data Deletion",
+          "body": "You can permanently delete your account, cloud garden records, and uploaded photos at any time directly inside the app via Profile → Data & Account → Delete Account."
+        }
+      ]
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "updatedAt": "Last updated: November 2026",
+      "sections": [
+        {
+          "heading": "1. Botanical Guidance Disclaimer",
+          "body": "FloraLog provides AI-assisted plant identification, health observations, and care schedules for informational purposes. Always verify pet toxicity and urgent plant-care decisions with a qualified veterinarian or horticulturist."
+        },
+        {
+          "heading": "2. Your Content",
+          "body": "You retain full ownership of all photos, notes, and plant records you upload to FloraLog. You may edit or permanently delete your content at any time."
+        },
+        {
+          "heading": "3. Fair Use of AI Scans",
+          "body": "Daily AI scan quotas help keep the service fast and reliable for all gardeners. Automated scraping or abusive traffic against the AI endpoints is prohibited."
+        }
+      ]
+    }
+  },
+  "aiLimit": {
+    "title": "Daily AI Scan Limit Reached",
+    "body": "You have used all {{limit}} free AI scans for today. Your daily allowance resets at {{resetTime}}.",
+    "midnightUtc": "midnight UTC",
+    "infoText": "Watering reminders, care calendar projections, and manual care logging remain 100% free and unlimited.",
+    "addManualBtn": "Add Plant Manually Instead",
+    "gotItBtn": "Got It"
+  },
+  "editLog": {
+    "eyebrow": "CARE TIMELINE LOG",
+    "title": "Edit Notebook Entry",
+    "saveLabel": "Save Log",
+    "eventCategory": "Event Category",
+    "entryTitle": "Entry Title",
+    "entryTitlePlaceholder": "e.g., Deep Soak & Dry Watering",
+    "notesLabel": "Observation & Care Notes",
+    "notesPlaceholder": "Describe watering details, root growth, or observations...",
+    "types": {
+      "water": "Water",
+      "propagation": "Propagation",
+      "fertilize": "Fertilize",
+      "prune": "Prune",
+      "repot": "Repot",
+      "note": "Note",
+      "ai_scan": "AI Scan"
+    }
+  },
+  "careMetrics": {
+    "soilMoistureCompact": "Soil Moisture Prior",
+    "soilMoistureFull": "Prior Soil Moisture (Optional)",
+    "metricsHeader": "Optional Growth & Watering Metrics",
+    "rootLengthLabel": "Root Length (cm)",
+    "rootPlaceholder": "e.g., 8.5",
+    "rootPlaceholderCompact": "Root (cm)",
+    "stemHeightLabel": "Stem Height (cm)",
+    "stemPlaceholder": "e.g., 14.0",
+    "stemPlaceholderCompact": "Stem (cm)",
+    "leafCountLabel": "Leaf Count",
+    "leafPlaceholder": "e.g., 6",
+    "leafPlaceholderCompact": "Leaf count",
+    "waterVolumeLabel": "Water Volume (ml)",
+    "waterPlaceholder": "e.g., 250",
+    "waterPlaceholderCompact": "Water (ml)"
   },
   "plantOptions": {
     "plantType": {
@@ -73,7 +218,8 @@
     "waterToday": "Water Today",
     "overdue": "{{count}}d Overdue",
     "untilWater": "{{count}}d until water",
-    "untilWaterEvery": "{{count}}d until water · every {{interval}}d"
+    "untilWaterEvery": "{{count}}d until water · every {{interval}}d",
+    "snoozeShort": "Snooze +2d"
   },
   "editPlant": {
     "eyebrow": "BOTANICAL SPECIMEN",
@@ -106,20 +252,67 @@
     "title": "My Garden",
     "welcome": "Welcome, {{name}}",
     "waterAll": "Water All ({{count}})",
-    "waterAllTitle": "Water All Plants",
+    "waterAllBtn": "Water All",
+    "waterAllTitle": "Water All Thirsty Plants",
     "waterAllMessage_one": "Mark {{count}} plant needing water as watered?",
     "waterAllMessage_other": "Mark all {{count}} plants needing water as watered?",
     "waterAllConfirm": "Mark Watered",
     "waterAllToast_one": "{{count}} plant marked as watered!",
     "waterAllToast_other": "All {{count}} plants marked as watered!",
-    "wateredToast": "Marked \"{{name}}\" as watered!",
+    "wateredToast": "Watered \"{{name}}\"!",
     "undoWateredToast": "Undid watering for \"{{name}}\".",
+    "snoozedToast": "Snoozed \"{{name}}\" watering for {{days}} days (soil still damp).",
+    "undoSnoozedToast": "Restored watering schedule for \"{{name}}\".",
     "undoWaterAllToast_one": "Undid watering for {{count}} plant.",
     "undoWaterAllToast_other": "Undid watering for {{count}} plants.",
     "deleteTitle": "Remove Plant",
     "deleteMessage": "Remove \"{{name}}\" and all its care logs?",
     "deleteConfirm": "Remove",
-    "deleteToast": "Removed \"{{name}}\" from your garden."
+    "deleteToast": "Removed \"{{name}}\" from your garden.",
+    "syncedToast": "Garden synced!",
+    "thirstyBanner_one": "{{count}} plant needs water",
+    "thirstyBanner_other": "{{count}} plants need water",
+    "propBenchBanner": "Propagation Bench • {{ready}} of {{total}} ready to pot (≥{{target}} cm roots)",
+    "aiNotePrefix": "AI Note: ",
+    "notebookLink": "Notebook",
+    "controls": {
+      "searchPlaceholder": "Search nickname, species, or room...",
+      "filters": {
+        "all": "All",
+        "needs_water": "Thirsty",
+        "needs_attention": "Attention",
+        "foliage": "Foliage",
+        "succulent": "Succulents",
+        "propagation": "Props",
+        "flowering": "Flowering"
+      },
+      "sortLabel": "Sort:",
+      "sorts": {
+        "needs_water": "Needs Water",
+        "health": "Health",
+        "alpha": "A–Z",
+        "recent": "Recent"
+      },
+      "byRoom": "By Room"
+    },
+    "empty": {
+      "emptyTitle": "Your garden is empty",
+      "emptySubtitle": "Identify or snap a photo of your first plant to start tracking watering schedules and AI health scans.",
+      "emptyAction": "Identify Your First Plant",
+      "noMatchesTitle": "Nothing matches this view",
+      "noMatchesSubtitle": "Your garden is looking calm here. Reset filters and search to see every specimen.",
+      "noMatchesAction": "Show All Plants"
+    },
+    "propagation": {
+      "rootsLabel": "Roots: {{current}} / {{target}} cm",
+      "rootReadiness": "Root readiness",
+      "stage": {
+        "unmeasured": "Log roots",
+        "early": "Rooting",
+        "developing": "Developing",
+        "ready": "Ready to pot!"
+      }
+    }
   },
   "schedule": {
     "eyebrow": "BOTANICAL AGENDA & CARE HORIZON",
@@ -128,6 +321,8 @@
     "rotatedToast": "Logged pot rotation for \"{{name}}\"!",
     "wateredToast": "Marked \"{{name}}\" as watered!",
     "undoWateredToast": "Undid watering for \"{{name}}\".",
+    "snoozedToast": "Snoozed \"{{name}}\" for +{{days}}d (soil still damp).",
+    "undoSnoozedToast": "Restored due date for \"{{name}}\".",
     "waterAllTitle": "Water All Plants",
     "waterAllMessage_one": "Mark {{count}} plant needing water as watered?",
     "waterAllMessage_other": "Mark all {{count}} plants needing water as watered?",
@@ -146,6 +341,7 @@
     "logRotate": "Log Rotate",
     "markWatered": "Mark Watered",
     "waterEarly": "Water Early",
+    "snoozeBtn": "+2d",
     "legend": {
       "watering": "Watering",
       "care": "Care",
@@ -203,6 +399,9 @@
       "searchPlaceholder": "e.g., Crassula ovata, Jade Plant, Avocado seed, Monstera...",
       "analyzing": "Analyzing Specimen...",
       "runButton": "Run AI Plant Identification",
+      "missingInputError": "Please enter a plant name or select/capture a photo first.",
+      "failedError": "Failed to identify plant.",
+      "customPlantFallback": "Custom Plant",
       "match": "{{percent}}% Match",
       "idealLight": "Ideal Light:",
       "baseWatering": "Base Watering:",
@@ -215,6 +414,7 @@
       "saveButton": "Add to My Garden & Open Notebook"
     },
     "diagnose": {
+      "step1": "STEP 1 · CHOOSE SPECIMEN",
       "contextTitle": "AI Prompt Context",
       "contextSubtitle": "This specimen history is automatically included with your scan so the AI can cross-reference watering and container details.",
       "contextSpecies": "Species: {{common}} ({{scientific}}, {{family}})",
@@ -231,8 +431,57 @@
         "Stretched / leggy stems",
         "Brown crispy leaf tips"
       ],
+      "noPlantError": "No plant selected for diagnosis.",
+      "failedError": "Failed to run AI health diagnosis.",
       "analyzing": "Cross-Referencing Photo & Care Logs...",
       "runButton": "Run AI Health & Condition Scan"
+    },
+    "selector": {
+      "emptyGarden": "Add a plant to your garden first to run a context-aware health scan.",
+      "choosePlaceholder": "Choose a plant...",
+      "sheetTitle": "Choose Specimen",
+      "inGarden_one": "{{count}} plant in your garden",
+      "inGarden_other": "{{count}} plants in your garden",
+      "searchPlaceholder": "Search by nickname, species, or spot...",
+      "noMatch": "No plants match \"{{query}}\"."
+    },
+    "multiAngle": {
+      "title": "Multi-Angle Diagnostic Photos (Optional)",
+      "attachedHint": "{{count}} of 3 angles attached",
+      "emptyHint": "Add canopy, leaf close-up, or soil shots",
+      "slots": {
+        "canopy": {
+          "label": "Whole Plant / Canopy",
+          "hint": "Overall shape & light"
+        },
+        "closeup": {
+          "label": "Leaf / Stem Close-Up",
+          "hint": "Spots, pests, edema"
+        },
+        "soil": {
+          "label": "Soil Surface & Pot Base",
+          "hint": "Moisture & drainage"
+        }
+      }
+    },
+    "diagnosisResult": {
+      "title": "AI Diagnosis Complete",
+      "nextSteps": "Recommended Next Steps:",
+      "viewInNotebook": "View in {{name}} Notebook"
+    },
+    "shimmer": {
+      "identifyEyebrow": "BOTANICAL ANALYSIS",
+      "diagnoseEyebrow": "PATHOLOGY SCAN",
+      "identifyStages": [
+        "Reading leaf venation & silhouette…",
+        "Matching botanical taxonomy & family…",
+        "Checking pet safety & succulent guardrails…"
+      ],
+      "diagnoseStages": [
+        "Inspecting foliage, stems & substrate cues…",
+        "Cross-referencing your care timeline…",
+        "Preparing tailored botanical recovery steps…"
+      ]
     }
   },
   "plantDetail": {
@@ -252,6 +501,8 @@
     "deleteLogToast": "Removed log \"{{title}}\".",
     "wateredToast": "Watered \"{{name}}\"!",
     "undoWateredToast": "Undid watering for \"{{name}}\".",
+    "snoozedToast": "Snoozed \"{{name}}\" watering for {{days}} days (soil still damp).",
+    "undoSnoozedToast": "Restored watering schedule for \"{{name}}\".",
     "editDetails": "Edit Details",
     "deletePlant": "Delete Plant",
     "updatedPlantToast": "Updated \"{{name}}\" details!",
@@ -260,7 +511,15 @@
       "garden": "Garden",
       "healthScan": "Health Scan",
       "indoor": "Indoor",
-      "outdoor": "Outdoor"
+      "outdoor": "Outdoor",
+      "ageDays_one": "{{count}} day in garden",
+      "ageDays_other": "{{count}} days in garden",
+      "ageMonths_one": "{{count}} mo in garden",
+      "ageMonths_other": "{{count}} mos in garden",
+      "growthRootDelta": "{{sign}}{{delta}} cm root growth",
+      "growthStemDelta": "{{sign}}{{delta}} cm stem growth",
+      "growthLeafDelta_one": "{{sign}}{{count}} new leaf",
+      "growthLeafDelta_other": "{{sign}}{{count}} new leaves"
     },
     "specs": {
       "eyebrow": "SPECIMEN CARE PROFILE",
@@ -276,21 +535,182 @@
       "emptyTitle": "Your care journal is ready",
       "emptySubtitle": "Log a watering, repotting, or growth observation above to start building this specimen's timeline."
     },
+    "composer": {
+      "title": "Quick-Log",
+      "hideDetails": "Hide Details",
+      "photoAndMetrics": "Photo & Metrics",
+      "notePlaceholder": "Optional note (e.g., 'Root reached 10.5cm' or 'Bottom-soaked for 15m')...",
+      "removePhoto": "Remove Photo",
+      "loggedToast": "Logged {{action}} for \"{{name}}\".",
+      "actions": {
+        "water": {
+          "label": "Log Water",
+          "defaultTitle": "Thorough Watering",
+          "defaultNotes": "Watered after checking substrate dryness."
+        },
+        "propagation": {
+          "label": "Prop Milestone",
+          "defaultTitle": "Propagation Growth Check",
+          "defaultNotes": "Logged new root/shoot elongation milestone."
+        },
+        "fertilize": {
+          "label": "Fertilize",
+          "defaultTitle": "Diluted Nutrient Feed",
+          "defaultNotes": "Applied balanced liquid fertilizer at 1/2 strength."
+        },
+        "prune": {
+          "label": "Prune",
+          "defaultTitle": "Canopy & Leaf Pruning",
+          "defaultNotes": "Removed spent lower foliage and pinched apical tip."
+        },
+        "repot": {
+          "label": "Repot",
+          "defaultTitle": "Substrate & Pot Refresh",
+          "defaultNotes": "Checked root health and refreshed gritty aerated substrate."
+        },
+        "note": {
+          "label": "Add Note",
+          "defaultTitle": "Botanical Observation Note",
+          "defaultNotes": "Leaves looking turgid and well-oriented toward window light."
+        }
+      }
+    },
+    "logItem": {
+      "metricRoot": "Root: {{value}} cm",
+      "metricStem": "Stem: {{value}} cm",
+      "metricLeaves": "Leaves: {{value}}",
+      "metricVolume": "Volume: {{value}} ml",
+      "metricSoil": "Soil prior: {{value}}"
+    },
     "gallery": {
+      "eyebrow": "VISUAL PROGRESS ({{count}})",
+      "timeline": "Timeline",
+      "beforeAndAfter": "Before & After",
+      "beforeTag": "Before · {{date}}",
+      "latestTag": "Latest · {{date}}",
       "aiScan": "AI Health Scan",
       "baselinePhoto": "Baseline Photo"
     },
     "growth": {
+      "eyebrow": "GROWTH ANALYTICS",
       "rootLength": "Root Length",
       "stemHeight": "Stem Height",
       "leafCount": "Leaf Count",
       "unitCm": "cm",
-      "unitLeaves": "leaves"
+      "unitLeaves": "leaves",
+      "taprootReady": "Taproot {{current}} / {{target}} cm — Ready for soil transition!",
+      "taprootAlmost": "Taproot {{current}} / {{target}} cm — almost ready for soil transition",
+      "taprootDeveloping": "Taproot {{current}} / {{target}} cm — developing root system"
+    },
+    "healthCard": {
+      "title": "AI Health & Condition Assessment",
+      "meta": "Analyzed photo + {{count}} care logs • Adjusted water cycle: {{days}}d",
+      "reanalyze": "Re-Analyze",
+      "refreshedToast": "AI Health Assessment refreshed! 🌿",
+      "scanError": "Could not complete AI health scan right now.",
+      "detectedIndicators": "DETECTED INDICATORS",
+      "nextStepsEyebrow": "ACTIONABLE NEXT STEPS (TAP TO CHECK OFF)",
+      "doneCounter": "{{done}}/{{total}} done",
+      "whyPrefix": "Why: {{rationale}}",
+      "followUpTitle": "Botanical Follow-Up Checks",
+      "followUpPlaceholder": "Or type a short observation...",
+      "followUpEmptyToast": "Tap or type at least one follow-up answer first.",
+      "refineBtn": "Refine Diagnosis with Answers",
+      "refiningBtn": "Refining Diagnosis...",
+      "refinedToast": "Diagnosis refined with your observations!",
+      "refineError": "Unable to refine diagnosis.",
+      "quickChips": [
+        "Check underside for webbing or specks",
+        "Soil feels soggy / sour smell",
+        "Placed near drafty AC or heater",
+        "Recently repotted or moved"
+      ],
+      "scanHistory": "Scan History ({{count}})",
+      "everyDaysShort": "every {{days}}d"
+    },
+    "adaptiveCare": {
+      "title": "Adaptive Care Intelligence",
+      "northHemisphere": "N. Hemisphere",
+      "southHemisphere": "S. Hemisphere",
+      "applyBtn": "Apply {{days}}-Day Interval",
+      "appliedToast": "Watering interval updated to every {{days}} days.",
+      "weatherTitle": "Outdoor Forecast (Open-Meteo)",
+      "refreshWeather": "Refresh",
+      "checkWeather": "Check Weather",
+      "citySearchPlaceholder": "Search city (e.g., London, Berlin, Moscow)...",
+      "searchingCities": "Searching cities...",
+      "noCitiesFound": "No matching cities found.",
+      "selectedCity": "{{city}}",
+      "changeCity": "Change City",
+      "weatherError": "Unable to fetch Open-Meteo forecast."
     }
   },
   "profile": {
     "eyebrow": "GARDENER ACCOUNT & CLOUD",
     "title": "Profile & Sync",
+    "overview": {
+      "nameUpdatedToast": "Display name updated! 🌿",
+      "photoUpdatedToast": "Profile photo updated.",
+      "photoErrorToast": "Could not update profile photo.",
+      "photoUploadFailedToast": "Failed to upload profile photo.",
+      "syncedToast": "Garden synced!",
+      "statusSyncing": "Syncing…",
+      "statusPending": "Offline — {{count}} pending",
+      "statusOfflineLocal": "Offline — Saved Locally",
+      "statusSynced": "Synced",
+      "statusCloudReady": "Cloud Ready",
+      "plantsStat": "Plants",
+      "careLogsStat": "Care Logs",
+      "syncingBtn": "Syncing...",
+      "syncNowBtn": "Sync Now",
+      "editNameTitle": "Edit Display Name",
+      "displayNameLabel": "Display Name",
+      "displayNamePlaceholder": "Your name or handle"
+    },
+    "guest": {
+      "pill": "Offline Guest Mode",
+      "title": "Back Up Your Garden in the Cloud",
+      "plantWord_one": "{{count}} plant",
+      "plantWord_other": "{{count}} plants",
+      "entryWord_one": "{{count}} care entry are",
+      "entryWord_other": "{{count}} care entries are",
+      "description": "Your {{plants}} and {{entries}} currently stored only on this device. Sign in or create a free account to sync your garden across Android, iOS, and Web.",
+      "actionBtn": "Sign In or Create Account"
+    },
+    "notifications": {
+      "eyebrow": "NOTIFICATIONS",
+      "statusPaused": "Paused",
+      "statusActive": "Active",
+      "statusScheduled": "{{count}} Scheduled",
+      "statusPermissionNeeded": "Permission Needed",
+      "wateringRemindersLabel": "Watering Reminders",
+      "wateringRemindersDesc": "Notify on the day each plant is due for water",
+      "dailyDigestLabel": "Daily Morning Digest",
+      "dailyDigestDesc": "Summary of plants needing attention today",
+      "preferredTimeWeb": "Preferred Reminder Time",
+      "reminderTime": "Reminder Time",
+      "sendTest": "Send Test Care Notification",
+      "footnote": "100% on-device alarms. Reminders reschedule automatically whenever you water a plant or change its interval.",
+      "rescheduledToast": "Reminders rescheduled for {{time}}.",
+      "permissionDeniedToast": "Notification permissions are disabled in system settings.",
+      "enabledToast": "Local plant care reminders enabled! 🔔",
+      "pausedToast": "Care reminders paused.",
+      "digestOnToast": "Daily morning garden digest enabled!",
+      "digestOffToast": "Daily morning digest turned off.",
+      "testSentToast": "Test care reminder scheduled (arriving in ~2s)! 🌿",
+      "grantPermissionToast": "Please grant notification permissions to receive reminders."
+    },
+    "roomPresets": {
+      "eyebrow": "ROOM PRESETS",
+      "addSpot": "Add Spot",
+      "placeholder": "e.g., West Sunroom Shelf",
+      "indoorSpot": "Indoor Spot",
+      "saveBtn": "Save Room Preset",
+      "emptyText": "No saved spots yet. Add your favorite windowsills or patio corners for quick plant setup.",
+      "footnote": "Saved spots auto-fill light exposure and indoor/outdoor defaults when adding or editing plants.",
+      "savedToast": "Saved room preset \"{{name}}\".",
+      "removedToast": "Removed \"{{name}}\" preset."
+    },
     "appearance": {
       "eyebrow": "APPEARANCE",
       "system": "System",
@@ -321,5 +741,47 @@
       "deleteAccount": "Delete Account",
       "deleteAccountSubtitle": "Permanently remove your cloud account and all synced data"
     }
+  },
+  "syncBanner": {
+    "syncing": "Syncing...",
+    "changesPending_one": "{{count}} change pending",
+    "changesPending_other": "{{count}} changes pending",
+    "photosWaiting_one": "{{count}} photo waiting to upload",
+    "photosWaiting_other": "{{count}} photos waiting to upload",
+    "syncingShort": "Syncing",
+    "syncNow": "Sync Now"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "subtitle": "FloraLog hit an unexpected snag while rendering this screen. Your saved plants and care logs are safe.",
+    "tryAgain": "Try Again",
+    "retrying": "Retrying...",
+    "returnGarden": "Return to Garden"
+  },
+  "splash": {
+    "eyebrow": "BOTANICAL COMPANION",
+    "tagline": "Mindful plant care & AI diagnostics"
+  },
+  "notificationsPush": {
+    "channelName": "Watering & Care Reminders",
+    "channelDesc": "Timely reminders when your plants are due for water or care.",
+    "titleProp": "💧 Refresh Water for {{name}}",
+    "titleSucculent": "🌵 Soak & Dry Check: {{name}}",
+    "titleDefault": "🌿 Time to Water {{name}}",
+    "bodyProp": "Your {{species}} propagation is due for fresh oxygenated water.",
+    "bodySucculent": "{{name}} ({{species}}) is due for water. Verify the soil is 100% bone-dry before soaking.",
+    "bodyDefault": "{{name}} ({{species}}) in {{location}} is ready for a thorough watering.",
+    "digestTitle": "🌱 FloraLog Morning Garden Digest",
+    "digestDue_one": "{{count}} plant needs your attention ({{names}}{{ellipsis}}).",
+    "digestDue_other": "{{count}} plants need your attention ({{names}}{{ellipsis}}).",
+    "digestOnSchedule_one": "Your {{count}} plant is on schedule ({{names}}). Tap to review today's care calendar.",
+    "digestOnSchedule_other": "Your {{count}} plants are on schedule ({{names}}). Tap to review today's care calendar.",
+    "testWebTitle": "🌿 FloraLog Care Reminder Test",
+    "testWebBodyWithPlants": "Reminders are active for {{first}} and {{others}} other plants!",
+    "testWebBodyEmpty": "Your local plant care notifications are working!",
+    "testNativeTitle": "🌿 FloraLog Care Reminder Active",
+    "testNativeBodyWithPlants_one": "{{count}} plant is being monitored ({{names}}). You'll be notified right on time!",
+    "testNativeBodyWithPlants_other": "{{count}} plants are being monitored ({{names}}). You'll be notified right on time!",
+    "testNativeBodyEmpty": "Local plant care notifications are configured and ready!"
   }
 }

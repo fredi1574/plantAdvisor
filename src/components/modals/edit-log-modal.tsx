@@ -1,5 +1,6 @@
 import { Pencil } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -26,15 +27,24 @@ interface EditLogModalProps {
 }
 
 const getEventTypes = (
-  palette: ThemePalette
+  palette: ThemePalette,
+  t: (key: string) => string
 ): { key: CareEventType; label: string; color: string }[] => [
-  { key: 'water', label: 'Water', color: palette.waterBlue },
-  { key: 'propagation', label: 'Propagation', color: palette.accentTerracotta },
-  { key: 'fertilize', label: 'Fertilize', color: palette.primary },
-  { key: 'prune', label: 'Prune', color: palette.primaryMuted },
-  { key: 'repot', label: 'Repot', color: palette.accentTerracotta },
-  { key: 'note', label: 'Note', color: palette.textSecondary },
-  { key: 'ai_scan', label: 'AI Scan', color: palette.primary },
+  { key: 'water', label: t('editLog.types.water'), color: palette.waterBlue },
+  {
+    key: 'propagation',
+    label: t('editLog.types.propagation'),
+    color: palette.accentTerracotta,
+  },
+  { key: 'fertilize', label: t('editLog.types.fertilize'), color: palette.primary },
+  { key: 'prune', label: t('editLog.types.prune'), color: palette.primaryMuted },
+  {
+    key: 'repot',
+    label: t('editLog.types.repot'),
+    color: palette.accentTerracotta,
+  },
+  { key: 'note', label: t('editLog.types.note'), color: palette.textSecondary },
+  { key: 'ai_scan', label: t('editLog.types.ai_scan'), color: palette.primary },
 ];
 
 export function EditLogModal({
@@ -73,8 +83,9 @@ function EditLogFormSheet({
   onSaved,
   onRequestDelete,
 }: EditLogFormSheetProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
-  const eventTypes = useMemo(() => getEventTypes(palette), [palette]);
+  const eventTypes = useMemo(() => getEventTypes(palette, t), [palette, t]);
   const updateCareEntry = usePlantStore((s) => s.updateCareEntry);
 
   const [eventType, setEventType] = useState<CareEventType>(entry.eventType);
@@ -103,10 +114,10 @@ function EditLogFormSheet({
   return (
     <BottomSheetModal
       visible={visible}
-      eyebrow="CARE TIMELINE LOG"
-      title="Edit Notebook Entry"
+      eyebrow={t('editLog.eyebrow')}
+      title={t('editLog.title')}
       headerIcon={<Pencil size={16} color={palette.primary} />}
-      saveLabel="Save Log"
+      saveLabel={t('editLog.saveLabel')}
       closeAccessibilityLabel="Close edit log modal"
       deleteAccessibilityLabel={`Delete log ${entry.title}`}
       onClose={onClose}
@@ -121,7 +132,7 @@ function EditLogFormSheet({
       }>
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          Event Category
+          {t('editLog.eventCategory')}
         </Text>
         <View style={styles.chipRow}>
           {eventTypes.map((et) => {
@@ -150,20 +161,20 @@ function EditLogFormSheet({
 
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          Entry Title
+          {t('editLog.entryTitle')}
         </Text>
         <BotanicalInput
           surface="primary"
           compact={false}
           value={title}
           onChangeText={setTitle}
-          placeholder="e.g., Deep Soak & Dry Watering"
+          placeholder={t('editLog.entryTitlePlaceholder')}
         />
       </View>
 
       <View style={styles.fieldGroup}>
         <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          Observation & Care Notes
+          {t('editLog.notesLabel')}
         </Text>
         <BotanicalInput
           surface="primary"
@@ -172,7 +183,7 @@ function EditLogFormSheet({
           onChangeText={setNotes}
           multiline
           numberOfLines={3}
-          placeholder="Describe watering details, root growth, or observations..."
+          placeholder={t('editLog.notesPlaceholder')}
           style={styles.multilineInput}
         />
       </View>

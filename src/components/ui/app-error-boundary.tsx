@@ -1,6 +1,7 @@
 import { type ErrorBoundaryProps, router } from 'expo-router';
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Pressable,
@@ -19,6 +20,7 @@ import { usePalette } from '@/hooks/use-theme';
  * Exported from `src/app/_layout.tsx` to catch unexpected route rendering errors.
  */
 export function AppErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const [isRetrying, setIsRetrying] = useState(false);
 
@@ -58,12 +60,11 @@ export function AppErrorBoundary({ error, retry }: ErrorBoundaryProps) {
           <Text
             style={[styles.title, { color: palette.textPrimary }]}
             accessibilityRole="header">
-            Something went wrong
+            {t('errorBoundary.title')}
           </Text>
 
           <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-            FloraLog hit an unexpected snag while rendering this screen. Your
-            saved plants and care logs are safe.
+            {t('errorBoundary.subtitle')}
           </Text>
 
           {error?.message ? (
@@ -102,7 +103,9 @@ export function AppErrorBoundary({ error, retry }: ErrorBoundaryProps) {
               )}
               <Text
                 style={[styles.primaryBtnText, { color: palette.textInverse }]}>
-                {isRetrying ? 'Retrying...' : 'Try Again'}
+                {isRetrying
+                  ? t('errorBoundary.retrying')
+                  : t('errorBoundary.tryAgain')}
               </Text>
             </Pressable>
 
@@ -121,7 +124,7 @@ export function AppErrorBoundary({ error, retry }: ErrorBoundaryProps) {
               <Home size={15} color={palette.textPrimary} />
               <Text
                 style={[styles.secondaryBtnText, { color: palette.textPrimary }]}>
-                Return to Garden
+                {t('errorBoundary.returnGarden')}
               </Text>
             </Pressable>
           </View>

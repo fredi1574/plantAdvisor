@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { Check, ChevronDown, MapPin, Search, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Modal,
@@ -21,6 +22,7 @@ import {
   Typography,
 } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { localizeCommonName, localizeLocation } from '@/i18n/plantDisplay';
 import { triggerLightHaptic } from '@/services/haptics';
 import type { UserPlant } from '@/types/plant';
 
@@ -39,6 +41,7 @@ export function PlantSelectorField({
   selectedPlant,
   onSelectPlant,
 }: PlantSelectorFieldProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -50,10 +53,14 @@ export function PlantSelectorField({
       (p) =>
         p.nickname.toLowerCase().includes(q) ||
         p.species.commonName.toLowerCase().includes(q) ||
+        localizeCommonName(p.species.commonName, i18n.language)
+          .toLowerCase()
+          .includes(q) ||
         p.species.scientificName.toLowerCase().includes(q) ||
-        p.location.toLowerCase().includes(q)
+        p.location.toLowerCase().includes(q) ||
+        localizeLocation(p.location, i18n.language).toLowerCase().includes(q)
     );
-  }, [plants, query]);
+  }, [plants, query, i18n.language]);
 
   const handleClose = () => {
     setOpen(false);
@@ -71,7 +78,7 @@ export function PlantSelectorField({
           },
         ]}>
         <Text style={[styles.emptyText, { color: palette.textSecondary }]}>
-          Add a plant to your garden first to run a context-aware health scan.
+          {t('scan.selector.emptyGarden')}
         </Text>
       </View>
     );
@@ -107,6 +114,8 @@ export function PlantSelectorField({
                 { backgroundColor: palette.bgSubtle },
               ]}
               contentFit="cover"
+              transition={180}
+              cachePolicy="memory-disk"
             />
             <View style={styles.triggerTextCol}>
               <Text
@@ -120,14 +129,18 @@ export function PlantSelectorField({
                   { color: palette.textSecondary },
                 ]}
                 numberOfLines={1}>
-                {selectedPlant.species.commonName} • {selectedPlant.location}
+                {localizeCommonName(
+                  selectedPlant.species.commonName,
+                  i18n.language
+                )}{' '}
+                • {localizeLocation(selectedPlant.location, i18n.language)}
               </Text>
             </View>
           </>
         ) : (
           <View style={styles.triggerTextCol}>
             <Text style={[styles.triggerTitle, { color: palette.textMuted }]}>
-              Choose a plant...
+              {t('scan.selector.choosePlaceholder')}
             </Text>
           </View>
         )}
@@ -162,12 +175,11 @@ export function PlantSelectorField({
                     styles.sheetTitle,
                     { color: palette.textPrimary, fontFamily: Fonts?.serif },
                   ]}>
-                  Choose Specimen
+                  {t('scan.selector.sheetTitle')}
                 </Text>
                 <Text
                   style={[styles.sheetSub, { color: palette.textSecondary }]}>
-                  {plants.length} {plants.length === 1 ? 'plant' : 'plants'} in
-                  your garden
+                  {t('scan.selector.inGarden', { count: plants.length })}
                 </Text>
               </View>
               <Pressable
@@ -198,7 +210,7 @@ export function PlantSelectorField({
                   compact={false}
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search by nickname, species, or spot..."
+                  placeholder={t('scan.selector.searchPlaceholder')}
                   accessibilityLabel="Search garden plants"
                   style={styles.searchInput}
                 />
@@ -214,7 +226,7 @@ export function PlantSelectorField({
               ListEmptyComponent={
                 <Text
                   style={[styles.noMatchText, { color: palette.textMuted }]}>
-                  No plants match &ldquo;{query}&rdquo;.
+                  {t('scan.selector.noMatch', { query })}
                 </Text>
               }
               renderItem={({ item }) => {
@@ -248,6 +260,8 @@ export function PlantSelectorField({
                         { backgroundColor: palette.bgSubtle },
                       ]}
                       contentFit="cover"
+                      transition={180}
+                      cachePolicy="memory-disk"
                     />
                     <View style={styles.optionTextCol}>
                       <Text
@@ -264,7 +278,10 @@ export function PlantSelectorField({
                           { color: palette.textSecondary },
                         ]}
                         numberOfLines={1}>
-                        {item.species.commonName}
+                        {localizeCommonName(
+                          item.species.commonName,
+                          i18n.language
+                        )}
                       </Text>
                       <View style={styles.optionLocRow}>
                         <MapPin size={11} color={palette.textMuted} />
@@ -274,7 +291,7 @@ export function PlantSelectorField({
                             { color: palette.textMuted },
                           ]}
                           numberOfLines={1}>
-                          {item.location}
+                          {localizeLocation(item.location, i18n.language)}
                         </Text>
                       </View>
                     </View>

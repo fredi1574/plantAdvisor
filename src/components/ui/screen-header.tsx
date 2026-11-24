@@ -27,7 +27,11 @@ export function ScreenHeader({
       <View style={styles.titleBlock}>
         <View style={styles.eyebrowRow}>
           {icon}
-          <Text style={[styles.eyebrow, { color: palette.primary }]}>
+          <Text
+            style={[
+              styles.eyebrow,
+              { color: palette.primary, fontFamily: Fonts.sansBold },
+            ]}>
             {eyebrow}
           </Text>
         </View>

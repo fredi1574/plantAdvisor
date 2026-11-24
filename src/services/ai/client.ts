@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import {
   enforceSucculentDiagnosisGuardrails,
   enforceSucculentIdentificationGuardrails,
@@ -76,10 +77,11 @@ export async function identifyPlant(
   hintQuery?: string
 ): Promise<PlantIdentificationResult> {
   const combinedInput = `${imageUriOrName} ${hintQuery ?? ''}`.trim();
+  const locale = i18n.language?.startsWith('ru') ? 'ru' : 'en';
 
   if (isMockAiEnabled()) {
     consumeMockQuotaOrThrow();
-    const mockResult = await mockIdentifyPlant(combinedInput);
+    const mockResult = await mockIdentifyPlant(combinedInput, locale);
     return enforceSucculentIdentificationGuardrails(mockResult);
   }
 
@@ -104,6 +106,7 @@ export async function identifyPlant(
   }>('plant-ai', {
     body: {
       action: 'identify',
+      locale,
       hintQuery: hintQuery?.trim() || undefined,
       textInput: isImageUri ? undefined : imageUriOrName,
       imageBase64: preparedImage?.base64,
@@ -140,6 +143,7 @@ export async function diagnosePlantHealth(
   userObservationNotes?: string
 ): Promise<PlantDiagnosisResult> {
   const photos = normalizeDiagnosticPhotos(imageInput);
+  const locale = i18n.language?.startsWith('ru') ? 'ru' : 'en';
 
   if (isMockAiEnabled()) {
     consumeMockQuotaOrThrow();
@@ -147,7 +151,8 @@ export async function diagnosePlantHealth(
       photos,
       plantProfile,
       recentLogs,
-      userObservationNotes
+      userObservationNotes,
+      locale
     );
     return enforceSucculentDiagnosisGuardrails(mockResult, plantProfile);
   }
@@ -182,6 +187,7 @@ export async function diagnosePlantHealth(
   }>('plant-ai', {
     body: {
       action: 'diagnose',
+      locale,
       plantProfile,
       recentLogs: serializedHistory,
       userObservationNotes,

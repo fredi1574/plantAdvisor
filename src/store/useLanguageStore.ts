@@ -15,7 +15,11 @@ export const useLanguageStore = create<LanguageState>()(
       preference: 'system',
       setPreference: (preference) => {
         set({ preference });
-        void i18n.changeLanguage(resolveLanguage(preference));
+        void (async () => {
+          await i18n.changeLanguage(resolveLanguage(preference));
+          const { usePlantStore } = await import('@/store/usePlantStore');
+          await usePlantStore.getState().rescheduleAllNotifications();
+        })();
       },
     }),
     {

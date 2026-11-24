@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { Maximize2, Pencil, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -45,6 +46,7 @@ export function SwipeableLogItem({
   onEdit,
   onDelete,
 }: SwipeableLogItemProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -81,14 +83,14 @@ export function SwipeableLogItem({
         compact
         style={styles.swipeWrapper}
         leftAction={{
-          label: 'Edit',
+          label: t('common.edit'),
           icon: <Pencil size={15} color={palette.textInverse} />,
           backgroundColor: palette.primary,
           accessibilityLabel: `Edit log ${entry.title}`,
           onTrigger: () => onEdit(entry),
         }}
         rightAction={{
-          label: 'Delete',
+          label: t('common.delete'),
           icon: <Trash2 size={15} color={palette.textInverse} />,
           backgroundColor: palette.criticalDot,
           accessibilityLabel: `Delete log ${entry.title}`,
@@ -125,7 +127,7 @@ export function SwipeableLogItem({
                     styles.timelineEventDate,
                     { color: palette.textMuted },
                   ]}>
-                  {new Date(entry.timestamp).toLocaleDateString(undefined, {
+                  {new Date(entry.timestamp).toLocaleDateString(i18n.language, {
                     month: 'short',
                     day: 'numeric',
                   })}
@@ -161,6 +163,8 @@ export function SwipeableLogItem({
                   source={{ uri: entry.photoUri }}
                   style={styles.photoThumb}
                   contentFit="cover"
+                  transition={180}
+                  cachePolicy="memory-disk"
                 />
                 <View style={styles.photoZoomBadge}>
                   <Maximize2 size={11} color="#FFFFFF" />
@@ -171,22 +175,40 @@ export function SwipeableLogItem({
             {entry.metrics && (
               <View style={styles.metricsPillsRow}>
                 {entry.metrics.rootLengthCm !== undefined && (
-                  <MetricPill label={`Root: ${entry.metrics.rootLengthCm} cm`} />
+                  <MetricPill
+                    label={t('plantDetail.logItem.metricRoot', {
+                      value: entry.metrics.rootLengthCm,
+                    })}
+                  />
                 )}
                 {entry.metrics.stemHeightCm !== undefined && (
-                  <MetricPill label={`Stem: ${entry.metrics.stemHeightCm} cm`} />
+                  <MetricPill
+                    label={t('plantDetail.logItem.metricStem', {
+                      value: entry.metrics.stemHeightCm,
+                    })}
+                  />
                 )}
                 {entry.metrics.leafCount !== undefined && (
-                  <MetricPill label={`Leaves: ${entry.metrics.leafCount}`} />
+                  <MetricPill
+                    label={t('plantDetail.logItem.metricLeaves', {
+                      value: entry.metrics.leafCount,
+                    })}
+                  />
                 )}
                 {entry.metrics.waterAmountMl !== undefined && (
                   <MetricPill
-                    label={`Volume: ${entry.metrics.waterAmountMl} ml`}
+                    label={t('plantDetail.logItem.metricVolume', {
+                      value: entry.metrics.waterAmountMl,
+                    })}
                   />
                 )}
                 {entry.metrics.soilMoisture !== undefined && (
                   <MetricPill
-                    label={`Soil prior: ${entry.metrics.soilMoisture.replace('_', ' ')}`}
+                    label={t('plantDetail.logItem.metricSoil', {
+                      value: t(
+                        `plantOptions.soilMoisture.${entry.metrics.soilMoisture}`
+                      ),
+                    })}
                   />
                 )}
               </View>

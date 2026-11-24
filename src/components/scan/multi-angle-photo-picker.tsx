@@ -8,6 +8,7 @@ import {
   X,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -53,6 +54,7 @@ export function MultiAnglePhotoPicker({
   onPickPhoto,
   onClearPhoto,
 }: MultiAnglePhotoPickerProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const [expanded, setExpanded] = useState(false);
 
@@ -85,12 +87,12 @@ export function MultiAnglePhotoPicker({
           <Images size={15} color={palette.primary} />
           <View style={styles.flex}>
             <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-              Multi-Angle Diagnostic Photos (Optional)
+              {t('scan.multiAngle.title')}
             </Text>
             <Text style={[styles.accordionHint, { color: palette.textMuted }]}>
               {attachedCount > 0
-                ? `${attachedCount} of 3 angles attached`
-                : 'Add canopy, leaf close-up, or soil shots'}
+                ? t('scan.multiAngle.attachedHint', { count: attachedCount })
+                : t('scan.multiAngle.emptyHint')}
             </Text>
           </View>
         </View>
@@ -109,6 +111,8 @@ export function MultiAnglePhotoPicker({
           ]}>
           {DIAGNOSTIC_ANGLE_SLOTS.map((slot) => {
             const uri = photos[slot.angle];
+            const slotLabel = t(`scan.multiAngle.slots.${slot.angle}.label`);
+            const slotHint = t(`scan.multiAngle.slots.${slot.angle}.hint`);
             return (
               <View
                 key={slot.angle}
@@ -126,14 +130,14 @@ export function MultiAnglePhotoPicker({
                         styles.angleSlotTitle,
                         { color: palette.textPrimary },
                       ]}>
-                      {slot.label}
+                      {slotLabel}
                     </Text>
                     <Text
                       style={[
                         styles.angleSlotHint,
                         { color: palette.textMuted },
                       ]}>
-                      {slot.hint}
+                      {slotHint}
                     </Text>
                   </View>
                   {uri ? (
@@ -178,7 +182,7 @@ export function MultiAnglePhotoPicker({
                           styles.anglePickBtnText,
                           { color: palette.primary },
                         ]}>
-                        Camera
+                        {t('editPlant.camera')}
                       </Text>
                     </SpringPressable>
                     <SpringPressable
@@ -201,7 +205,7 @@ export function MultiAnglePhotoPicker({
                           styles.anglePickBtnText,
                           { color: palette.primary },
                         ]}>
-                        Library
+                        {t('editPlant.library')}
                       </Text>
                     </SpringPressable>
                   </View>

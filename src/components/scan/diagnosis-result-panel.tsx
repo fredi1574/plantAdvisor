@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { CheckCircle2 } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -28,13 +29,14 @@ export function DiagnosisResultPanel({
   diagnosis,
   plant,
 }: DiagnosisResultPanelProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
 
   return (
     <SurfaceCard style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={[styles.title, { color: palette.textPrimary }]}>
-          AI Diagnosis Complete
+          {t('scan.diagnosisResult.title')}
         </Text>
         <HealthStatusBadge status={diagnosis.healthStatus} showDot={false} />
       </View>
@@ -50,7 +52,7 @@ export function DiagnosisResultPanel({
       ) : null}
 
       <Text style={[styles.subHeader, { color: palette.textPrimary }]}>
-        Recommended Next Steps:
+        {t('scan.diagnosisResult.nextSteps')}
       </Text>
 
       {diagnosis.recommendedActions.map((act, idx) => (
@@ -85,7 +87,7 @@ export function DiagnosisResultPanel({
         ]}>
         <CheckCircle2 size={16} color={palette.textInverse} />
         <Text style={[styles.btnText, { color: palette.textInverse }]}>
-          View in {plant.nickname} Notebook
+          {t('scan.diagnosisResult.viewInNotebook', { name: plant.nickname })}
         </Text>
       </SpringPressable>
     </SurfaceCard>

@@ -18,6 +18,8 @@ import {
 } from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import i18n from '@/i18n';
+import { localizeCommonName, localizeLocation } from '@/i18n/plantDisplay';
 import type { UserPlant } from '@/types/plant';
 
 export interface NotificationPreferences {
@@ -60,9 +62,8 @@ export async function initializeNotifications(): Promise<void> {
 
     if (Platform.OS === 'android') {
       await setNotificationChannelAsync(WATERING_CHANNEL_ID, {
-        name: 'Watering & Care Reminders',
-        description:
-          'Timely reminders when your plants are due for water or care.',
+        name: i18n.t('notificationsPush.channelName'),
+        description: i18n.t('notificationsPush.channelDesc'),
         importance: AndroidImportance.HIGH,
         enableVibrate: true,
         lightColor: '#2D5A3C',
@@ -191,18 +192,30 @@ export async function schedulePlantWateringReminder(
     const triggerDate = computePlantReminderDate(plant, prefs);
     const isSucculent = plant.species.plantType === 'succulent';
     const isPropagation = plant.species.plantType === 'propagation';
+    const speciesName = localizeCommonName(
+      plant.species.commonName,
+      i18n.language
+    );
+    const locationName = localizeLocation(plant.location, i18n.language);
 
     const title = isPropagation
-      ? `💧 Refresh Water for ${plant.nickname}`
+      ? i18n.t('notificationsPush.titleProp', { name: plant.nickname })
       : isSucculent
-        ? `🌵 Soak & Dry Check: ${plant.nickname}`
-        : `🌿 Time to Water ${plant.nickname}`;
+        ? i18n.t('notificationsPush.titleSucculent', { name: plant.nickname })
+        : i18n.t('notificationsPush.titleDefault', { name: plant.nickname });
 
     const body = isPropagation
-      ? `Your ${plant.species.commonName} propagation is due for fresh oxygenated water.`
+      ? i18n.t('notificationsPush.bodyProp', { species: speciesName })
       : isSucculent
-        ? `${plant.nickname} (${plant.species.commonName}) is due for water. Verify the soil is 100% bone-dry before soaking.`
-        : `${plant.nickname} (${plant.species.commonName}) in ${plant.location} is ready for a thorough watering.`;
+        ? i18n.t('notificationsPush.bodySucculent', {
+            name: plant.nickname,
+            species: speciesName,
+          })
+        : i18n.t('notificationsPush.bodyDefault', {
+            name: plant.nickname,
+            species: speciesName,
+            location: locationName,
+          });
 
     const id = await scheduleNotificationAsync({
       identifier: getPlantNotificationId(plant.id),
@@ -271,19 +284,20 @@ export async function scheduleDailyGardenDigest(
 
     const body =
       dueTodayOrSoon.length > 0
-        ? `${dueTodayOrSoon.length} ${
-            dueTodayOrSoon.length === 1 ? 'plant needs' : 'plants need'
-          } your attention (${namesPreview}${
-            dueTodayOrSoon.length > 3 ? '...' : ''
-          }).`
-        : `Your ${plants.length} ${
-            plants.length === 1 ? 'plant is' : 'plants are'
-          } on schedule (${namesPreview}). Tap to review today's care calendar.`;
+        ? i18n.t('notificationsPush.digestDue', {
+            count: dueTodayOrSoon.length,
+            names: namesPreview,
+            ellipsis: dueTodayOrSoon.length > 3 ? '...' : '',
+          })
+        : i18n.t('notificationsPush.digestOnSchedule', {
+            count: plants.length,
+            names: namesPreview,
+          });
 
     const id = await scheduleNotificationAsync({
       identifier: DAILY_DIGEST_ID,
       content: {
-        title: '🌱 FloraLog Morning Garden Digest',
+        title: i18n.t('notificationsPush.digestTitle'),
         body,
         sound: 'default',
         data: {
@@ -349,14 +363,14 @@ export async function sendTestCareNotification(
     if (typeof window !== 'undefined' && 'Notification' in window) {
       const granted = await requestNotificationPermissions();
       if (granted) {
-        new Notification('🌿 FloraLog Care Reminder Test', {
+        new Notification(i18n.t('notificationsPush.testWebTitle'), {
           body:
             plants.length > 0
-              ? `Reminders are active for ${plants[0].nickname} and ${Math.max(
-                  0,
-                  plants.length - 1
-                )} other plants!`
-              : 'Your local plant care notifications are working!',
+              ? i18n.t('notificationsPush.testWebBodyWithPlants', {
+                  first: plants[0].nickname,
+                  others: Math.max(0, plants.length - 1),
+                })
+              : i18n.t('notificationsPush.testWebBodyEmpty'),
         });
         return true;
       }
@@ -376,13 +390,14 @@ export async function sendTestCareNotification(
 
     await scheduleNotificationAsync({
       content: {
-        title: '🌿 FloraLog Care Reminder Active',
+        title: i18n.t('notificationsPush.testNativeTitle'),
         body:
           plants.length > 0
-            ? `${plants.length} ${
-                plants.length === 1 ? 'plant is' : 'plants are'
-              } being monitored (${sampleNames}). You'll be notified right on time!`
-            : 'Local plant care notifications are configured and ready!',
+            ? i18n.t('notificationsPush.testNativeBodyWithPlants', {
+                count: plants.length,
+                names: sampleNames,
+              })
+            : i18n.t('notificationsPush.testNativeBodyEmpty'),
         sound: 'default',
         data: { type: 'test-reminder' },
         ...(Platform.OS === 'android' ? { channelId: WATERING_CHANNEL_ID } : {}),

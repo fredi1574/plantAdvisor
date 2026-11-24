@@ -1,3 +1,4 @@
+import { localizeCommonName } from '@/i18n/plantDisplay';
 import { isSucculentTaxon } from '@/services/ai/guardrails';
 import { prepareImageForAI } from '@/services/imageUtils';
 import type {
@@ -142,10 +143,17 @@ const MOCK_CATALOG: PlantIdentificationResult[] = [
 ];
 
 export async function mockIdentifyPlant(
-  input: string
+  input: string,
+  locale: 'en' | 'ru' = 'en'
 ): Promise<PlantIdentificationResult> {
   await simulateNetworkDelay(700);
   const q = input.toLowerCase();
+  const localizeResult = (
+    res: PlantIdentificationResult
+  ): PlantIdentificationResult =>
+    locale === 'ru'
+      ? { ...res, commonName: localizeCommonName(res.commonName, 'ru') }
+      : res;
 
   if (
     q.includes('avocado') ||
@@ -153,7 +161,7 @@ export async function mockIdentifyPlant(
     q.includes('pit') ||
     q.includes('seed')
   ) {
-    return {
+    return localizeResult({
       commonName: 'Avocado Seed Propagation',
       scientificName: 'Persea americana',
       family: 'Lauraceae',
@@ -184,7 +192,7 @@ export async function mockIdentifyPlant(
         safetyNotes:
           'Keep pit and foliage out of reach of pets and children; persin can cause gastrointestinal upset and cardiac stress.',
       },
-    };
+    });
   }
 
   if (
@@ -193,7 +201,7 @@ export async function mockIdentifyPlant(
     q.includes('cactus') ||
     q.includes('haworthia')
   ) {
-    return {
+    return localizeResult({
       commonName: q.includes('aloe') ? 'Aloe Vera' : 'Rosette Echeveria',
       scientificName: q.includes('aloe')
         ? 'Aloe barbadensis miller'
@@ -235,7 +243,7 @@ export async function mockIdentifyPlant(
             safetyNotes:
               'Non-toxic to cats, dogs, and children. Ideal pet-friendly windowsill succulent.',
           },
-    };
+    });
   }
 
   if (
@@ -245,7 +253,7 @@ export async function mockIdentifyPlant(
     q.includes('fiddle') ||
     q.includes('fern')
   ) {
-    return {
+    return localizeResult({
       commonName: 'Swiss Cheese Plant (Monstera)',
       scientificName: 'Monstera deliciosa',
       family: 'Araceae',
@@ -276,7 +284,7 @@ export async function mockIdentifyPlant(
         safetyNotes:
           'Toxic to cats, dogs, and children if chewed; causes immediate oral irritation, pawing at mouth, and drooling.',
       },
-    };
+    });
   }
 
   let hash = 0;
@@ -285,14 +293,15 @@ export async function mockIdentifyPlant(
     hash |= 0;
   }
   const pickedIndex = Math.abs(hash) % MOCK_CATALOG.length;
-  return MOCK_CATALOG[pickedIndex];
+  return localizeResult(MOCK_CATALOG[pickedIndex]);
 }
 
 export async function mockDiagnosePlantHealth(
   photos: DiagnosticPhotoInput[],
   plantProfile: UserPlant,
   recentLogs: NotebookEntry[],
-  userObservationNotes?: string
+  userObservationNotes?: string,
+  _locale: 'en' | 'ru' = 'en'
 ): Promise<PlantDiagnosisResult> {
   await simulateNetworkDelay(750);
 

@@ -1,4 +1,5 @@
 import { MapPin } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { PlantStatusPhoto } from "@/components/garden/plant-status-photo";
@@ -13,6 +14,7 @@ import {
   Typography,
 } from "@/constants/theme";
 import { usePalette } from "@/hooks/use-theme";
+import { localizeCommonName, localizeLocation } from "@/i18n/plantDisplay";
 import type { UserPlant } from "@/types/plant";
 
 interface PlantGridCardProps {
@@ -32,6 +34,7 @@ export function PlantGridCard({
   showPropagationProgress = false,
   latestRootLengthCm = null,
 }: PlantGridCardProps) {
+  const { i18n } = useTranslation();
   const palette = usePalette();
   const healthStatus = plant.latestHealthAssessment?.healthStatus ?? "thriving";
   const badge = getHealthBadgeTheme(palette)[healthStatus];
@@ -72,7 +75,7 @@ export function PlantGridCard({
           style={[styles.species, { color: palette.textSecondary }]}
           numberOfLines={1}
         >
-          {plant.species.commonName}
+          {localizeCommonName(plant.species.commonName, i18n.language)}
         </Text>
 
         <View style={styles.locationRow}>
@@ -81,7 +84,7 @@ export function PlantGridCard({
             style={[styles.locationText, { color: palette.textMuted }]}
             numberOfLines={1}
           >
-            {plant.location}
+            {localizeLocation(plant.location, i18n.language)}
           </Text>
         </View>
       </View>

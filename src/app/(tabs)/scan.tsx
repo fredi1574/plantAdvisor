@@ -262,7 +262,7 @@ export default function ScanScreen() {
           {mode === 'identify' ? (
             <>
               <PhotoCaptureCard
-                stepLabel="STEP 1 · SPECIMEN PHOTO"
+                stepLabel={t('scan.photo.step1')}
                 imageUri={imageUri}
                 imageDimensions={imageDimensions}
                 onImageSelected={handleImageSelected}

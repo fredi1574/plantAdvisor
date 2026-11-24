@@ -1,5 +1,6 @@
 import { CalendarCheck2, Sparkles, Sprout, X } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   Pressable,
@@ -24,11 +25,15 @@ interface AiLimitModalProps {
   onAddManual?: () => void;
 }
 
-function formatResetTime(resetAt?: string): string {
-  if (!resetAt) return 'midnight UTC';
+function formatResetTime(
+  resetAt: string | undefined,
+  locale: string,
+  fallback: string
+): string {
+  if (!resetAt) return fallback;
   const d = new Date(resetAt);
-  if (Number.isNaN(d.getTime())) return 'midnight UTC';
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (Number.isNaN(d.getTime())) return fallback;
+  return d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 }
 
 export function AiLimitModal({
@@ -37,9 +42,14 @@ export function AiLimitModal({
   onClose,
   onAddManual,
 }: AiLimitModalProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const limit = quota?.limit ?? 5;
-  const resetText = formatResetTime(quota?.resetAt);
+  const resetText = formatResetTime(
+    quota?.resetAt,
+    i18n.language,
+    t('aiLimit.midnightUtc')
+  );
 
   return (
     <Modal
@@ -82,11 +92,10 @@ export function AiLimitModal({
           </View>
 
           <Text style={[styles.title, { color: palette.textPrimary }]}>
-            Daily AI Scan Limit Reached
+            {t('aiLimit.title')}
           </Text>
           <Text style={[styles.body, { color: palette.textSecondary }]}>
-            You have used all {limit} free AI scans for today. Your daily
-            allowance resets at {resetText}.
+            {t('aiLimit.body', { limit, resetTime: resetText })}
           </Text>
 
           <View
@@ -100,8 +109,7 @@ export function AiLimitModal({
           >
             <CalendarCheck2 size={16} color={palette.primary} />
             <Text style={[styles.infoText, { color: palette.textPrimary }]}>
-              Watering reminders, care calendar projections, and manual care
-              logging remain 100% free and unlimited.
+              {t('aiLimit.infoText')}
             </Text>
           </View>
 
@@ -124,7 +132,7 @@ export function AiLimitModal({
                 <Text
                   style={[styles.primaryBtnText, { color: palette.textInverse }]}
                 >
-                  Add Plant Manually Instead
+                  {t('aiLimit.addManualBtn')}
                 </Text>
               </Pressable>
             ) : null}
@@ -145,7 +153,7 @@ export function AiLimitModal({
               <Text
                 style={[styles.secondaryBtnText, { color: palette.textPrimary }]}
               >
-                Got It
+                {t('aiLimit.gotItBtn')}
               </Text>
             </Pressable>
           </View>

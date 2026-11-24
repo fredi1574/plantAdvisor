@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp, History } from 'lucide-react-native';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SurfaceCard } from '@/components/ui/surface-card';
@@ -27,6 +28,7 @@ export function ScanHistoryDrawer({
   expanded,
   onToggle,
 }: ScanHistoryDrawerProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const healthBadgeTheme = useMemo(
     () => getHealthBadgeTheme(palette),
@@ -46,7 +48,9 @@ export function ScanHistoryDrawer({
         <View style={styles.toggleTitleRow}>
           <History size={14} color={palette.textSecondary} />
           <Text style={[styles.toggleText, { color: palette.textSecondary }]}>
-            Scan History ({assessments.length})
+            {t('plantDetail.healthCard.scanHistory', {
+              count: assessments.length,
+            })}
           </Text>
         </View>
         {expanded ? (
@@ -67,10 +71,13 @@ export function ScanHistoryDrawer({
               <View style={styles.cardHeader}>
                 <Text
                   style={[styles.cardBadgeText, { color: histBadge.text }]}>
-                  {histBadge.label} · every {hist.adjustedWateringIntervalDays}d
+                  {t(`badges.health.${hist.healthStatus}`)} ·{' '}
+                  {t('plantDetail.healthCard.everyDaysShort', {
+                    days: hist.adjustedWateringIntervalDays,
+                  })}
                 </Text>
                 <Text style={[styles.cardDate, { color: palette.textMuted }]}>
-                  {new Date(hist.createdAt).toLocaleDateString()}
+                  {new Date(hist.createdAt).toLocaleDateString(i18n.language)}
                 </Text>
               </View>
               <Text

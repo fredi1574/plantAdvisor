@@ -7,13 +7,158 @@
     "edit": "Изменить",
     "close": "Закрыть",
     "confirm": "Подтвердить",
-    "loading": "Загрузка..."
+    "loading": "Загрузка...",
+    "or": "или",
+    "gardener": "Садовод",
+    "unspecifiedSpot": "Место не указано"
   },
   "tabs": {
     "garden": "Сад",
     "schedule": "График",
     "scan": "Скан",
     "account": "Профиль"
+  },
+  "auth": {
+    "signInTitle": "FloraLog",
+    "signInSubtitle": "Войдите в свою ботаническую оранжерею",
+    "signInSubmit": "Войти в мой сад",
+    "noAccountPrompt": "Нет аккаунта?",
+    "createAccountLink": "Создать аккаунт",
+    "signUpTitle": "Создать аккаунт",
+    "signUpSubtitle": "Начните личный дневник ухода за растениями FloraLog",
+    "signUpSubmit": "Создать аккаунт",
+    "hasAccountPrompt": "Уже есть аккаунт?",
+    "signInLink": "Войти",
+    "continueWithGoogle": "Продолжить с Google",
+    "namePlaceholder": "Ваше имя",
+    "emailPlaceholder": "Электронная почта",
+    "passwordPlaceholder": "Пароль",
+    "passwordMinPlaceholder": "Пароль (мин. 6 символов)",
+    "invalidEmailError": "Пожалуйста, введите корректный адрес электронной почты.",
+    "shortPasswordError": "Пароль должен содержать не менее 6 символов.",
+    "verificationSent": "Письмо с подтверждением отправлено на {{email}}. Подтвердите почту и войдите ниже.",
+    "privacyPolicy": "Политика конфиденциальности",
+    "termsOfService": "Условия использования"
+  },
+  "onboarding": {
+    "skip": "Пропустить",
+    "continue": "Далее",
+    "identifyFirst": "Определить первое растение",
+    "exploreSample": "Посмотреть демо-оранжерею",
+    "slides": {
+      "welcome": {
+        "eyebrow": "ДОБРО ПОЖАЛОВАТЬ В FLORALOG",
+        "title": "Ваш спокойный дневник растений",
+        "body": "Ведите учёт всех комнатных растений, суккулентов и черенков в одном месте — с умным графиком полива и историей ухода."
+      },
+      "ai": {
+        "eyebrow": "ИИ-БОТАНИК И ДИАГНОСТИКА",
+        "title": "Определение и диагноз за секунды",
+        "body": "Сфотографируйте лист, чтобы определить вид с проверкой безопасности для питомцев или провести ИИ-оценку здоровья."
+      },
+      "care": {
+        "eyebrow": "БЕРЕЖНЫЙ РИТМ УХОДА",
+        "title": "Ни одного пропущенного полива",
+        "body": "Получайте локальные напоминания, отмечайте полив одним касанием с быстрой отменой и следите за укоренением черенков."
+      }
+    }
+  },
+  "deleteAccountModal": {
+    "title": "Удалить аккаунт навсегда?",
+    "subtitlePrefix": "Это действие безвозвратно удалит ",
+    "fallbackAccount": "ваш аккаунт",
+    "subtitleSuffix": ", включая все сохранённые растения, хронологию ухода, ИИ-сканы здоровья и загруженные фотографии. Отменить удаление невозможно.",
+    "typePrefix": "Введите ",
+    "typeSuffix": " для подтверждения",
+    "confirmBtn": "Удалить аккаунт навсегда",
+    "deletingBtn": "Удаление аккаунта...",
+    "defaultError": "Не удалось удалить аккаунт. Пожалуйста, попробуйте ещё раз."
+  },
+  "legal": {
+    "privacy": {
+      "title": "Политика конфиденциальности",
+      "updatedAt": "Обновлено: ноябрь 2026 г.",
+      "sections": [
+        {
+          "heading": "1. Какие данные мы собираем",
+          "body": "FloraLog хранит профили растений, записи ухода, пресеты комнат и фотографии, которые вы добавляете. При входе в аккаунт ваш email и отображаемое имя сохраняются в Supabase Auth для синхронизации между устройствами."
+        },
+        {
+          "heading": "2. Камера, фотографии и ИИ-сканы",
+          "body": "Доступ к камере и галерее используется исключительно при прикреплении фотографий растений или запуске ИИ-определения и диагностики. Снимки передаются по защищённому каналу в облачную функцию Supabase и не передаются рекламным сетям."
+        },
+        {
+          "heading": "3. Локальные уведомления",
+          "body": "Напоминания о поливе и утренние сводки планируются на 100% локально на вашем устройстве через Expo Notifications без сбора рекламных push-токенов."
+        },
+        {
+          "heading": "4. Удаление аккаунта и данных",
+          "body": "Вы можете в любой момент безвозвратно удалить свой аккаунт, облачные записи и фотографии прямо в приложении: Профиль → Данные и аккаунт → Удалить аккаунт."
+        }
+      ]
+    },
+    "terms": {
+      "title": "Условия использования",
+      "updatedAt": "Обновлено: ноябрь 2026 г.",
+      "sections": [
+        {
+          "heading": "1. Отказ от ответственности по уходу",
+          "body": "FloraLog предоставляет ИИ-рекомендации по определению видов, оценке состояния и графикам полива в справочных целях. Всегда проверяйте токсичность растений для животных у квалифицированного ветеринара."
+        },
+        {
+          "heading": "2. Ваш контент",
+          "body": "Вы сохраняете полные права на все загруженные фотографии, заметки и карточки растений и можете редактировать или удалять их в любое время."
+        },
+        {
+          "heading": "3. Добросовестное использование ИИ",
+          "body": "Дневные лимиты ИИ-сканирования помогают поддерживать стабильную и быструю работу сервиса для всех садоводов. Автоматизированный парсинг и злоупотребление API запрещены."
+        }
+      ]
+    }
+  },
+  "aiLimit": {
+    "title": "Дневной лимит ИИ-сканов исчерпан",
+    "body": "Вы использовали все {{limit}} бесплатных ИИ-сканов на сегодня. Лимит обновится в {{resetTime}}.",
+    "midnightUtc": "полночь UTC",
+    "infoText": "Напоминания о поливе, календарь ухода и ручное ведение журнала остаются на 100% бесплатными и безлимитными.",
+    "addManualBtn": "Добавить растение вручную",
+    "gotItBtn": "Понятно"
+  },
+  "editLog": {
+    "eyebrow": "ЗАПИСЬ ЖУРНАЛА УХОДА",
+    "title": "Редактировать запись",
+    "saveLabel": "Сохранить запись",
+    "eventCategory": "Категория события",
+    "entryTitle": "Заголовок записи",
+    "entryTitlePlaceholder": "Напр., Обильный полив после просушки",
+    "notesLabel": "Наблюдения и заметки",
+    "notesPlaceholder": "Опишите детали полива, рост корней или наблюдения...",
+    "types": {
+      "water": "Полив",
+      "propagation": "Черенок",
+      "fertilize": "Подкормка",
+      "prune": "Обрезка",
+      "repot": "Пересадка",
+      "note": "Заметка",
+      "ai_scan": "ИИ-скан"
+    }
+  },
+  "careMetrics": {
+    "soilMoistureCompact": "Влажность почвы до полива",
+    "soilMoistureFull": "Влажность почвы до полива (необязательно)",
+    "metricsHeader": "Метрики роста и полива (необязательно)",
+    "rootLengthLabel": "Длина корней (см)",
+    "rootPlaceholder": "Напр., 8.5",
+    "rootPlaceholderCompact": "Корни (см)",
+    "stemHeightLabel": "Высота стебля (см)",
+    "stemPlaceholder": "Напр., 14.0",
+    "stemPlaceholderCompact": "Стебель (см)",
+    "leafCountLabel": "Количество листьев",
+    "leafPlaceholder": "Напр., 6",
+    "leafPlaceholderCompact": "Листья",
+    "waterVolumeLabel": "Объём воды (мл)",
+    "waterPlaceholder": "Напр., 250",
+    "waterPlaceholderCompact": "Вода (мл)"
   },
   "plantOptions": {
     "plantType": {
@@ -73,7 +218,8 @@
     "waterToday": "Полить сегодня",
     "overdue": "Просрочено {{count}} д.",
     "untilWater": "Полив через {{count}} д.",
-    "untilWaterEvery": "Полив через {{count}} д. · раз в {{interval}} д."
+    "untilWaterEvery": "Полив через {{count}} д. · раз в {{interval}} д.",
+    "snoozeShort": "+2 дн."
   },
   "editPlant": {
     "eyebrow": "БОТАНИЧЕСКИЙ ОБРАЗЕЦ",
@@ -106,6 +252,7 @@
     "title": "Мой сад",
     "welcome": "Добро пожаловать, {{name}}",
     "waterAll": "Полить все ({{count}})",
+    "waterAllBtn": "Полить все",
     "waterAllTitle": "Полить все растения",
     "waterAllMessage_one": "Отметить {{count}} растение как политое?",
     "waterAllMessage_few": "Отметить все {{count}} растения как политые?",
@@ -116,13 +263,60 @@
     "waterAllToast_many": "Все {{count}} растений отмечены как политые!",
     "wateredToast": "Полив «{{name}}» отмечен!",
     "undoWateredToast": "Полив «{{name}}» отменён.",
+    "snoozedToast": "Полив «{{name}}» отложен на {{days}} дн. (почва ещё влажная).",
+    "undoSnoozedToast": "График полива «{{name}}» восстановлен.",
     "undoWaterAllToast_one": "Полив {{count}} растения отменён.",
     "undoWaterAllToast_few": "Полив {{count}} растений отменён.",
     "undoWaterAllToast_many": "Полив {{count}} растений отменён.",
     "deleteTitle": "Удалить растение",
     "deleteMessage": "Удалить «{{name}}» и все записи ухода?",
     "deleteConfirm": "Удалить",
-    "deleteToast": "«{{name}}» удалено из вашего сада."
+    "deleteToast": "«{{name}}» удалено из вашего сада.",
+    "syncedToast": "Сад синхронизирован!",
+    "thirstyBanner_one": "{{count}} растение ждёт полива",
+    "thirstyBanner_few": "{{count}} растения ждут полива",
+    "thirstyBanner_many": "{{count}} растений ждут полива",
+    "propBenchBanner": "Стеллаж черенков • {{ready}} из {{total}} готовы к грунту (≥{{target}} см)",
+    "aiNotePrefix": "Заметка ИИ: ",
+    "notebookLink": "Журнал",
+    "controls": {
+      "searchPlaceholder": "Поиск по названию, виду или комнате...",
+      "filters": {
+        "all": "Все",
+        "needs_water": "Полив",
+        "needs_attention": "Внимание",
+        "foliage": "Лиственные",
+        "succulent": "Суккуленты",
+        "propagation": "Черенки",
+        "flowering": "Цветущие"
+      },
+      "sortLabel": "Сорт.:",
+      "sorts": {
+        "needs_water": "По поливу",
+        "health": "Здоровье",
+        "alpha": "А–Я",
+        "recent": "Новые"
+      },
+      "byRoom": "По комнатам"
+    },
+    "empty": {
+      "emptyTitle": "Ваш сад пока пуст",
+      "emptySubtitle": "Определите или сфотографируйте первое растение, чтобы отслеживать график полива и ИИ-диагностику.",
+      "emptyAction": "Определить первое растение",
+      "noMatchesTitle": "Ничего не найдено",
+      "noMatchesSubtitle": "По выбранным параметрам растений нет. Сбросьте фильтры и поиск, чтобы увидеть всю коллекцию.",
+      "noMatchesAction": "Показать все растения"
+    },
+    "propagation": {
+      "rootsLabel": "Корни: {{current}} / {{target}} см",
+      "rootReadiness": "Готовность корней",
+      "stage": {
+        "unmeasured": "Замер корней",
+        "early": "Укоренение",
+        "developing": "Растут",
+        "ready": "Готов к грунту!"
+      }
+    }
   },
   "schedule": {
     "eyebrow": "КАЛЕНДАРЬ И ПЛАН УХОДА",
@@ -131,6 +325,8 @@
     "rotatedToast": "Поворот горшка «{{name}}» записан!",
     "wateredToast": "Полив «{{name}}» отмечен!",
     "undoWateredToast": "Полив «{{name}}» отменён.",
+    "snoozedToast": "Полив «{{name}}» отложен на +{{days}} дн. (почва влажная).",
+    "undoSnoozedToast": "Срок полива «{{name}}» восстановлен.",
     "waterAllTitle": "Полить все растения",
     "waterAllMessage_one": "Отметить {{count}} растение как политое?",
     "waterAllMessage_few": "Отметить все {{count}} растения как политые?",
@@ -153,6 +349,7 @@
     "logRotate": "Повернуть",
     "markWatered": "Полить",
     "waterEarly": "Полить раньше",
+    "snoozeBtn": "+2 дн.",
     "legend": {
       "watering": "Полив",
       "care": "Уход",
@@ -211,6 +408,9 @@
       "searchPlaceholder": "Напр., Толстянка, Монстера, Авокадо...",
       "analyzing": "Анализируем образец...",
       "runButton": "Определить растение с ИИ",
+      "missingInputError": "Пожалуйста, введите название растения или выберите фото.",
+      "failedError": "Не удалось определить растение.",
+      "customPlantFallback": "Моё растение",
       "match": "Совпадение {{percent}}%",
       "idealLight": "Идеальный свет:",
       "baseWatering": "Базовый полив:",
@@ -223,6 +423,7 @@
       "saveButton": "Добавить в сад и открыть журнал"
     },
     "diagnose": {
+      "step1": "ШАГ 1 · ВЫБЕРИТЕ РАСТЕНИЕ",
       "contextTitle": "Контекст для ИИ",
       "contextSubtitle": "История ухода автоматически передаётся ИИ вместе со снимком для точной диагностики.",
       "contextSpecies": "Вид: {{common}} ({{scientific}}, {{family}})",
@@ -239,8 +440,58 @@
         "Вытянутые стебли",
         "Сухие коричневые кончики"
       ],
+      "noPlantError": "Растение для диагностики не выбрано.",
+      "failedError": "Не удалось выполнить ИИ-диагностику.",
       "analyzing": "Сверяем фото с историей ухода...",
       "runButton": "Запустить ИИ-диагностику"
+    },
+    "selector": {
+      "emptyGarden": "Сначала добавьте растение в сад, чтобы запустить ИИ-диагностику.",
+      "choosePlaceholder": "Выберите растение...",
+      "sheetTitle": "Выберите растение",
+      "inGarden_one": "{{count}} растение в вашем саду",
+      "inGarden_few": "{{count}} растения в вашем саду",
+      "inGarden_many": "{{count}} растений в вашем саду",
+      "searchPlaceholder": "Поиск по названию, виду или месту...",
+      "noMatch": "По запросу «{{query}}» ничего не найдено."
+    },
+    "multiAngle": {
+      "title": "Фото с разных ракурсов (необязательно)",
+      "attachedHint": "Прикреплено ракурсов: {{count}} из 3",
+      "emptyHint": "Добавьте общий план, лист вблизи или грунт",
+      "slots": {
+        "canopy": {
+          "label": "Растение целиком / крона",
+          "hint": "Общая форма и свет"
+        },
+        "closeup": {
+          "label": "Лист / стебель крупно",
+          "hint": "Пятна, вредители, отёки"
+        },
+        "soil": {
+          "label": "Поверхность грунта и горшок",
+          "hint": "Влажность и дренаж"
+        }
+      }
+    },
+    "diagnosisResult": {
+      "title": "ИИ-диагностика завершена",
+      "nextSteps": "Рекомендуемые шаги:",
+      "viewInNotebook": "Открыть журнал «{{name}}»"
+    },
+    "shimmer": {
+      "identifyEyebrow": "БОТАНИЧЕСКИЙ АНАЛИЗ",
+      "diagnoseEyebrow": "ДИАГНОСТИКА СОСТОЯНИЯ",
+      "identifyStages": [
+        "Анализируем жилкование и форму листа…",
+        "Определяем ботанический вид и семейство…",
+        "Проверяем безопасность для питомцев и режим полива…"
+      ],
+      "diagnoseStages": [
+        "Осматриваем листья, стебли и состояние грунта…",
+        "Сверяем симптомы с историей полива…",
+        "Формируем персональный план восстановления…"
+      ]
     }
   },
   "plantDetail": {
@@ -260,6 +511,8 @@
     "deleteLogToast": "Запись «{{title}}» удалена.",
     "wateredToast": "Полив «{{name}}» отмечен!",
     "undoWateredToast": "Полив «{{name}}» отменён.",
+    "snoozedToast": "Полив «{{name}}» отложен на {{days}} дн. (почва ещё влажная).",
+    "undoSnoozedToast": "График полива «{{name}}» восстановлен.",
     "editDetails": "Редактировать",
     "deletePlant": "Удалить растение",
     "updatedPlantToast": "Данные «{{name}}» обновлены!",
@@ -268,7 +521,18 @@
       "garden": "Сад",
       "healthScan": "Скан здоровья",
       "indoor": "Домашнее",
-      "outdoor": "Уличное"
+      "outdoor": "Уличное",
+      "ageDays_one": "{{count}} день в саду",
+      "ageDays_few": "{{count}} дня в саду",
+      "ageDays_many": "{{count}} дней в саду",
+      "ageMonths_one": "{{count}} мес. в саду",
+      "ageMonths_few": "{{count}} мес. в саду",
+      "ageMonths_many": "{{count}} мес. в саду",
+      "growthRootDelta": "{{sign}}{{delta}} см корней",
+      "growthStemDelta": "{{sign}}{{delta}} см стебля",
+      "growthLeafDelta_one": "{{sign}}{{count}} новый лист",
+      "growthLeafDelta_few": "{{sign}}{{count}} новых листа",
+      "growthLeafDelta_many": "{{sign}}{{count}} новых листьев"
     },
     "specs": {
       "eyebrow": "ПРОФИЛЬ УХОДА",
@@ -284,21 +548,184 @@
       "emptyTitle": "Журнал ухода готов",
       "emptySubtitle": "Добавьте полив, пересадку или наблюдение выше, чтобы начать историю этого растения."
     },
+    "composer": {
+      "title": "Быстрая запись",
+      "hideDetails": "Скрыть детали",
+      "photoAndMetrics": "Фото и метрики",
+      "notePlaceholder": "Заметка (напр., «Корень достиг 10.5 см» или «Нижний полив 15 мин»)...",
+      "removePhoto": "Удалить фото",
+      "loggedToast": "Записано «{{action}}» для «{{name}}».",
+      "actions": {
+        "water": {
+          "label": "Полив",
+          "defaultTitle": "Обильный полив",
+          "defaultNotes": "Растение полито после проверки сухости грунта."
+        },
+        "propagation": {
+          "label": "Рост черенка",
+          "defaultTitle": "Проверка роста корней",
+          "defaultNotes": "Отмечен новый этап роста корней и побега."
+        },
+        "fertilize": {
+          "label": "Подкормка",
+          "defaultTitle": "Внесение удобрений",
+          "defaultNotes": "Внесено сбалансированное жидкое удобрение в половинной дозе."
+        },
+        "prune": {
+          "label": "Обрезка",
+          "defaultTitle": "Формирующая обрезка",
+          "defaultNotes": "Удалены старые нижние листья и прищипнута верхушка."
+        },
+        "repot": {
+          "label": "Пересадка",
+          "defaultTitle": "Обновление грунта и горшка",
+          "defaultNotes": "Проверены корни и обновлён рыхлый воздухопроницаемый субстрат."
+        },
+        "note": {
+          "label": "Заметка",
+          "defaultTitle": "Ботаническое наблюдение",
+          "defaultNotes": "Листья упругие, хорошо ориентированы к свету."
+        }
+      }
+    },
+    "logItem": {
+      "metricRoot": "Корни: {{value}} см",
+      "metricStem": "Стебель: {{value}} см",
+      "metricLeaves": "Листья: {{value}}",
+      "metricVolume": "Объём: {{value}} мл",
+      "metricSoil": "Почва до: {{value}}"
+    },
     "gallery": {
+      "eyebrow": "ВИЗУАЛЬНЫЙ ПРОГРЕСС ({{count}})",
+      "timeline": "Лента",
+      "beforeAndAfter": "До и после",
+      "beforeTag": "До · {{date}}",
+      "latestTag": "Сейчас · {{date}}",
       "aiScan": "ИИ-скан здоровья",
       "baselinePhoto": "Исходное фото"
     },
     "growth": {
+      "eyebrow": "ДИНАМИКА РОСТА",
       "rootLength": "Длина корней",
       "stemHeight": "Высота стебля",
       "leafCount": "Количество листьев",
       "unitCm": "см",
-      "unitLeaves": "лист."
+      "unitLeaves": "лист.",
+      "taprootReady": "Корень {{current}} / {{target}} см — Готов к пересадке в грунт!",
+      "taprootAlmost": "Корень {{current}} / {{target}} см — почти готов к пересадке",
+      "taprootDeveloping": "Корень {{current}} / {{target}} см — развитие корневой системы"
+    },
+    "healthCard": {
+      "title": "ИИ-оценка здоровья и состояния",
+      "meta": "Фото + {{count}} записей ухода • Цикл полива: {{days}} дн.",
+      "reanalyze": "Пересканировать",
+      "refreshedToast": "ИИ-оценка здоровья обновлена! 🌿",
+      "scanError": "Не удалось выполнить ИИ-скан прямо сейчас.",
+      "detectedIndicators": "ВЫЯВЛЕННЫЕ ПРИЗНАКИ",
+      "nextStepsEyebrow": "ПЛАН ДЕЙСТВИЙ (НАЖМИТЕ, ЧТОБЫ ОТМЕТИТЬ)",
+      "doneCounter": "{{done}}/{{total}} выполнено",
+      "whyPrefix": "Почему: {{rationale}}",
+      "followUpTitle": "Уточняющие вопросы ботаника",
+      "followUpPlaceholder": "Или напишите короткое наблюдение...",
+      "followUpEmptyToast": "Сначала выберите или напишите хотя бы один ответ.",
+      "refineBtn": "Уточнить диагноз по ответам",
+      "refiningBtn": "Уточняем диагноз...",
+      "refinedToast": "Диагноз уточнён с учётом ваших наблюдений!",
+      "refineError": "Не удалось уточнить диагноз.",
+      "quickChips": [
+        "Паутинка или точки под листьями",
+        "Грунт сырой / кислый запах",
+        "Рядом сквозняк или батарея",
+        "Недавно пересажено или переставлено"
+      ],
+      "scanHistory": "История сканов ({{count}})",
+      "everyDaysShort": "раз в {{days}} дн."
+    },
+    "adaptiveCare": {
+      "title": "Адаптивный режим ухода",
+      "northHemisphere": "Сев. полушарие",
+      "southHemisphere": "Южн. полушарие",
+      "applyBtn": "Применить интервал {{days}} дн.",
+      "appliedToast": "Интервал полива обновлён: каждые {{days}} дн.",
+      "weatherTitle": "Уличный прогноз (Open-Meteo)",
+      "refreshWeather": "Обновить",
+      "checkWeather": "Проверить погоду",
+      "citySearchPlaceholder": "Поиск города (напр., Москва, Алматы, Берлин)...",
+      "searchingCities": "Поиск городов...",
+      "noCitiesFound": "Подходящие города не найдены.",
+      "selectedCity": "{{city}}",
+      "changeCity": "Сменить город",
+      "weatherError": "Не удалось загрузить прогноз Open-Meteo."
     }
   },
   "profile": {
     "eyebrow": "АККАУНТ САДОВОДА И ОБЛАКО",
     "title": "Профиль и синхронизация",
+    "overview": {
+      "nameUpdatedToast": "Имя профиля обновлено! 🌿",
+      "photoUpdatedToast": "Фото профиля обновлено.",
+      "photoErrorToast": "Не удалось обновить фото профиля.",
+      "photoUploadFailedToast": "Ошибка при загрузке фото профиля.",
+      "syncedToast": "Сад синхронизирован!",
+      "statusSyncing": "Синхронизация…",
+      "statusPending": "Офлайн — в очереди: {{count}}",
+      "statusOfflineLocal": "Офлайн — сохранено локально",
+      "statusSynced": "Синхронизировано",
+      "statusCloudReady": "Облако подключено",
+      "plantsStat": "Растения",
+      "careLogsStat": "Записи ухода",
+      "syncingBtn": "Синхронизация...",
+      "syncNowBtn": "Синхронизировать",
+      "editNameTitle": "Изменить имя профиля",
+      "displayNameLabel": "Отображаемое имя",
+      "displayNamePlaceholder": "Ваше имя или ник"
+    },
+    "guest": {
+      "pill": "Гостевой офлайн-режим",
+      "title": "Сохраните ваш сад в облаке",
+      "plantWord_one": "{{count}} растение",
+      "plantWord_few": "{{count}} растения",
+      "plantWord_many": "{{count}} растений",
+      "entryWord_one": "{{count}} запись ухода хранятся",
+      "entryWord_few": "{{count}} записи ухода хранятся",
+      "entryWord_many": "{{count}} записей ухода хранятся",
+      "description": "Сейчас {{plants}} и {{entries}} только на этом устройстве. Войдите или создайте бесплатный аккаунт для синхронизации сада на Android, iOS и Web.",
+      "actionBtn": "Войти или создать аккаунт"
+    },
+    "notifications": {
+      "eyebrow": "УВЕДОМЛЕНИЯ",
+      "statusPaused": "На паузе",
+      "statusActive": "Активны",
+      "statusScheduled": "Запланировано: {{count}}",
+      "statusPermissionNeeded": "Нужен доступ",
+      "wateringRemindersLabel": "Напоминания о поливе",
+      "wateringRemindersDesc": "Уведомлять в день планового полива каждого растения",
+      "dailyDigestLabel": "Утренняя сводка по саду",
+      "dailyDigestDesc": "Ежедневный обзор растений, требующих внимания сегодня",
+      "preferredTimeWeb": "Предпочтительное время напоминаний",
+      "reminderTime": "Время напоминаний",
+      "sendTest": "Отправить тестовое уведомление",
+      "footnote": "100% локальные уведомления на устройстве. Расписание пересчитывается автоматически после полива или изменения интервала.",
+      "rescheduledToast": "Напоминания перенесены на {{time}}.",
+      "permissionDeniedToast": "Уведомления отключены в системных настройках устройства.",
+      "enabledToast": "Локальные напоминания об уходе включены! 🔔",
+      "pausedToast": "Напоминания об уходе приостановлены.",
+      "digestOnToast": "Ежедневная утренняя сводка включена!",
+      "digestOffToast": "Утренняя сводка отключена.",
+      "testSentToast": "Тестовое напоминание отправлено (придёт через ~2 сек)! 🌿",
+      "grantPermissionToast": "Разрешите уведомления, чтобы получать напоминания."
+    },
+    "roomPresets": {
+      "eyebrow": "ПРЕСЕТЫ КОМНАТ",
+      "addSpot": "Добавить место",
+      "placeholder": "Напр., Западный подоконник",
+      "indoorSpot": "В помещении",
+      "saveBtn": "Сохранить пресет комнаты",
+      "emptyText": "Сохранённых мест пока нет. Добавьте любимые подоконники или уголки для быстрой настройки растений.",
+      "footnote": "Сохранённые места автоматически заполняют освещение и размещение при добавлении или редактировании растений.",
+      "savedToast": "Пресет комнаты «{{name}}» сохранён.",
+      "removedToast": "Пресет «{{name}}» удалён."
+    },
     "appearance": {
       "eyebrow": "ОФОРМЛЕНИЕ",
       "system": "Системная",
@@ -329,5 +756,52 @@
       "deleteAccount": "Удалить аккаунт",
       "deleteAccountSubtitle": "Безвозвратно удалить облачный аккаунт и все синхронизированные данные"
     }
+  },
+  "syncBanner": {
+    "syncing": "Синхронизация...",
+    "changesPending_one": "{{count}} изменение в очереди",
+    "changesPending_few": "{{count}} изменения в очереди",
+    "changesPending_many": "{{count}} изменений в очереди",
+    "photosWaiting_one": "{{count}} фото ждёт загрузки",
+    "photosWaiting_few": "{{count}} фото ждут загрузки",
+    "photosWaiting_many": "{{count}} фото ждут загрузки",
+    "syncingShort": "Синхр.",
+    "syncNow": "Синхронизировать"
+  },
+  "errorBoundary": {
+    "title": "Что-то пошло не так",
+    "subtitle": "При отображении экрана произошла непредвиденная ошибка. Ваши растения и записи ухода в безопасности.",
+    "tryAgain": "Попробовать снова",
+    "retrying": "Повтор...",
+    "returnGarden": "Вернуться в сад"
+  },
+  "splash": {
+    "eyebrow": "БОТАНИЧЕСКИЙ ДНЕВНИК",
+    "tagline": "Бережный уход за растениями и ИИ-диагностика"
+  },
+  "notificationsPush": {
+    "channelName": "Напоминания о поливе и уходе",
+    "channelDesc": "Своевременные напоминания, когда вашим растениям нужен полив или уход.",
+    "titleProp": "💧 Обновите воду: {{name}}",
+    "titleSucculent": "🌵 Проверка суккулента: {{name}}",
+    "titleDefault": "🌿 Пора полить {{name}}",
+    "bodyProp": "Черенку ({{species}}) пора заменить воду на свежую.",
+    "bodySucculent": "«{{name}}» ({{species}}) по графику пора полить. Убедитесь, что грунт полностью сухой.",
+    "bodyDefault": "«{{name}}» ({{species}}, {{location}}) готово к обильному поливу.",
+    "digestTitle": "🌱 Утренняя сводка сада FloraLog",
+    "digestDue_one": "{{count}} растение ждёт вашего внимания ({{names}}{{ellipsis}}).",
+    "digestDue_few": "{{count}} растения ждут вашего внимания ({{names}}{{ellipsis}}).",
+    "digestDue_many": "{{count}} растений ждут вашего внимания ({{names}}{{ellipsis}}).",
+    "digestOnSchedule_one": "Ваше {{count}} растение в порядке ({{names}}). Откройте календарь ухода.",
+    "digestOnSchedule_few": "Ваши {{count}} растения в порядке ({{names}}). Откройте календарь ухода.",
+    "digestOnSchedule_many": "Ваши {{count}} растений в порядке ({{names}}). Откройте календарь ухода.",
+    "testWebTitle": "🌿 Тест напоминаний FloraLog",
+    "testWebBodyWithPlants": "Напоминания активны для «{{first}}» и ещё {{others}} раст.!",
+    "testWebBodyEmpty": "Локальные уведомления об уходе работают!",
+    "testNativeTitle": "🌿 Напоминания FloraLog активны",
+    "testNativeBodyWithPlants_one": "Отслеживается {{count}} растение ({{names}}). Мы напомним вовремя!",
+    "testNativeBodyWithPlants_few": "Отслеживаются {{count}} растения ({{names}}). Мы напомним вовремя!",
+    "testNativeBodyWithPlants_many": "Отслеживаются {{count}} растений ({{names}}). Мы напомним вовремя!",
+    "testNativeBodyEmpty": "Локальные уведомления об уходе настроены и готовы к работе!"
   }
 }

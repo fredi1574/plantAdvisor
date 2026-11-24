@@ -324,6 +324,11 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = body.action;
+  const locale = body.locale === 'ru' ? 'ru' : 'en';
+  const languageDirective =
+    locale === 'ru'
+      ? 'LANGUAGE REQUIREMENT: Write all user-facing prose fields (commonName, identificationNotes, idealLight, soilRecommendation, rotWarningNote, toxicPrinciples, safetyNotes, detectedSymptoms, diagnosisSummary, followUpQuestions, recommendedActions.instruction, recommendedActions.rationale, succulentGuardrailApplied) in natural, accurate Russian (Русский язык). Keep scientificName and family in standard botanical Latin, and keep all schema enum fields (plantType, toxicityLevel, healthStatus, urgency) in their exact English enum values.'
+      : 'LANGUAGE REQUIREMENT: Write all user-facing prose fields in clear English, keeping scientificName in Latin binomial format.';
 
   if (action === 'quota') {
     const { data: quotaData, error: quotaError } = await supabase.rpc(
@@ -364,7 +369,7 @@ Deno.serve(async (req: Request) => {
 
     const parts: Record<string, unknown>[] = [
       {
-        text: `${SUCCULENT_SYSTEM_GUARDRAIL}\n\nIdentify the plant from the provided input. Hint/Name query: "${queryText}". Return strict JSON matching the schema.`,
+        text: `${SUCCULENT_SYSTEM_GUARDRAIL}\n\n${languageDirective}\n\nIdentify the plant from the provided input. Hint/Name query: "${queryText}". Return strict JSON matching the schema.`,
       },
     ];
 
@@ -447,6 +452,8 @@ Deno.serve(async (req: Request) => {
     const species = (plantProfile.species as Record<string, unknown>) ?? {};
     const promptText = `
 ${SUCCULENT_SYSTEM_GUARDRAIL}
+
+${languageDirective}
 
 You are FloraLog's senior botanical pathologist. Analyze the plant's current visual condition ALONGSIDE its historical care notebook to diagnose abiotic or biotic issues (overwatering, edema, etiolation, root rot, nutrient deficiency, or propagation stagnation).
 

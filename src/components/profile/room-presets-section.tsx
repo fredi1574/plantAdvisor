@@ -1,5 +1,6 @@
 import { MapPin, Plus, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -9,6 +10,7 @@ import { SwitchRow } from '@/components/ui/switch-row';
 import { LIGHT_EXPOSURE_OPTIONS } from '@/constants/plantOptions';
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
+import { localizeLocation } from '@/i18n/plantDisplay';
 import { triggerLightHaptic } from '@/services/haptics';
 import { usePlantStore } from '@/store/usePlantStore';
 import type { LightExposure } from '@/types/plant';
@@ -17,14 +19,11 @@ interface RoomPresetsSectionProps {
   onShowToast: (message: string) => void;
 }
 
-const EXPOSURE_LABEL_MAP = new Map(
-  LIGHT_EXPOSURE_OPTIONS.map((opt) => [opt.key, opt.label])
-);
-
 /**
  * Inset grouped manager for reusable Room / Spot profiles in Profile & Settings.
  */
 export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const roomPresets = usePlantStore((s) => s.roomPresets);
   const addRoomPreset = usePlantStore((s) => s.addRoomPreset);
@@ -43,14 +42,14 @@ export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
     addRoomPreset({ name: trimmed, lightExposure, isIndoor });
     setName('');
     setShowComposer(false);
-    onShowToast(`Saved room preset "${trimmed}".`);
+    onShowToast(t('profile.roomPresets.savedToast', { name: trimmed }));
   };
 
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
         <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-          ROOM PRESETS
+          {t('profile.roomPresets.eyebrow')}
         </Text>
         <Pressable
           onPress={() => {
@@ -71,7 +70,7 @@ export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
           ]}>
           <Plus size={12} color={palette.primary} />
           <Text style={[styles.addToggleText, { color: palette.primary }]}>
-            {showComposer ? 'Close' : 'Add Spot'}
+            {showComposer ? t('common.close') : t('profile.roomPresets.addSpot')}
           </Text>
         </Pressable>
       </View>
@@ -98,14 +97,14 @@ export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
               compact={false}
               value={name}
               onChangeText={setName}
-              placeholder="e.g., West Sunroom Shelf"
+              placeholder={t('profile.roomPresets.placeholder')}
               accessibilityLabel="Room preset name"
             />
             <View style={styles.chipRow}>
               {LIGHT_EXPOSURE_OPTIONS.map((opt) => (
                 <Chip
                   key={opt.key}
-                  label={opt.label}
+                  label={t(`plantOptions.lightExposure.${opt.key}`)}
                   variant="subtle"
                   size="sm"
                   selected={lightExposure === opt.key}
@@ -115,7 +114,7 @@ export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
               ))}
             </View>
             <SwitchRow
-              label="Indoor Spot"
+              label={t('profile.roomPresets.indoorSpot')}
               value={isIndoor}
               onValueChange={setIsIndoor}
               contained={false}
@@ -132,7 +131,7 @@ export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
               ]}>
               <Text
                 style={[styles.saveBtnText, { color: palette.textInverse }]}>
-                Save Room Preset
+                {t('profile.roomPresets.saveBtn')}
               </Text>
             </SpringPressable>
           </View>
@@ -141,8 +140,7 @@ export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
         {roomPresets.length === 0 ? (
           <View style={styles.emptyRow}>
             <Text style={[styles.emptyText, { color: palette.textMuted }]}>
-              No saved spots yet. Add your favorite windowsills or patio corners
-              for quick plant setup.
+              {t('profile.roomPresets.emptyText')}
             </Text>
           </View>
         ) : (
@@ -162,7 +160,7 @@ export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
                   <Text
                     style={[styles.presetName, { color: palette.textPrimary }]}
                     numberOfLines={1}>
-                    {preset.name}
+                    {localizeLocation(preset.name, i18n.language)}
                   </Text>
                   <Text
                     style={[
@@ -170,16 +168,21 @@ export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
                       { color: palette.textSecondary },
                     ]}
                     numberOfLines={1}>
-                    {EXPOSURE_LABEL_MAP.get(preset.lightExposure) ??
-                      preset.lightExposure.replace('_', ' ')}{' '}
-                    • {preset.isIndoor ? 'Indoor' : 'Outdoor'}
+                    {t(`plantOptions.lightExposure.${preset.lightExposure}`)} •{' '}
+                    {preset.isIndoor
+                      ? t('plantDetail.hero.indoor')
+                      : t('plantDetail.hero.outdoor')}
                   </Text>
                 </View>
                 <Pressable
                   onPress={() => {
                     triggerLightHaptic();
                     deleteRoomPreset(preset.id);
-                    onShowToast(`Removed "${preset.name}" preset.`);
+                    onShowToast(
+                      t('profile.roomPresets.removedToast', {
+                        name: preset.name,
+                      })
+                    );
                   }}
                   hitSlop={10}
                   accessibilityRole="button"
@@ -197,8 +200,7 @@ export function RoomPresetsSection({ onShowToast }: RoomPresetsSectionProps) {
       </View>
 
       <Text style={[styles.footnote, { color: palette.textMuted }]}>
-        Saved spots auto-fill light exposure and indoor/outdoor defaults when
-        adding or editing plants.
+        {t('profile.roomPresets.footnote')}
       </Text>
     </View>
   );

@@ -151,7 +151,7 @@ export function HealthDiagnosisFlow({
 
   const handleRunHealthDiagnosis = async () => {
     if (!selectedPlant) {
-      onError('No plant selected for diagnosis.');
+      onError(t('scan.diagnose.noPlantError'));
       return;
     }
     if (aiQuota && aiQuota.remaining <= 0) {
@@ -194,7 +194,7 @@ export function HealthDiagnosisFlow({
         onError(
           err instanceof Error
             ? err.message
-            : 'Failed to run AI health diagnosis.'
+            : t('scan.diagnose.failedError')
         );
       }
     } finally {
@@ -206,7 +206,7 @@ export function HealthDiagnosisFlow({
     <View style={styles.flowRoot}>
       <View style={styles.stepBlock}>
         <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-          STEP 1 · CHOOSE SPECIMEN
+          {t('scan.diagnose.step1')}
         </Text>
 
         <View style={styles.specimenPickerRow}>
@@ -274,7 +274,7 @@ export function HealthDiagnosisFlow({
                           fontFamily: Fonts?.serif,
                         },
                       ]}>
-                      AI Prompt Context
+                      {t('scan.diagnose.contextTitle')}
                     </Text>
                   </View>
                   <Pressable

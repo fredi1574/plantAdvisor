@@ -1,5 +1,6 @@
 import { CheckSquare, Sparkles, Square } from 'lucide-react-native';
 import { useReducer } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   LinearTransition,
@@ -118,6 +119,7 @@ export function PlantHealthAssessmentCard({
   plantAssessments,
   onShowToast,
 }: PlantHealthAssessmentCardProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const reducedMotion = useReducedMotion();
   const toggleRecommendedAction = usePlantStore(
@@ -144,7 +146,7 @@ export function PlantHealthAssessmentCard({
       );
       saveHealthAssessment(plant.id, diagnosis, plant.photoUri);
       dispatch({ type: 'FINISH_SUCCESS' });
-      onShowToast('AI Health Assessment refreshed! 🌿');
+      onShowToast(t('plantDetail.healthCard.refreshedToast'));
     } catch (err) {
       if (err instanceof AiQuotaExceededError) {
         dispatch({ type: 'QUOTA_EXCEEDED', quota: err.quota });
@@ -154,7 +156,7 @@ export function PlantHealthAssessmentCard({
           error:
             err instanceof Error
               ? err.message
-              : 'Could not complete AI health scan right now.',
+              : t('plantDetail.healthCard.scanError'),
         });
       }
     }
@@ -170,7 +172,7 @@ export function PlantHealthAssessmentCard({
       .filter((pair): pair is string => Boolean(pair));
 
     if (answeredPairs.length === 0) {
-      onShowToast('Tap or type at least one follow-up answer first.');
+      onShowToast(t('plantDetail.healthCard.followUpEmptyToast'));
       return;
     }
 
@@ -185,7 +187,7 @@ export function PlantHealthAssessmentCard({
       saveHealthAssessment(plant.id, refined, plant.photoUri);
       dispatch({ type: 'FINISH_SUCCESS', clearFollowUps: true });
       triggerSuccessHaptic();
-      onShowToast('Diagnosis refined with your observations!');
+      onShowToast(t('plantDetail.healthCard.refinedToast'));
     } catch (err) {
       if (err instanceof AiQuotaExceededError) {
         dispatch({ type: 'QUOTA_EXCEEDED', quota: err.quota });
@@ -193,7 +195,9 @@ export function PlantHealthAssessmentCard({
         dispatch({
           type: 'FINISH_ERROR',
           error:
-            err instanceof Error ? err.message : 'Unable to refine diagnosis.',
+            err instanceof Error
+              ? err.message
+              : t('plantDetail.healthCard.refineError'),
         });
       }
     }
@@ -216,17 +220,19 @@ export function PlantHealthAssessmentCard({
               <Sparkles size={18} color={palette.primary} />
               <View style={styles.titleTextWrap}>
                 <Text style={[styles.title, { color: palette.textPrimary }]}>
-                  AI Health & Condition Assessment
+                  {t('plantDetail.healthCard.title')}
                 </Text>
                 <Text style={[styles.meta, { color: palette.textSecondary }]}>
-                  Analyzed photo + {plantEntries.length} care logs • Adjusted
-                  water cycle: {assessment.adjustedWateringIntervalDays}d
+                  {t('plantDetail.healthCard.meta', {
+                    count: plantEntries.length,
+                    days: assessment.adjustedWateringIntervalDays,
+                  })}
                 </Text>
               </View>
             </View>
 
             <Chip
-              label="Re-Analyze"
+              label={t('plantDetail.healthCard.reanalyze')}
               variant="primarySoft"
               size="md"
               loading={isRescanning}
@@ -250,7 +256,7 @@ export function PlantHealthAssessmentCard({
           {assessment.detectedSymptoms.length > 0 && (
             <SurfaceCard variant="nested">
               <Text style={[styles.eyebrow, { color: palette.textSecondary }]}>
-                DETECTED INDICATORS
+                {t('plantDetail.healthCard.detectedIndicators')}
               </Text>
               {assessment.detectedSymptoms.map((sym, idx) => (
                 <Text
@@ -265,11 +271,14 @@ export function PlantHealthAssessmentCard({
           <View style={styles.actionsSection}>
             <View style={styles.actionsHeaderRow}>
               <Text style={[styles.eyebrow, { color: palette.textSecondary }]}>
-                ACTIONABLE NEXT STEPS (TAP TO CHECK OFF)
+                {t('plantDetail.healthCard.nextStepsEyebrow')}
               </Text>
               <Text style={[styles.actionsCounter, { color: palette.primary }]}>
-                {assessment.recommendedActions.filter((a) => a.completed).length}
-                /{assessment.recommendedActions.length} done
+                {t('plantDetail.healthCard.doneCounter', {
+                  done: assessment.recommendedActions.filter((a) => a.completed)
+                    .length,
+                  total: assessment.recommendedActions.length,
+                })}
               </Text>
             </View>
 
@@ -331,7 +340,9 @@ export function PlantHealthAssessmentCard({
                           styles.actionRationale,
                           { color: palette.textSecondary },
                         ]}>
-                        Why: {action.rationale}
+                        {t('plantDetail.healthCard.whyPrefix', {
+                          rationale: action.rationale,
+                        })}
                       </Text>
                     )}
                   </View>

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Lock, Mail, User as UserIcon } from 'lucide-react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { AuthIconInput } from '@/components/auth/auth-icon-input';
@@ -8,6 +9,7 @@ import { AuthScreenShell } from '@/components/auth/auth-screen-shell';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export default function SignUpScreen() {
+  const { t } = useTranslation();
   const signUpWithEmail = useAuthStore((s) => s.signUpWithEmail);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -27,11 +29,11 @@ export default function SignUpScreen() {
 
     const cleanEmail = email.trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      setLocalError('Please enter a valid email address.');
+      setLocalError(t('auth.invalidEmailError'));
       return;
     }
     if (password.length < 6) {
-      setLocalError('Password must be at least 6 characters.');
+      setLocalError(t('auth.shortPasswordError'));
       return;
     }
 
@@ -73,27 +75,27 @@ export default function SignUpScreen() {
 
   return (
     <AuthScreenShell
-      title="Create Account"
-      subtitle="Start your personal FloraLog plant journal"
+      title={t('auth.signUpTitle')}
+      subtitle={t('auth.signUpSubtitle')}
       compactLogo
       errorMessage={localError || authError}
       successMessage={
         confirmationSent
-          ? `Verification link sent to ${email.trim()}. Confirm your email, then sign in below.`
+          ? t('auth.verificationSent', { email: email.trim() })
           : null
       }
-      submitLabel="Create Account"
+      submitLabel={t('auth.signUpSubmit')}
       isLoading={isLoading}
       onSubmit={() => void handleSignUp()}
       onGooglePress={() => void handleGoogleSignUp()}
-      footerPrompt="Already have an account?"
-      footerActionLabel="Sign in"
+      footerPrompt={t('auth.hasAccountPrompt')}
+      footerActionLabel={t('auth.signInLink')}
       onFooterAction={navigateToSignIn}>
       <View style={styles.inputsStack}>
         <AuthIconInput
           value={displayName}
           onChangeText={setDisplayName}
-          placeholder="Your name"
+          placeholder={t('auth.namePlaceholder')}
           autoCapitalize="words"
           returnKeyType="next"
           renderIcon={(color) => <UserIcon size={16} color={color} />}
@@ -102,7 +104,7 @@ export default function SignUpScreen() {
         <AuthIconInput
           value={email}
           onChangeText={setEmail}
-          placeholder="Email address"
+          placeholder={t('auth.emailPlaceholder')}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
@@ -113,7 +115,7 @@ export default function SignUpScreen() {
         <AuthIconInput
           value={password}
           onChangeText={setPassword}
-          placeholder="Password (min. 6 chars)"
+          placeholder={t('auth.passwordMinPlaceholder')}
           isPassword
           autoCapitalize="none"
           returnKeyType="go"

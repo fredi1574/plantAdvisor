@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 
 import { AuthIconInput } from '@/components/auth/auth-icon-input';
@@ -8,6 +9,7 @@ import { AuthScreenShell } from '@/components/auth/auth-screen-shell';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export default function SignInScreen() {
+  const { t } = useTranslation();
   const signInWithEmail = useAuthStore((s) => s.signInWithEmail);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -24,11 +26,11 @@ export default function SignInScreen() {
 
     const cleanEmail = email.trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
-      setLocalError('Please enter a valid email address.');
+      setLocalError(t('auth.invalidEmailError'));
       return;
     }
     if (password.length < 6) {
-      setLocalError('Password must be at least 6 characters.');
+      setLocalError(t('auth.shortPasswordError'));
       return;
     }
 
@@ -49,15 +51,15 @@ export default function SignInScreen() {
 
   return (
     <AuthScreenShell
-      title="FloraLog"
-      subtitle="Sign in to your botanical sanctuary"
+      title={t('auth.signInTitle')}
+      subtitle={t('auth.signInSubtitle')}
       errorMessage={localError || authError}
-      submitLabel="Enter My Garden"
+      submitLabel={t('auth.signInSubmit')}
       isLoading={isLoading}
       onSubmit={() => void handleSignIn()}
       onGooglePress={() => void handleGoogleSignIn()}
-      footerPrompt="Don't have an account?"
-      footerActionLabel="Create account"
+      footerPrompt={t('auth.noAccountPrompt')}
+      footerActionLabel={t('auth.createAccountLink')}
       onFooterAction={() => {
         setLocalError(null);
         clearError();
@@ -67,7 +69,7 @@ export default function SignInScreen() {
         <AuthIconInput
           value={email}
           onChangeText={setEmail}
-          placeholder="Email address"
+          placeholder={t('auth.emailPlaceholder')}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
@@ -78,7 +80,7 @@ export default function SignInScreen() {
         <AuthIconInput
           value={password}
           onChangeText={setPassword}
-          placeholder="Password"
+          placeholder={t('auth.passwordPlaceholder')}
           isPassword
           autoCapitalize="none"
           returnKeyType="go"

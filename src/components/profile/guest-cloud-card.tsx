@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { CloudOff, LogIn } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SurfaceCard } from '@/components/ui/surface-card';
@@ -19,6 +20,7 @@ export function GuestCloudCard({
   plantCount,
   entryCount,
 }: GuestCloudCardProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
 
   return (
@@ -33,18 +35,18 @@ export function GuestCloudCard({
         ]}>
         <CloudOff size={14} color={palette.attentionText} />
         <Text style={[styles.statusPillText, { color: palette.attentionText }]}>
-          Offline Guest Mode
+          {t('profile.guest.pill')}
         </Text>
       </View>
 
       <Text style={[styles.title, { color: palette.textPrimary }]}>
-        Back Up Your Garden in the Cloud
+        {t('profile.guest.title')}
       </Text>
       <Text style={[styles.description, { color: palette.textSecondary }]}>
-        Your {plantCount} {plantCount === 1 ? 'plant' : 'plants'} and{' '}
-        {entryCount} care {entryCount === 1 ? 'entry are' : 'entries are'}{' '}
-        currently stored only on this device. Sign in or create a free account
-        to sync your garden with Supabase across Android, iOS, and Web.
+        {t('profile.guest.description', {
+          plants: t('profile.guest.plantWord', { count: plantCount }),
+          entries: t('profile.guest.entryWord', { count: entryCount }),
+        })}
       </Text>
 
       <Pressable
@@ -56,7 +58,7 @@ export function GuestCloudCard({
         ]}>
         <LogIn size={18} color={palette.textInverse} />
         <Text style={[styles.primaryBtnText, { color: palette.textInverse }]}>
-          Sign In or Create Account
+          {t('profile.guest.actionBtn')}
         </Text>
       </Pressable>
     </SurfaceCard>

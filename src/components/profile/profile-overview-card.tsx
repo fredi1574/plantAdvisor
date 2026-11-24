@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -54,6 +55,7 @@ export function ProfileOverviewCard({
   profile,
   onShowToast,
 }: ProfileOverviewCardProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const isAuthLoading = useAuthStore((s) => s.isLoading);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -64,14 +66,13 @@ export function ProfileOverviewCard({
   const pendingSyncCount = usePlantStore((s) => s.pendingSyncCount);
   const lastSyncedAt = usePlantStore((s) => s.lastSyncedAt);
   const syncError = usePlantStore((s) => s.syncError);
-  const syncWithSupabase = usePlantStore((s) => s.syncWithSupabase);
 
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
   const [draftName, setDraftName] = useState('');
 
   const currentDisplayName =
-    profile?.displayName ?? user.email?.split('@')[0] ?? 'Gardener';
+    profile?.displayName ?? user.email?.split('@')[0] ?? t('common.gardener');
 
   const handleOpenEditName = () => {
     triggerLightHaptic();
@@ -87,7 +88,7 @@ export function ProfileOverviewCard({
     if (res.ok) {
       triggerSuccessHaptic();
       setIsEditNameOpen(false);
-      onShowToast('Display name updated! 🌿');
+      onShowToast(t('profile.overview.nameUpdatedToast'));
     } else if (res.error) {
       onShowToast(res.error);
     }
@@ -120,23 +121,15 @@ export function ProfileOverviewCard({
       });
       if (res.ok) {
         triggerSuccessHaptic();
-        onShowToast('Profile photo updated.');
+        onShowToast(t('profile.overview.photoUpdatedToast'));
       } else {
-        onShowToast(res.error ?? 'Could not update profile photo.');
+        onShowToast(res.error ?? t('profile.overview.photoErrorToast'));
       }
     } catch {
-      onShowToast('Failed to upload profile photo.');
+      onShowToast(t('profile.overview.photoUploadFailedToast'));
     } finally {
       setIsUploadingAvatar(false);
     }
-  };
-
-  const handleManualSync = async () => {
-    await syncWithSupabase();
-    const latestError = usePlantStore.getState().syncError;
-    onShowToast(
-      latestError ? latestError : 'Garden synced with Supabase cloud!'
-    );
   };
 
   return (
@@ -188,7 +181,7 @@ export function ProfileOverviewCard({
               styles.profileName,
               { color: palette.textPrimary, fontFamily: Fonts?.serif },
             ]}>
-            {profile?.displayName || 'Gardener'}
+            {profile?.displayName || t('common.gardener')}
           </Text>
           <Text style={[styles.profileEmail, { color: palette.textSecondary }]}>
             {user.email}
@@ -223,14 +216,16 @@ export function ProfileOverviewCard({
                   },
                 ]}>
                 {isSyncing
-                  ? 'Syncing…'
+                  ? t('profile.overview.statusSyncing')
                   : pendingSyncCount > 0
-                    ? `Offline — ${pendingSyncCount} pending`
+                    ? t('profile.overview.statusPending', {
+                        count: pendingSyncCount,
+                      })
                     : syncError
-                      ? 'Offline — Saved Locally'
+                      ? t('profile.overview.statusOfflineLocal')
                       : lastSyncedAt
-                        ? 'Synced'
-                        : 'Cloud Ready'}
+                        ? t('profile.overview.statusSynced')
+                        : t('profile.overview.statusCloudReady')}
               </Text>
             </View>
           </View>
@@ -264,7 +259,7 @@ export function ProfileOverviewCard({
             {plantCount}
           </Text>
           <Text style={[styles.statLabel, { color: palette.textSecondary }]}>
-            Plants
+            {t('profile.overview.plantsStat')}
           </Text>
         </View>
         <View
@@ -275,36 +270,9 @@ export function ProfileOverviewCard({
             {entryCount}
           </Text>
           <Text style={[styles.statLabel, { color: palette.textSecondary }]}>
-            Care Logs
+            {t('profile.overview.careLogsStat')}
           </Text>
         </View>
-        <View
-          style={[styles.statDivider, { backgroundColor: palette.borderSubtle }]}
-        />
-        <SpringPressable
-          onPress={() => {
-            triggerLightHaptic();
-            void handleManualSync();
-          }}
-          disabled={isSyncing}
-          accessibilityRole="button"
-          accessibilityLabel="Sync garden now"
-          style={[
-            styles.syncNowBtn,
-            {
-              backgroundColor: palette.primarySoft,
-              borderColor: palette.primaryBorder,
-            },
-          ]}>
-          {isSyncing ? (
-            <ActivityIndicator size="small" color={palette.primary} />
-          ) : (
-            <RefreshCw size={14} color={palette.primary} />
-          )}
-          <Text style={[styles.syncNowText, { color: palette.primary }]}>
-            {isSyncing ? 'Syncing...' : 'Sync Now'}
-          </Text>
-        </SpringPressable>
       </View>
 
       <Modal
@@ -331,7 +299,7 @@ export function ProfileOverviewCard({
                   styles.modalTitle,
                   { color: palette.textPrimary, fontFamily: Fonts?.serif },
                 ]}>
-                Edit Display Name
+                {t('profile.overview.editNameTitle')}
               </Text>
               <Pressable
                 onPress={() => setIsEditNameOpen(false)}
@@ -350,14 +318,14 @@ export function ProfileOverviewCard({
             <View style={styles.modalFieldGroup}>
               <Text
                 style={[styles.modalLabel, { color: palette.textSecondary }]}>
-                Display Name
+                {t('profile.overview.displayNameLabel')}
               </Text>
               <BotanicalInput
                 surface="primary"
                 compact={false}
                 value={draftName}
                 onChangeText={setDraftName}
-                placeholder="Your name or handle"
+                placeholder={t('profile.overview.displayNamePlaceholder')}
                 autoFocus
                 accessibilityLabel="Display name input"
                 style={styles.modalInput}
@@ -382,7 +350,7 @@ export function ProfileOverviewCard({
                     styles.modalCancelText,
                     { color: palette.textPrimary },
                   ]}>
-                  Cancel
+                  {t('common.cancel')}
                 </Text>
               </Pressable>
 
@@ -406,7 +374,7 @@ export function ProfileOverviewCard({
                         styles.modalSaveText,
                         { color: palette.textInverse },
                       ]}>
-                      Save
+                      {t('common.save')}
                     </Text>
                   </>
                 )}
@@ -492,12 +460,13 @@ const styles = StyleSheet.create({
   statsBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     paddingVertical: Spacing.md,
     borderTopWidth: BorderWidth.hairline,
     borderBottomWidth: BorderWidth.hairline,
   },
   statItem: {
+    flex: 1,
     alignItems: 'center',
     paddingHorizontal: 10,
   },
@@ -512,19 +481,6 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 24,
-  },
-  syncNowBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    borderWidth: BorderWidth.hairline,
-  },
-  syncNowText: {
-    fontSize: 12,
-    fontWeight: '700',
   },
   editNameBtn: {
     width: 36,

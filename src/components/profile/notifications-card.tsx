@@ -3,6 +3,7 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { ChevronRight, Clock, Send } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Chip } from '@/components/ui/chip';
@@ -41,6 +42,7 @@ interface NotificationsCardProps {
  * and test notification trigger.
  */
 export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const plants = usePlantStore((s) => s.plants);
   const notificationPrefs = usePlantStore((s) => s.notificationPrefs);
@@ -72,7 +74,7 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
     });
     const count = await getScheduledReminderCount();
     setScheduledCount(count);
-    onShowToast(`Reminders rescheduled for ${label}.`);
+    onShowToast(t('profile.notifications.rescheduledToast', { time: label }));
   };
 
   const handleNativeTimeChange = async (
@@ -88,7 +90,10 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
 
     const hour = selectedDate.getHours();
     const minute = selectedDate.getMinutes();
-    const label = formatReminderTime(hour, minute);
+    const label =
+      i18n.language === 'ru'
+        ? `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+        : formatReminderTime(hour, minute);
 
     if (Platform.OS === 'ios') {
       setShowNativePicker(false);
@@ -102,9 +107,7 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
       const granted = await requestNotificationPermissions();
       setPermissionStatus(granted ? 'granted' : 'denied');
       if (!granted) {
-        onShowToast(
-          'Notification permissions are disabled in system settings.'
-        );
+        onShowToast(t('profile.notifications.permissionDeniedToast'));
         return;
       }
     }
@@ -113,8 +116,8 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
     setScheduledCount(count);
     onShowToast(
       enabled
-        ? 'Local plant care reminders enabled! 🔔'
-        : 'Care reminders paused.'
+        ? t('profile.notifications.enabledToast')
+        : t('profile.notifications.pausedToast')
     );
   };
 
@@ -124,8 +127,8 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
     setScheduledCount(count);
     onShowToast(
       dailyDigestEnabled
-        ? 'Daily morning garden digest enabled!'
-        : 'Daily morning digest turned off.'
+        ? t('profile.notifications.digestOnToast')
+        : t('profile.notifications.digestOffToast')
     );
   };
 
@@ -134,26 +137,29 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
     const status = await getNotificationPermissionStatus();
     setPermissionStatus(status);
     if (ok) {
-      onShowToast('Test care reminder scheduled (arriving in ~2s)! 🌿');
+      onShowToast(t('profile.notifications.testSentToast'));
     } else {
-      onShowToast(
-        'Please grant notification permissions to receive reminders.'
-      );
+      onShowToast(t('profile.notifications.grantPermissionToast'));
     }
   };
 
   const isOnlineStatus =
     notificationPrefs.enabled && permissionStatus === 'granted';
-  const formattedTime = formatReminderTime(
-    notificationPrefs.reminderHour,
-    notificationPrefs.reminderMinute
-  );
+  const formattedTime =
+    i18n.language === 'ru'
+      ? `${String(notificationPrefs.reminderHour).padStart(2, '0')}:${String(
+          notificationPrefs.reminderMinute
+        ).padStart(2, '0')}`
+      : formatReminderTime(
+          notificationPrefs.reminderHour,
+          notificationPrefs.reminderMinute
+        );
 
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
         <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-          NOTIFICATIONS
+          {t('profile.notifications.eyebrow')}
         </Text>
         <View
           style={[
@@ -177,12 +183,14 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
               },
             ]}>
             {!notificationPrefs.enabled
-              ? 'Paused'
+              ? t('profile.notifications.statusPaused')
               : permissionStatus === 'granted'
                 ? Platform.OS === 'web'
-                  ? 'Active'
-                  : `${scheduledCount} Scheduled`
-                : 'Permission Needed'}
+                  ? t('profile.notifications.statusActive')
+                  : t('profile.notifications.statusScheduled', {
+                      count: scheduledCount,
+                    })
+                : t('profile.notifications.statusPermissionNeeded')}
           </Text>
         </View>
       </View>
@@ -197,8 +205,8 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
         ]}>
         <View style={styles.rowPad}>
           <SwitchRow
-            label="Watering Reminders"
-            description="Notify on the day each plant is due for water"
+            label={t('profile.notifications.wateringRemindersLabel')}
+            description={t('profile.notifications.wateringRemindersDesc')}
             value={notificationPrefs.enabled}
             onValueChange={(val) => void handleToggleNotifications(val)}
             contained={false}
@@ -215,8 +223,8 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
             />
             <View style={styles.rowPad}>
               <SwitchRow
-                label="Daily Morning Digest"
-                description="Summary of plants needing attention today"
+                label={t('profile.notifications.dailyDigestLabel')}
+                description={t('profile.notifications.dailyDigestDesc')}
                 value={notificationPrefs.dailyDigestEnabled}
                 onValueChange={(val) => void handleToggleDailyDigest(val)}
                 contained={false}
@@ -235,7 +243,7 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
                 <View style={styles.timeLabelRow}>
                   <Clock size={14} color={palette.textSecondary} />
                   <Text style={[styles.rowTitle, { color: palette.textPrimary }]}>
-                    Preferred Reminder Time
+                    {t('profile.notifications.preferredTimeWeb')}
                   </Text>
                 </View>
                 <View style={styles.webPresetsRow}>
@@ -243,17 +251,21 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
                     const selected =
                       notificationPrefs.reminderHour === preset.hour &&
                       notificationPrefs.reminderMinute === preset.minute;
+                    const displayLabel =
+                      i18n.language === 'ru'
+                        ? `${String(preset.hour).padStart(2, '0')}:00`
+                        : preset.label;
                     return (
                       <Chip
                         key={preset.label}
-                        label={preset.label}
+                        label={displayLabel}
                         size="md"
                         selected={selected}
                         onPress={() =>
                           void handleSelectReminderTime(
                             preset.hour,
                             preset.minute,
-                            preset.label
+                            displayLabel
                           )
                         }
                       />
@@ -270,12 +282,12 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
                     pressed && { backgroundColor: palette.bgSubtle },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Preferred reminder time ${formattedTime}. Tap to change.`}>
+                  accessibilityLabel={`${t('profile.notifications.reminderTime')} ${formattedTime}`}>
                   <View style={styles.actionRowLeft}>
                     <Clock size={16} color={palette.primary} />
                     <Text
                       style={[styles.rowTitle, { color: palette.textPrimary }]}>
-                      Reminder Time
+                      {t('profile.notifications.reminderTime')}
                     </Text>
                   </View>
                   <View style={styles.actionRowRight}>
@@ -303,7 +315,7 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
                       )
                     }
                     mode="time"
-                    is24Hour={false}
+                    is24Hour={i18n.language === 'ru'}
                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                     onChange={(event, date) =>
                       void handleNativeTimeChange(event, date)
@@ -328,7 +340,7 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
           <View style={styles.actionRowLeft}>
             <Send size={15} color={palette.primary} />
             <Text style={[styles.rowTitle, { color: palette.primary }]}>
-              Send Test Care Notification
+              {t('profile.notifications.sendTest')}
             </Text>
           </View>
           <ChevronRight size={15} color={palette.textMuted} />
@@ -336,8 +348,7 @@ export function NotificationsCard({ onShowToast }: NotificationsCardProps) {
       </View>
 
       <Text style={[styles.footnote, { color: palette.textMuted }]}>
-        100% on-device alarms. Reminders reschedule automatically whenever you
-        water a plant or change its interval.
+        {t('profile.notifications.footnote')}
       </Text>
     </View>
   );

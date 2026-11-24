@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { Leaf } from 'lucide-react-native';
 import { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated,
   Easing,
@@ -31,6 +32,7 @@ export function BotanicalSplashScreen({
   onFinish,
   readyToDismiss,
 }: BotanicalSplashScreenProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const styles = useMemo(() => createStyles(palette), [palette]);
   const logoScale = useAnimatedValue(0.84);
@@ -172,12 +174,10 @@ export function BotanicalSplashScreen({
           ]}>
           <View style={styles.eyebrowPill}>
             <Leaf size={11} color={palette.primary} />
-            <Text style={styles.eyebrowText}>BOTANICAL COMPANION</Text>
+            <Text style={styles.eyebrowText}>{t('splash.eyebrow')}</Text>
           </View>
           <Text style={styles.brandTitle}>FloraLog</Text>
-          <Text style={styles.brandTagline}>
-            Mindful plant care & AI diagnostics
-          </Text>
+          <Text style={styles.brandTagline}>{t('splash.tagline')}</Text>
         </Animated.View>
 
         {/* Minimal Loading Progress Track */}

@@ -89,8 +89,7 @@ export function CareLogSection({
               styles.emptyTimelineSubtitle,
               { color: palette.textSecondary },
             ]}>
-            Log a watering, repotting, or growth observation above to start
-            tracking this specimen&apos;s story.
+            {t('plantDetail.journal.emptySubtitle')}
           </Text>
         </View>
       ) : (

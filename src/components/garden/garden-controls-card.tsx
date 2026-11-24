@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react-native';
 import React, { type ReactNode, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Platform,
   Pressable,
@@ -48,11 +49,11 @@ export interface GardenStats {
   floweringCount: number;
 }
 
-const SORT_OPTIONS: { key: GardenSortMode; label: string }[] = [
-  { key: 'needs_water', label: 'Needs Water' },
-  { key: 'health', label: 'Health' },
-  { key: 'alpha', label: 'A–Z' },
-  { key: 'recent', label: 'Recent' },
+const SORT_KEYS: GardenSortMode[] = [
+  'needs_water',
+  'health',
+  'alpha',
+  'recent',
 ];
 
 interface GardenControlsCardProps {
@@ -83,6 +84,7 @@ export function GardenControlsCard({
   onSelectSort,
   onToggleGroupByLocation,
 }: GardenControlsCardProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
 
   const filterChips: {
@@ -97,7 +99,7 @@ export function GardenControlsCard({
     () => [
       {
         key: 'all',
-        label: 'All',
+        label: t('garden.controls.filters.all'),
         count: stats.total,
         softBg: palette.primarySoft,
         softBorder: palette.primaryBorder,
@@ -106,7 +108,7 @@ export function GardenControlsCard({
       },
       {
         key: 'needs_water',
-        label: 'Thirsty',
+        label: t('garden.controls.filters.needs_water'),
         count: stats.needsWaterCount,
         softBg: palette.waterAlertBg,
         softBorder: palette.waterAlertBorder,
@@ -115,7 +117,7 @@ export function GardenControlsCard({
       },
       {
         key: 'needs_attention',
-        label: 'Attention',
+        label: t('garden.controls.filters.needs_attention'),
         count: stats.needsAttentionCount,
         softBg: palette.attentionBg,
         softBorder: palette.attentionBorder,
@@ -124,7 +126,7 @@ export function GardenControlsCard({
       },
       {
         key: 'foliage',
-        label: 'Foliage',
+        label: t('garden.controls.filters.foliage'),
         count: stats.foliageCount,
         softBg: palette.thrivingBg,
         softBorder: palette.thrivingBorder,
@@ -133,7 +135,7 @@ export function GardenControlsCard({
       },
       {
         key: 'succulent',
-        label: 'Succulents',
+        label: t('garden.controls.filters.succulent'),
         count: stats.succulentCount,
         softBg: palette.accentTerracottaSoft,
         softBorder: palette.borderSubtle,
@@ -142,7 +144,7 @@ export function GardenControlsCard({
       },
       {
         key: 'propagation',
-        label: 'Props',
+        label: t('garden.controls.filters.propagation'),
         count: stats.propagationCount,
         softBg: palette.waterBlueSoft,
         softBorder: palette.waterAlertBorder,
@@ -151,7 +153,7 @@ export function GardenControlsCard({
       },
       {
         key: 'flowering',
-        label: 'Flowering',
+        label: t('garden.controls.filters.flowering'),
         count: stats.floweringCount,
         softBg: palette.accentTerracottaSoft,
         softBorder: palette.borderSubtle,
@@ -159,7 +161,7 @@ export function GardenControlsCard({
         renderIcon: (color) => <Flower2 size={13} color={color} />,
       },
     ],
-    [stats, palette]
+    [stats, palette, t]
   );
 
   return (
@@ -177,7 +179,7 @@ export function GardenControlsCard({
           <TextInput
             value={searchQuery}
             onChangeText={onChangeSearch}
-            placeholder="Search nickname, species, or room..."
+            placeholder={t('garden.controls.searchPlaceholder')}
             placeholderTextColor={palette.textMuted}
             style={[styles.searchInput, { color: palette.textPrimary }]}
           />
@@ -237,25 +239,25 @@ export function GardenControlsCard({
           <View style={styles.sortLabelGroup}>
             <ArrowUpDown size={13} color={palette.textSecondary} />
             <Text style={[styles.sortLabel, { color: palette.textSecondary }]}>
-              Sort:
+              {t('garden.controls.sortLabel')}
             </Text>
           </View>
 
-          {SORT_OPTIONS.map((opt) => (
+          {SORT_KEYS.map((sortKey) => (
             <Chip
-              key={opt.key}
-              label={opt.label}
+              key={sortKey}
+              label={t(`garden.controls.sorts.${sortKey}`)}
               variant="subtle"
-              selected={sortBy === opt.key}
+              selected={sortBy === sortKey}
               onPress={() => {
                 triggerLightHaptic();
-                onSelectSort(opt.key);
+                onSelectSort(sortKey);
               }}
             />
           ))}
 
           <Chip
-            label="By Room"
+            label={t('garden.controls.byRoom')}
             variant="subtle"
             selected={groupByLocation}
             selectedStyle="solid"

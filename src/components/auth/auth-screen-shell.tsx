@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { ArrowRight } from 'lucide-react-native';
 import React, { type ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -53,14 +54,16 @@ export function AuthScreenShell({
   isLoading,
   onSubmit,
   onGooglePress,
-  googleLabel = 'Continue with Google',
+  googleLabel,
   footerPrompt,
   footerActionLabel,
   onFooterAction,
   children,
 }: AuthScreenShellProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const [legalDoc, setLegalDoc] = useState<LegalDocumentType | null>(null);
+  const resolvedGoogleLabel = googleLabel ?? t('auth.continueWithGoogle');
 
   return (
     <SafeAreaView
@@ -182,7 +185,7 @@ export function AuthScreenShell({
                     />
                     <Text
                       style={[styles.dividerText, { color: palette.textMuted }]}>
-                      or
+                      {t('common.or')}
                     </Text>
                     <View
                       style={[
@@ -196,7 +199,7 @@ export function AuthScreenShell({
                     onPress={onGooglePress}
                     disabled={isLoading}
                     accessibilityRole="button"
-                    accessibilityLabel={googleLabel}
+                    accessibilityLabel={resolvedGoogleLabel}
                     style={({ pressed }) => [
                       styles.googleBtn,
                       {
@@ -227,7 +230,7 @@ export function AuthScreenShell({
                         styles.googleBtnText,
                         { color: palette.textPrimary },
                       ]}>
-                      {googleLabel}
+                      {resolvedGoogleLabel}
                     </Text>
                   </Pressable>
                 </>
@@ -253,10 +256,10 @@ export function AuthScreenShell({
               <Pressable
                 onPress={() => setLegalDoc('privacy')}
                 accessibilityRole="button"
-                accessibilityLabel="Read Privacy Policy"
+                accessibilityLabel={t('auth.privacyPolicy')}
                 style={({ pressed }) => pressed && { opacity: 0.7 }}>
                 <Text style={[styles.legalLink, { color: palette.textMuted }]}>
-                  Privacy Policy
+                  {t('auth.privacyPolicy')}
                 </Text>
               </Pressable>
               <Text style={[styles.legalDot, { color: palette.textMuted }]}>
@@ -265,10 +268,10 @@ export function AuthScreenShell({
               <Pressable
                 onPress={() => setLegalDoc('terms')}
                 accessibilityRole="button"
-                accessibilityLabel="Read Terms of Service"
+                accessibilityLabel={t('auth.termsOfService')}
                 style={({ pressed }) => pressed && { opacity: 0.7 }}>
                 <Text style={[styles.legalLink, { color: palette.textMuted }]}>
-                  Terms of Service
+                  {t('auth.termsOfService')}
                 </Text>
               </Pressable>
             </View>

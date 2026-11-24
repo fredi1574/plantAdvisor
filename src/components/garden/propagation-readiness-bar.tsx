@@ -1,5 +1,6 @@
 import { CheckCircle2, Sprout } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
@@ -105,6 +106,7 @@ export function PropagationReadinessBar({
   rootLengthCm,
   compact = false,
 }: PropagationReadinessBarProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const readiness = computePropagationReadiness(rootLengthCm);
 
@@ -128,6 +130,7 @@ export function PropagationReadinessBar({
       : palette.accentTerracotta;
 
   const percent = Math.round(readiness.progress * 100);
+  const localizedStatus = t(`garden.propagation.stage.${readiness.stage}`);
 
   return (
     <View
@@ -154,8 +157,11 @@ export function PropagationReadinessBar({
             ]}
             numberOfLines={1}>
             {readiness.rootLengthCm !== null
-              ? `Roots: ${readiness.rootLengthCm.toFixed(1)} / ${readiness.targetCm} cm`
-              : 'Root readiness'}
+              ? t('garden.propagation.rootsLabel', {
+                  current: readiness.rootLengthCm.toFixed(1),
+                  target: readiness.targetCm,
+                })
+              : t('garden.propagation.rootReadiness')}
           </Text>
         </View>
 
@@ -163,7 +169,7 @@ export function PropagationReadinessBar({
           <Text
             style={[styles.statusBadgeText, { color: badgeText }]}
             numberOfLines={1}>
-            {readiness.statusLabel}
+            {localizedStatus}
           </Text>
         </View>
       </View>

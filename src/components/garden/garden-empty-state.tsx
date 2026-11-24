@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -20,6 +21,7 @@ interface GardenEmptyStateProps {
  * Reusable empty-state card for an empty conservatory or a zero-result filter/search query.
  */
 export function GardenEmptyState({ variant, onAction }: GardenEmptyStateProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const isEmptyGarden = variant === 'empty-garden';
 
@@ -36,13 +38,15 @@ export function GardenEmptyState({ variant, onAction }: GardenEmptyStateProps) {
           styles.title,
           { color: palette.textPrimary, fontFamily: Fonts?.serif },
         ]}>
-        {isEmptyGarden ? 'Your garden is empty' : 'Nothing matches this view'}
+        {isEmptyGarden
+          ? t('garden.empty.emptyTitle')
+          : t('garden.empty.noMatchesTitle')}
       </Text>
 
       <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
         {isEmptyGarden
-          ? 'Identify or snap a photo of your first plant to start tracking watering schedules and AI health scans.'
-          : 'Your garden is looking calm here. Reset filters and search to see every specimen.'}
+          ? t('garden.empty.emptySubtitle')
+          : t('garden.empty.noMatchesSubtitle')}
       </Text>
 
       <SpringPressable
@@ -53,7 +57,9 @@ export function GardenEmptyState({ variant, onAction }: GardenEmptyStateProps) {
         accessibilityRole="button"
         style={[styles.actionBtn, { backgroundColor: palette.primary }]}>
         <Text style={[styles.actionBtnText, { color: palette.textInverse }]}>
-          {isEmptyGarden ? 'Identify Your First Plant' : 'Show All Plants'}
+          {isEmptyGarden
+            ? t('garden.empty.emptyAction')
+            : t('garden.empty.noMatchesAction')}
         </Text>
       </SpringPressable>
     </SurfaceCard>

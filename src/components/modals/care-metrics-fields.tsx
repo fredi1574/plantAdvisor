@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { BotanicalInput } from '@/components/ui/botanical-input';
@@ -95,6 +96,7 @@ export function CareMetricsFields({
   compact = false,
   showFieldLabels = true,
 }: CareMetricsFieldsProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const inputSurface = compact ? 'surface' : 'primary';
 
@@ -113,7 +115,9 @@ export function CareMetricsFields({
             compact ? styles.compactLabel : styles.sectionLabel,
             { color: compact ? palette.textSecondary : palette.textPrimary },
           ]}>
-          {compact ? 'Soil Moisture Prior' : 'Prior Soil Moisture (Optional)'}
+          {compact
+            ? t('careMetrics.soilMoistureCompact')
+            : t('careMetrics.soilMoistureFull')}
         </Text>
         <View style={styles.chipRow}>
           {SOIL_MOISTURE_OPTIONS.map((opt) => {
@@ -121,7 +125,7 @@ export function CareMetricsFields({
             return (
               <Chip
                 key={opt.key}
-                label={opt.label}
+                label={t(`plantOptions.soilMoisture.${opt.key}`)}
                 variant={compact ? 'surface' : 'subtle'}
                 selected={active}
                 selectedStyle={compact ? 'soft' : 'solid'}
@@ -137,7 +141,7 @@ export function CareMetricsFields({
       <View style={styles.fieldGroup}>
         {showFieldLabels && (
           <Text style={[styles.sectionLabel, { color: palette.textPrimary }]}>
-            Optional Growth & Watering Metrics
+            {t('careMetrics.metricsHeader')}
           </Text>
         )}
 
@@ -146,7 +150,7 @@ export function CareMetricsFields({
             {showFieldLabels && (
               <Text
                 style={[styles.subFieldLabel, { color: palette.textSecondary }]}>
-                Root Length (cm)
+                {t('careMetrics.rootLengthLabel')}
               </Text>
             )}
             <BotanicalInput
@@ -155,7 +159,11 @@ export function CareMetricsFields({
               value={value.rootLengthCm}
               onChangeText={(v) => updateField('rootLengthCm', v)}
               keyboardType="decimal-pad"
-              placeholder={showFieldLabels ? 'e.g., 8.5' : 'Root (cm)'}
+              placeholder={
+                showFieldLabels
+                  ? t('careMetrics.rootPlaceholder')
+                  : t('careMetrics.rootPlaceholderCompact')
+              }
             />
           </View>
 
@@ -163,7 +171,7 @@ export function CareMetricsFields({
             {showFieldLabels && (
               <Text
                 style={[styles.subFieldLabel, { color: palette.textSecondary }]}>
-                Stem Height (cm)
+                {t('careMetrics.stemHeightLabel')}
               </Text>
             )}
             <BotanicalInput
@@ -172,7 +180,11 @@ export function CareMetricsFields({
               value={value.stemHeightCm}
               onChangeText={(v) => updateField('stemHeightCm', v)}
               keyboardType="decimal-pad"
-              placeholder={showFieldLabels ? 'e.g., 14.0' : 'Stem (cm)'}
+              placeholder={
+                showFieldLabels
+                  ? t('careMetrics.stemPlaceholder')
+                  : t('careMetrics.stemPlaceholderCompact')
+              }
             />
           </View>
         </View>
@@ -182,7 +194,7 @@ export function CareMetricsFields({
             {showFieldLabels && (
               <Text
                 style={[styles.subFieldLabel, { color: palette.textSecondary }]}>
-                Leaf Count
+                {t('careMetrics.leafCountLabel')}
               </Text>
             )}
             <BotanicalInput
@@ -191,7 +203,11 @@ export function CareMetricsFields({
               value={value.leafCount}
               onChangeText={(v) => updateField('leafCount', v)}
               keyboardType="number-pad"
-              placeholder={showFieldLabels ? 'e.g., 6' : 'Leaf count'}
+              placeholder={
+                showFieldLabels
+                  ? t('careMetrics.leafPlaceholder')
+                  : t('careMetrics.leafPlaceholderCompact')
+              }
             />
           </View>
 
@@ -199,7 +215,7 @@ export function CareMetricsFields({
             {showFieldLabels && (
               <Text
                 style={[styles.subFieldLabel, { color: palette.textSecondary }]}>
-                Water Volume (ml)
+                {t('careMetrics.waterVolumeLabel')}
               </Text>
             )}
             <BotanicalInput
@@ -208,7 +224,11 @@ export function CareMetricsFields({
               value={value.waterAmountMl}
               onChangeText={(v) => updateField('waterAmountMl', v)}
               keyboardType="number-pad"
-              placeholder={showFieldLabels ? 'e.g., 250' : 'Water (ml)'}
+              placeholder={
+                showFieldLabels
+                  ? t('careMetrics.waterPlaceholder')
+                  : t('careMetrics.waterPlaceholderCompact')
+              }
             />
           </View>
         </View>

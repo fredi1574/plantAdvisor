@@ -5,6 +5,8 @@
 import '@/global.css';
 
 import { Platform } from 'react-native';
+
+import i18n from '@/i18n';
 import type { ActionUrgency, HealthStatus } from '@/types/plant';
 
 export const LightPalette = {
@@ -176,28 +178,62 @@ export function getUrgencyBadgeTheme(palette: ThemePalette): Record<
 export const HealthBadgeTheme = getHealthBadgeTheme(LightPalette);
 export const UrgencyBadgeTheme = getUrgencyBadgeTheme(LightPalette);
 
-export const Fonts = Platform.select({
-  web: {
-    sans: 'PlusJakartaSans_400Regular, var(--font-display)',
-    sansMedium: 'PlusJakartaSans_500Medium, var(--font-display)',
-    sansSemiBold: 'PlusJakartaSans_600SemiBold, var(--font-display)',
-    sansBold: 'PlusJakartaSans_700Bold, var(--font-display)',
-    serif: 'Fraunces_700Bold, var(--font-serif)',
-    serifSemiBold: 'Fraunces_600SemiBold, var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
+function isRussianLocaleActive(): boolean {
+  return Boolean(i18n.language?.startsWith('ru'));
+}
+
+const WebFonts = {
+  sans: 'PlusJakartaSans_400Regular, Manrope_400Regular, var(--font-display)',
+  sansMedium:
+    'PlusJakartaSans_500Medium, Manrope_500Medium, var(--font-display)',
+  sansSemiBold:
+    'PlusJakartaSans_600SemiBold, Manrope_600SemiBold, var(--font-display)',
+  sansBold: 'PlusJakartaSans_700Bold, Manrope_700Bold, var(--font-display)',
+  serif: 'Fraunces_700Bold, Lora_700Bold, var(--font-serif)',
+  serifSemiBold: 'Fraunces_600SemiBold, Lora_600SemiBold, var(--font-serif)',
+  rounded: 'var(--font-rounded)',
+  mono: 'var(--font-mono)',
+};
+
+const NativeFonts = {
+  get sans(): string {
+    return isRussianLocaleActive()
+      ? 'Manrope_400Regular'
+      : 'PlusJakartaSans_400Regular';
   },
-  default: {
-    sans: 'PlusJakartaSans_400Regular',
-    sansMedium: 'PlusJakartaSans_500Medium',
-    sansSemiBold: 'PlusJakartaSans_600SemiBold',
-    sansBold: 'PlusJakartaSans_700Bold',
-    serif: 'Fraunces_700Bold',
-    serifSemiBold: 'Fraunces_600SemiBold',
-    rounded: Platform.OS === 'ios' ? 'ui-rounded' : 'PlusJakartaSans_600SemiBold',
-    mono: Platform.OS === 'ios' ? 'ui-monospace' : 'monospace',
+  get sansMedium(): string {
+    return isRussianLocaleActive()
+      ? 'Manrope_500Medium'
+      : 'PlusJakartaSans_500Medium';
   },
-});
+  get sansSemiBold(): string {
+    return isRussianLocaleActive()
+      ? 'Manrope_600SemiBold'
+      : 'PlusJakartaSans_600SemiBold';
+  },
+  get sansBold(): string {
+    return isRussianLocaleActive()
+      ? 'Manrope_700Bold'
+      : 'PlusJakartaSans_700Bold';
+  },
+  get serif(): string {
+    return isRussianLocaleActive() ? 'Lora_700Bold' : 'Fraunces_700Bold';
+  },
+  get serifSemiBold(): string {
+    return isRussianLocaleActive()
+      ? 'Lora_600SemiBold'
+      : 'Fraunces_600SemiBold';
+  },
+  get rounded(): string {
+    if (Platform.OS === 'ios') return 'ui-rounded';
+    return isRussianLocaleActive()
+      ? 'Manrope_600SemiBold'
+      : 'PlusJakartaSans_600SemiBold';
+  },
+  mono: Platform.OS === 'ios' ? 'ui-monospace' : 'monospace',
+};
+
+export const Fonts = Platform.OS === 'web' ? WebFonts : NativeFonts;
 
 export const Typography = {
   eyebrow: {

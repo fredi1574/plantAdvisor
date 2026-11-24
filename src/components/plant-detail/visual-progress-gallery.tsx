@@ -25,10 +25,10 @@ interface VisualProgressGalleryProps {
   acquiredAt?: string;
 }
 
-function formatPhotoDate(iso: string): string {
+function formatPhotoDate(iso: string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
   });
@@ -40,7 +40,7 @@ export function VisualProgressGallery({
   plantPhotoUri,
   acquiredAt,
 }: VisualProgressGalleryProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const palette = usePalette();
   const [compareMode, setCompareMode] = useState(false);
   const [previewItem, setPreviewItem] = useState<ProgressPhotoItem | null>(
@@ -105,12 +105,16 @@ export function VisualProgressGallery({
     <View style={styles.section}>
       <View style={styles.headerRow}>
         <Text style={[styles.eyebrow, { color: palette.textMuted }]}>
-          VISUAL PROGRESS ({photos.length})
+          {t('plantDetail.gallery.eyebrow', { count: photos.length })}
         </Text>
 
         {canCompare && (
           <Chip
-            label={compareMode ? 'Timeline' : 'Before & After'}
+            label={
+              compareMode
+                ? t('plantDetail.gallery.timeline')
+                : t('plantDetail.gallery.beforeAndAfter')
+            }
             variant="subtle"
             selected={compareMode}
             selectedStyle="solid"
@@ -134,11 +138,15 @@ export function VisualProgressGallery({
               source={{ uri: earliest.uri }}
               style={styles.compareImage}
               contentFit="cover"
+              transition={180}
+              cachePolicy="memory-disk"
             />
             <Text
               style={[styles.compareTag, { color: palette.textPrimary }]}
               numberOfLines={1}>
-              Before · {formatPhotoDate(earliest.timestamp)}
+              {t('plantDetail.gallery.beforeTag', {
+                date: formatPhotoDate(earliest.timestamp, i18n.language),
+              })}
             </Text>
             <Text
               style={[styles.compareSub, { color: palette.textMuted }]}
@@ -154,11 +162,15 @@ export function VisualProgressGallery({
               source={{ uri: latest.uri }}
               style={styles.compareImage}
               contentFit="cover"
+              transition={180}
+              cachePolicy="memory-disk"
             />
             <Text
               style={[styles.compareTag, { color: palette.primary }]}
               numberOfLines={1}>
-              Latest · {formatPhotoDate(latest.timestamp)}
+              {t('plantDetail.gallery.latestTag', {
+                date: formatPhotoDate(latest.timestamp, i18n.language),
+              })}
             </Text>
             <Text
               style={[styles.compareSub, { color: palette.textMuted }]}
@@ -187,10 +199,12 @@ export function VisualProgressGallery({
                 source={{ uri: photo.uri }}
                 style={styles.thumbImage}
                 contentFit="cover"
+                transition={180}
+                cachePolicy="memory-disk"
               />
               <View style={styles.thumbMeta}>
                 <Text style={[styles.thumbDate, { color: palette.primary }]}>
-                  {formatPhotoDate(photo.timestamp)}
+                  {formatPhotoDate(photo.timestamp, i18n.language)}
                 </Text>
                 <Text
                   style={[styles.thumbLabel, { color: palette.textSecondary }]}
@@ -208,7 +222,7 @@ export function VisualProgressGallery({
         uri={previewItem?.uri}
         caption={
           previewItem
-            ? `${formatPhotoDate(previewItem.timestamp)} · ${previewItem.label}`
+            ? `${formatPhotoDate(previewItem.timestamp, i18n.language)} · ${previewItem.label}`
             : undefined
         }
         onClose={() => setPreviewItem(null)}

@@ -1,5 +1,6 @@
 import { CheckCircle2, Trash2, X } from 'lucide-react-native';
 import React, { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -52,6 +53,7 @@ export function BottomSheetModal({
   onDelete,
   children,
 }: BottomSheetModalProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const insets = useSafeAreaInsets();
 
@@ -156,7 +158,7 @@ export function BottomSheetModal({
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Cancel"
+              accessibilityLabel={t('common.cancel')}
               style={({ pressed }) => [
                 styles.cancelBtn,
                 {
@@ -167,7 +169,7 @@ export function BottomSheetModal({
               ]}>
               <Text
                 style={[styles.cancelBtnText, { color: palette.textSecondary }]}>
-                Cancel
+                {t('common.cancel')}
               </Text>
             </Pressable>
 

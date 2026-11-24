@@ -1,5 +1,6 @@
 import { HelpCircle, Sparkles } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Pressable,
@@ -39,7 +40,14 @@ export function DiagnosisFollowUpBox({
   onChangeAnswer,
   onRefine,
 }: DiagnosisFollowUpBoxProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
+  const quickChipsRaw = t('plantDetail.healthCard.quickChips', {
+    returnObjects: true,
+  }) as string[];
+  const quickChips = Array.isArray(quickChipsRaw)
+    ? quickChipsRaw
+    : QUICK_FOLLOW_UP_CHIPS;
 
   if (questions.length === 0) return null;
 
@@ -48,7 +56,7 @@ export function DiagnosisFollowUpBox({
       <View style={styles.titleRow}>
         <HelpCircle size={14} color={palette.primary} />
         <Text style={[styles.title, { color: palette.primary }]}>
-          Botanical Follow-Up Checks
+          {t('plantDetail.healthCard.followUpTitle')}
         </Text>
       </View>
 
@@ -60,7 +68,7 @@ export function DiagnosisFollowUpBox({
               • {question}
             </Text>
             <View style={styles.chipsRow}>
-              {QUICK_FOLLOW_UP_CHIPS.map((chip) => {
+              {quickChips.map((chip) => {
                 const selected = answer === chip;
                 return (
                   <Chip
@@ -79,7 +87,7 @@ export function DiagnosisFollowUpBox({
             <BotanicalInput
               value={answer}
               onChangeText={(value) => onChangeAnswer(idx, value)}
-              placeholder="Or type a short observation..."
+              placeholder={t('plantDetail.healthCard.followUpPlaceholder')}
             />
           </View>
         );
@@ -101,8 +109,8 @@ export function DiagnosisFollowUpBox({
         )}
         <Text style={[styles.refineBtnText, { color: palette.textInverse }]}>
           {isRefining
-            ? 'Refining Diagnosis...'
-            : 'Refine Diagnosis with Answers'}
+            ? t('plantDetail.healthCard.refiningBtn')
+            : t('plantDetail.healthCard.refineBtn')}
         </Text>
       </Pressable>
     </View>

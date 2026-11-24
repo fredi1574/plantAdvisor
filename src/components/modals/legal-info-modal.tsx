@@ -1,5 +1,6 @@
 import { FileText, ShieldCheck, X } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   Pressable,
@@ -27,55 +28,11 @@ interface LegalInfoModalProps {
   onClose: () => void;
 }
 
-const LEGAL_CONTENT: Record<
-  LegalDocumentType,
-  {
-    title: string;
-    updatedAt: string;
-    sections: { heading: string; body: string }[];
-  }
-> = {
-  privacy: {
-    title: 'Privacy Policy',
-    updatedAt: 'Last updated: November 2026',
-    sections: [
-      {
-        heading: '1. Data We Collect',
-        body: 'FloraLog stores the plant profiles, care logs, room presets, and photos you choose to add. If you sign in, your email address and display name are stored in Supabase Auth to sync your garden across devices.',
-      },
-      {
-        heading: '2. Camera, Photos & AI Scans',
-        body: 'Camera and photo library permissions are used solely when you attach specimen photos or run an AI Plant Identification / Health Scan. Photos submitted for AI scans are sent securely to our Supabase Edge Function for analysis and are not sold or shared with third-party advertisers.',
-      },
-      {
-        heading: '3. On-Device Notifications',
-        body: 'Watering reminders and daily garden digests are scheduled 100% locally on your device using Expo Notifications. No push tracking tokens are collected.',
-      },
-      {
-        heading: '4. Account & Data Deletion',
-        body: 'You can permanently delete your account, cloud garden records, and uploaded photos at any time directly inside the app via Profile → Data & Account → Delete Account.',
-      },
-    ],
-  },
-  terms: {
-    title: 'Terms of Service',
-    updatedAt: 'Last updated: November 2026',
-    sections: [
-      {
-        heading: '1. Botanical Guidance Disclaimer',
-        body: 'FloraLog provides AI-assisted plant identification, health observations, and care schedules for informational purposes. Always verify pet toxicity and urgent plant-care decisions with a qualified veterinarian or horticulturist.',
-      },
-      {
-        heading: '2. Your Content',
-        body: 'You retain full ownership of all photos, notes, and plant records you upload to FloraLog. You may edit or permanently delete your content at any time.',
-      },
-      {
-        heading: '3. Fair Use of AI Scans',
-        body: 'Daily AI scan quotas help keep the service fast and reliable for all gardeners. Automated scraping or abusive traffic against the AI endpoints is prohibited.',
-      },
-    ],
-  },
-};
+interface LegalDocContent {
+  title: string;
+  updatedAt: string;
+  sections: { heading: string; body: string }[];
+}
 
 /**
  * In-app Privacy Policy and Terms of Service reader modal for store compliance.
@@ -85,8 +42,11 @@ export function LegalInfoModal({
   document,
   onClose,
 }: LegalInfoModalProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
-  const content = LEGAL_CONTENT[document];
+  const content = t(`legal.${document}`, {
+    returnObjects: true,
+  }) as LegalDocContent;
 
   return (
     <Modal

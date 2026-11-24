@@ -121,7 +121,8 @@ export function IdentifyPlantFlow({
     useState(manualEntryRevision);
   if (manualEntryRevision !== prevManualRevision) {
     setPrevManualRevision(manualEntryRevision);
-    const manualName = searchQuery.trim() || 'Custom Plant';
+    const manualName =
+      searchQuery.trim() || t('scan.identify.customPlantFallback');
     setForm((prev) => ({ ...prev, nickname: manualName }));
     setIdResult(buildManualIdentification(manualName));
   }
@@ -135,7 +136,7 @@ export function IdentifyPlantFlow({
 
   const handleRunIdentification = async () => {
     if (!imageUri && !searchQuery.trim()) {
-      onError('Please enter a plant name or select/capture a photo first.');
+      onError(t('scan.identify.missingInputError'));
       return;
     }
     if (aiQuota && aiQuota.remaining <= 0) {
@@ -155,7 +156,7 @@ export function IdentifyPlantFlow({
         onQuotaExceeded(err.quota);
       } else {
         onError(
-          err instanceof Error ? err.message : 'Failed to identify plant.'
+          err instanceof Error ? err.message : t('scan.identify.failedError')
         );
       }
     } finally {

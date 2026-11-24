@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { Camera, Image as ImageIcon, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -21,7 +22,8 @@ import { usePlantStore } from '@/store/usePlantStore';
 import type { CareEventType, UserPlant } from '@/types/plant';
 
 const getQuickActions = (
-  palette: ThemePalette
+  palette: ThemePalette,
+  t: (key: string) => string
 ): {
   type: CareEventType;
   label: string;
@@ -31,45 +33,44 @@ const getQuickActions = (
 }[] => [
     {
       type: 'water',
-      label: 'Log Water',
-      defaultTitle: 'Thorough Watering',
-      defaultNotes: 'Watered after checking substrate dryness.',
+      label: t('plantDetail.composer.actions.water.label'),
+      defaultTitle: t('plantDetail.composer.actions.water.defaultTitle'),
+      defaultNotes: t('plantDetail.composer.actions.water.defaultNotes'),
       color: palette.waterBlue,
     },
     {
       type: 'propagation',
-      label: 'Prop Milestone',
-      defaultTitle: 'Propagation Growth Check',
-      defaultNotes: 'Logged new root/shoot elongation milestone.',
+      label: t('plantDetail.composer.actions.propagation.label'),
+      defaultTitle: t('plantDetail.composer.actions.propagation.defaultTitle'),
+      defaultNotes: t('plantDetail.composer.actions.propagation.defaultNotes'),
       color: palette.accentTerracotta,
     },
     {
       type: 'fertilize',
-      label: 'Fertilize',
-      defaultTitle: 'Diluted Nutrient Feed',
-      defaultNotes: 'Applied balanced liquid fertilizer at 1/2 strength.',
+      label: t('plantDetail.composer.actions.fertilize.label'),
+      defaultTitle: t('plantDetail.composer.actions.fertilize.defaultTitle'),
+      defaultNotes: t('plantDetail.composer.actions.fertilize.defaultNotes'),
       color: palette.primary,
     },
     {
       type: 'prune',
-      label: 'Prune',
-      defaultTitle: 'Canopy & Leaf Pruning',
-      defaultNotes: 'Removed spent lower foliage and pinched apical tip.',
+      label: t('plantDetail.composer.actions.prune.label'),
+      defaultTitle: t('plantDetail.composer.actions.prune.defaultTitle'),
+      defaultNotes: t('plantDetail.composer.actions.prune.defaultNotes'),
       color: palette.primaryMuted,
     },
     {
       type: 'repot',
-      label: 'Repot',
-      defaultTitle: 'Substrate & Pot Refresh',
-      defaultNotes: 'Checked root health and refreshed gritty aerated substrate.',
+      label: t('plantDetail.composer.actions.repot.label'),
+      defaultTitle: t('plantDetail.composer.actions.repot.defaultTitle'),
+      defaultNotes: t('plantDetail.composer.actions.repot.defaultNotes'),
       color: palette.accentTerracotta,
     },
     {
       type: 'note',
-      label: 'Add Note',
-      defaultTitle: 'Botanical Observation Note',
-      defaultNotes:
-        'Leaves looking turgid and well-oriented toward window light.',
+      label: t('plantDetail.composer.actions.note.label'),
+      defaultTitle: t('plantDetail.composer.actions.note.defaultTitle'),
+      defaultNotes: t('plantDetail.composer.actions.note.defaultNotes'),
       color: palette.textSecondary,
     },
   ];
@@ -86,8 +87,12 @@ export function CareEventComposer({
   plant,
   onShowToast,
 }: CareEventComposerProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
-  const quickActions = useMemo(() => getQuickActions(palette), [palette]);
+  const quickActions = useMemo(
+    () => getQuickActions(palette, t),
+    [palette, t]
+  );
 
   const logCareEvent = usePlantStore((s) => s.logCareEvent);
   const waterPlantNow = usePlantStore((s) => s.waterPlantNow);
@@ -141,7 +146,12 @@ export function CareEventComposer({
     setCustomNote('');
     setPhotoUri(undefined);
     setMetricsDraft(EMPTY_CARE_METRICS_DRAFT);
-    onShowToast(`Logged ${template.label} for "${plant.nickname}".`);
+    onShowToast(
+      t('plantDetail.composer.loggedToast', {
+        action: template.label,
+        name: plant.nickname,
+      })
+    );
   };
 
   return (
@@ -149,10 +159,14 @@ export function CareEventComposer({
       <View style={styles.headerRow}>
         <Text
           style={[styles.sectionHeaderTitle, { color: palette.textPrimary }]}>
-          Quick-Log
+          {t('plantDetail.composer.title')}
         </Text>
         <Chip
-          label={showDetailedLog ? 'Hide Details' : 'Photo & Metrics'}
+          label={
+            showDetailedLog
+              ? t('plantDetail.composer.hideDetails')
+              : t('plantDetail.composer.photoAndMetrics')
+          }
           selected={showDetailedLog}
           icon={
             <Camera
@@ -172,7 +186,7 @@ export function CareEventComposer({
         compact={false}
         value={customNote}
         onChangeText={setCustomNote}
-        placeholder="Optional note (e.g., 'Root reached 10.5cm' or 'Bottom-soaked for 15m')..."
+        placeholder={t('plantDetail.composer.notePlaceholder')}
       />
 
       {showDetailedLog && (
@@ -193,7 +207,7 @@ export function CareEventComposer({
                   styles.photoPickerBtnText,
                   { color: palette.textPrimary },
                 ]}>
-                Camera
+                {t('editPlant.camera')}
               </Text>
             </Pressable>
             <Pressable
@@ -211,7 +225,7 @@ export function CareEventComposer({
                   styles.photoPickerBtnText,
                   { color: palette.textPrimary },
                 ]}>
-                Library
+                {t('editPlant.library')}
               </Text>
             </Pressable>
           </View>
@@ -224,7 +238,7 @@ export function CareEventComposer({
                 contentFit="cover"
               />
               <Chip
-                label="Remove Photo"
+                label={t('plantDetail.composer.removePhoto')}
                 icon={<X size={12} color={palette.textSecondary} />}
                 onPress={() => setPhotoUri(undefined)}
               />

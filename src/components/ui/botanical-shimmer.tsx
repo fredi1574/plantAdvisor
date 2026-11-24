@@ -1,5 +1,6 @@
 import { Sparkles, Stethoscope } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View, type DimensionValue } from 'react-native';
 import Animated, {
   Easing,
@@ -77,8 +78,15 @@ interface AiScanShimmerCardProps {
  * shown while AI plant identification or health diagnosis is running.
  */
 export function AiScanShimmerCard({ mode }: AiScanShimmerCardProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
-  const stages = STAGE_COPY[mode];
+  const stagesRaw = t(
+    mode === 'identify'
+      ? 'scan.shimmer.identifyStages'
+      : 'scan.shimmer.diagnoseStages',
+    { returnObjects: true }
+  ) as string[];
+  const stages = Array.isArray(stagesRaw) ? stagesRaw : STAGE_COPY[mode];
   const [stageIndex, setStageIndex] = useState(0);
   const [prevMode, setPrevMode] = useState(mode);
 
@@ -98,6 +106,7 @@ export function AiScanShimmerCard({ mode }: AiScanShimmerCardProps) {
 
   return (
     <View
+      accessible
       accessibilityRole="progressbar"
       accessibilityLabel={stages[stageIndex]}
       style={[
@@ -117,7 +126,9 @@ export function AiScanShimmerCard({ mode }: AiScanShimmerCardProps) {
         </View>
         <View style={styles.headerTextCol}>
           <Text style={[styles.eyebrow, { color: palette.primary }]}>
-            {mode === 'identify' ? 'BOTANICAL ANALYSIS' : 'PATHOLOGY SCAN'}
+            {mode === 'identify'
+              ? t('scan.shimmer.identifyEyebrow')
+              : t('scan.shimmer.diagnoseEyebrow')}
           </Text>
           <Text style={[styles.stageText, { color: palette.textPrimary }]}>
             {stages[stageIndex]}

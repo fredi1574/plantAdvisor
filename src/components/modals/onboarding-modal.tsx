@@ -1,5 +1,6 @@
 import { ArrowRight, Camera, Sprout } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SpringPressable } from '@/components/ui/animated-wrappers';
@@ -25,28 +26,10 @@ interface OnboardingModalProps {
   onExploreSample: () => void;
 }
 
-const SLIDES = [
-  {
-    key: 'welcome',
-    eyebrow: 'WELCOME TO FLORALOG',
-    title: 'Your calm botanical notebook',
-    body: 'Track every houseplant, succulent, and propagation in one place—with adaptive watering schedules and chronological care logs.',
-    Illustration: PottedSucculentIllustration,
-  },
-  {
-    key: 'ai',
-    eyebrow: 'AI BOTANIST & HEALTH SCANS',
-    title: 'Identify & diagnose in seconds',
-    body: 'Snap a leaf photo to auto-identify species with pet-safety warnings, or run context-aware health scans paired with your care history.',
-    Illustration: SproutSearchIllustration,
-  },
-  {
-    key: 'care',
-    eyebrow: 'EFFORTLESS CARE RHYTHM',
-    title: 'Never miss a watering day',
-    body: 'Get gentle on-device reminders, batch-water thirsty plants with instant Undo, and watch propagation roots grow ready for soil.',
-    Illustration: JournalSproutIllustration,
-  },
+const SLIDE_KEYS = [
+  { key: 'welcome', Illustration: PottedSucculentIllustration },
+  { key: 'ai', Illustration: SproutSearchIllustration },
+  { key: 'care', Illustration: JournalSproutIllustration },
 ] as const;
 
 /**
@@ -58,11 +41,12 @@ export function OnboardingModal({
   onStartScan,
   onExploreSample,
 }: OnboardingModalProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const [step, setStep] = useState(0);
 
-  const slide = SLIDES[step];
-  const isLast = step === SLIDES.length - 1;
+  const slide = SLIDE_KEYS[step];
+  const isLast = step === SLIDE_KEYS.length - 1;
   const SlideIllustration = slide.Illustration;
 
   return (
@@ -82,7 +66,7 @@ export function OnboardingModal({
           ]}>
           <View style={styles.topRow}>
             <Text style={[styles.eyebrow, { color: palette.primary }]}>
-              {slide.eyebrow}
+              {t(`onboarding.slides.${slide.key}.eyebrow`)}
             </Text>
             <Pressable
               onPress={() => {
@@ -93,7 +77,7 @@ export function OnboardingModal({
               accessibilityRole="button"
               accessibilityLabel="Skip onboarding">
               <Text style={[styles.skipText, { color: palette.textMuted }]}>
-                Skip
+                {t('onboarding.skip')}
               </Text>
             </Pressable>
           </View>
@@ -108,15 +92,15 @@ export function OnboardingModal({
                 styles.title,
                 { color: palette.textPrimary, fontFamily: Fonts?.serif },
               ]}>
-              {slide.title}
+              {t(`onboarding.slides.${slide.key}.title`)}
             </Text>
             <Text style={[styles.body, { color: palette.textSecondary }]}>
-              {slide.body}
+              {t(`onboarding.slides.${slide.key}.body`)}
             </Text>
           </View>
 
           <View style={styles.dotsRow}>
-            {SLIDES.map((s, idx) => (
+            {SLIDE_KEYS.map((s, idx) => (
               <View
                 key={s.key}
                 style={[
@@ -150,7 +134,7 @@ export function OnboardingModal({
                     styles.primaryBtnText,
                     { color: palette.textInverse },
                   ]}>
-                  Identify My First Plant
+                  {t('onboarding.identifyFirst')}
                 </Text>
               </SpringPressable>
 
@@ -172,7 +156,7 @@ export function OnboardingModal({
                 <Sprout size={15} color={palette.primary} />
                 <Text
                   style={[styles.secondaryBtnText, { color: palette.primary }]}>
-                  Explore Sample Conservatory
+                  {t('onboarding.exploreSample')}
                 </Text>
               </Pressable>
             </View>
@@ -180,14 +164,14 @@ export function OnboardingModal({
             <SpringPressable
               onPress={() => {
                 triggerLightHaptic();
-                setStep((prev) => Math.min(SLIDES.length - 1, prev + 1));
+                setStep((prev) => Math.min(SLIDE_KEYS.length - 1, prev + 1));
               }}
               accessibilityRole="button"
               accessibilityLabel="Next onboarding slide"
               style={[styles.primaryBtn, { backgroundColor: palette.primary }]}>
               <Text
                 style={[styles.primaryBtnText, { color: palette.textInverse }]}>
-                Continue
+                {t('onboarding.continue')}
               </Text>
               <ArrowRight size={16} color={palette.textInverse} />
             </SpringPressable>

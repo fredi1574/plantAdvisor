@@ -1,5 +1,6 @@
 import { AlertTriangle, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -43,6 +44,7 @@ export function DeleteAccountModal({
   onClose,
   onConfirmDelete,
 }: DeleteAccountModalProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -64,9 +66,7 @@ export function DeleteAccountModal({
     try {
       const res = await onConfirmDelete();
       if (!res.ok) {
-        setErrorMessage(
-          res.error || 'Could not delete your account. Please try again.'
-        );
+        setErrorMessage(res.error || t('deleteAccountModal.defaultError'));
         return;
       }
       setConfirmText('');
@@ -120,29 +120,28 @@ export function DeleteAccountModal({
               styles.title,
               { color: palette.textPrimary, fontFamily: Fonts?.serif },
             ]}>
-            Delete Account Permanently?
+            {t('deleteAccountModal.title')}
           </Text>
 
           <Text style={[styles.subtitle, { color: palette.textSecondary }]}>
-            This will permanently erase{' '}
+            {t('deleteAccountModal.subtitlePrefix')}
             {email ? (
               <Text style={[styles.boldText, { color: palette.textPrimary }]}>
                 {email}
               </Text>
             ) : (
-              'your account'
+              t('deleteAccountModal.fallbackAccount')
             )}
-            , including all saved plants, chronological care logs, AI health
-            scans, and uploaded photos. This action cannot be undone.
+            {t('deleteAccountModal.subtitleSuffix')}
           </Text>
 
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: palette.textPrimary }]}>
-              Type{' '}
+              {t('deleteAccountModal.typePrefix')}
               <Text style={{ color: palette.criticalText }}>
                 {CONFIRM_KEYWORD}
-              </Text>{' '}
-              to confirm
+              </Text>
+              {t('deleteAccountModal.typeSuffix')}
             </Text>
             <BotanicalInput
               surface="primary"
@@ -184,8 +183,8 @@ export function DeleteAccountModal({
               )}
               <Text style={styles.deleteBtnText}>
                 {isDeleting
-                  ? 'Deleting Account...'
-                  : 'Permanently Delete Account'}
+                  ? t('deleteAccountModal.deletingBtn')
+                  : t('deleteAccountModal.confirmBtn')}
               </Text>
             </SpringPressable>
 
@@ -203,7 +202,7 @@ export function DeleteAccountModal({
               ]}>
               <Text
                 style={[styles.cancelBtnText, { color: palette.textPrimary }]}>
-                Cancel
+                {t('common.cancel')}
               </Text>
             </Pressable>
           </View>
