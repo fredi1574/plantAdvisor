@@ -450,6 +450,9 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     set({ isLoading: true, authError: null });
 
     try {
+      const googleMod = getGoogleSigninModule();
+      await googleMod?.GoogleSignin.signOut().catch(() => undefined);
+
       if (supabase) {
         await deleteAccountInSupabase();
         await supabase.auth.signOut({ scope: 'local' });
@@ -481,10 +484,8 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     set({ isLoading: true, authError: null });
     try {
       await clearLocalAuthSession();
-      if (googleConfigured) {
-        const googleMod = getGoogleSigninModule();
-        await googleMod?.GoogleSignin.signOut().catch(() => undefined);
-      }
+      const googleMod = getGoogleSigninModule();
+      await googleMod?.GoogleSignin.signOut().catch(() => undefined);
       if (supabase) {
         await supabase.auth.signOut();
       }

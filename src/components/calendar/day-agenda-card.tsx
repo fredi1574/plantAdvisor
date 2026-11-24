@@ -214,6 +214,8 @@ function AgendaTaskItem({
           source={{ uri: plant.photoUri }}
           style={[styles.taskThumb, { backgroundColor: palette.bgElevated }]}
           contentFit="cover"
+          transition={180}
+          cachePolicy="memory-disk"
         />
 
         <View style={styles.taskInfoCol}>

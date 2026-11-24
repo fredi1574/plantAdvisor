@@ -1,5 +1,6 @@
 import { CloudOff, CloudUpload, RefreshCw } from 'lucide-react-native';
-import React from 'react';
+import React, { useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,8 +8,22 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeOutDown,
+  useReducedMotion,
+} from 'react-native-reanimated';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
-import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
+import {
+  BorderWidth,
+  BottomTabInset,
+  FloatingShadow,
+  MaxContentWidth,
+  Radius,
+  Spacing,
+  Typography,
+} from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
 
 interface SyncStatusBannerProps {
@@ -18,10 +33,14 @@ interface SyncStatusBannerProps {
   localPhotoCount?: number;
   syncError: string | null;
   onSyncNow: () => void;
+  /** Render as a floating toast notification detached from page flow. */
+  floating?: boolean;
+  /** Extra bottom offset above safe-area inset (defaults to BottomTabInset). */
+  bottomOffset?: number;
 }
 
 /**
- * Compact banner surfacing queued offline mutations, unuploaded local photos,
+ * Compact banner/toast surfacing queued offline mutations, unuploaded local photos,
  * or cloud sync errors with a one-tap retry action.
  */
 export function SyncStatusBanner({
@@ -31,8 +50,14 @@ export function SyncStatusBanner({
   localPhotoCount = 0,
   syncError,
   onSyncNow,
+  floating = false,
+  bottomOffset = BottomTabInset,
 }: SyncStatusBannerProps) {
+  const { t } = useTranslation();
   const palette = usePalette();
+  const insets = useContext(SafeAreaInsetsContext);
+  const bottomInset = insets?.bottom ?? 0;
+  const reducedMotion = useReducedMotion();
 
   const shouldShow =
     visible &&
@@ -47,18 +72,14 @@ export function SyncStatusBanner({
   const borderColor = hasWarning ? palette.attentionBorder : palette.primaryBorder;
   const accentColor = hasWarning ? palette.attentionText : palette.primary;
 
-  let statusLabel = 'Syncing with Supabase...';
+  let statusLabel = t('syncBanner.syncing');
   if (!isSyncing) {
     const parts: string[] = [];
     if (pendingSyncCount > 0) {
-      parts.push(
-        `${pendingSyncCount} ${pendingSyncCount === 1 ? 'change' : 'changes'} pending`
-      );
+      parts.push(t('syncBanner.changesPending', { count: pendingSyncCount }));
     }
     if (localPhotoCount > 0) {
-      parts.push(
-        `${localPhotoCount} ${localPhotoCount === 1 ? 'photo' : 'photos'} waiting to upload`
-      );
+      parts.push(t('syncBanner.photosWaiting', { count: localPhotoCount }));
     }
 
     if (parts.length > 0) {
@@ -68,10 +89,13 @@ export function SyncStatusBanner({
     }
   }
 
-  return (
+  const content = (
     <View
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
       style={[
         styles.banner,
+        floating && styles.floatingBanner,
         {
           backgroundColor: bgColor,
           borderColor,
@@ -108,14 +132,46 @@ export function SyncStatusBanner({
         accessibilityLabel="Sync garden now">
         <RefreshCw size={12} color={accentColor} />
         <Text style={[styles.actionText, { color: accentColor }]}>
-          {isSyncing ? 'Syncing' : 'Sync Now'}
+          {isSyncing ? t('syncBanner.syncingShort') : t('syncBanner.syncNow')}
         </Text>
       </Pressable>
+    </View>
+  );
+
+  if (!floating) {
+    return content;
+  }
+
+  return (
+    <View
+      pointerEvents="box-none"
+      style={[
+        styles.floatingWrapper,
+        { bottom: bottomInset + bottomOffset },
+      ]}>
+      <Animated.View
+        entering={reducedMotion ? undefined : FadeInDown.duration(220)}
+        exiting={reducedMotion ? undefined : FadeOutDown.duration(180)}
+        style={styles.floatingInner}>
+        {content}
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  floatingWrapper: {
+    position: 'absolute',
+    left: Spacing.lg,
+    right: Spacing.lg,
+    zIndex: 9998,
+    elevation: 9998,
+    alignItems: 'center',
+  },
+  floatingInner: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+  },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -125,6 +181,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+  },
+  floatingBanner: {
+    ...FloatingShadow,
   },
   leftRow: {
     flex: 1,

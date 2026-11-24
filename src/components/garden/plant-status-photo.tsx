@@ -46,6 +46,8 @@ export function PlantStatusPhoto({
           { backgroundColor: palette.bgSubtle },
         ]}
         contentFit="cover"
+        transition={180}
+        cachePolicy="memory-disk"
       />
 
       {isAlert && (

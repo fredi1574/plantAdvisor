@@ -64,7 +64,7 @@ describe('SyncStatusBanner', () => {
       />
     );
 
-    expect(screen.getByText('Syncing with Supabase...')).toBeTruthy();
+    expect(screen.getByText('Syncing...')).toBeTruthy();
     await fireEvent.press(screen.getByLabelText('Sync garden now'));
     expect(onSyncNow).not.toHaveBeenCalled();
   });
