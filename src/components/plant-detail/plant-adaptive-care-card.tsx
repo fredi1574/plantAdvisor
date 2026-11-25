@@ -5,7 +5,7 @@ import {
   SlidersHorizontal,
   Snowflake,
 } from 'lucide-react-native';
-import { useReducer, useState } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -17,6 +17,7 @@ import { usePalette } from '@/hooks/use-theme';
 import {
   computeAdaptiveWateringInterval,
   fetchOutdoorWeatherAdvisory,
+  getCachedWeatherAdvisory,
   searchWeatherLocations,
   type WeatherCareAdvisory,
   type WeatherLocationResult,
@@ -92,6 +93,31 @@ export function PlantAdaptiveCareCard({
   const [isSearchingCities, setIsSearchingCities] = useState(false);
   const [citySearchTouched, setCitySearchTouched] = useState(false);
 
+  // Hydrate any fresh (<30 min) cached forecast for outdoor plants on mount / location change
+  useEffect(() => {
+    if (plant.isIndoor) return;
+    const lat = Number(adaptiveCarePrefs.latitude);
+    const lon = Number(adaptiveCarePrefs.longitude);
+    if (Number.isNaN(lat) || Number.isNaN(lon)) return;
+
+    let cancelled = false;
+    void (async () => {
+      const cached = await getCachedWeatherAdvisory(lat, lon);
+      if (!cancelled && cached) {
+        dispatchWeather({ type: 'FETCH_SUCCESS', advisory: cached });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    plant.isIndoor,
+    adaptiveCarePrefs.latitude,
+    adaptiveCarePrefs.longitude,
+    i18n.language,
+  ]);
+
   const adaptiveInterval = computeAdaptiveWateringInterval(
     {
       baseWateringDays: plant.species.baselineCare.baseWateringDays,
@@ -118,7 +144,11 @@ export function PlantAdaptiveCareCard({
     );
   };
 
-  const handleFetchWeatherForCoords = async (lat: number, lon: number) => {
+  const handleFetchWeatherForCoords = async (
+    lat: number,
+    lon: number,
+    forceRefresh = false
+  ) => {
     if (
       Number.isNaN(lat) ||
       Number.isNaN(lon) ||
@@ -136,7 +166,9 @@ export function PlantAdaptiveCareCard({
 
     dispatchWeather({ type: 'FETCH_START' });
     try {
-      const advisory = await fetchOutdoorWeatherAdvisory(lat, lon);
+      const advisory = await fetchOutdoorWeatherAdvisory(lat, lon, {
+        forceRefresh,
+      });
       dispatchWeather({ type: 'FETCH_SUCCESS', advisory });
       triggerLightHaptic();
     } catch (err) {
@@ -153,7 +185,8 @@ export function PlantAdaptiveCareCard({
   const handleFetchWeather = async () => {
     await handleFetchWeatherForCoords(
       Number(adaptiveCarePrefs.latitude),
-      Number(adaptiveCarePrefs.longitude)
+      Number(adaptiveCarePrefs.longitude),
+      Boolean(weather.advisory)
     );
   };
 

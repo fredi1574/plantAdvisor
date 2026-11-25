@@ -3,8 +3,12 @@
  *
  * 1. Seasonal, hemisphere, pot-material & indoor/outdoor watering interval tuning
  * 2. Open-Meteo free weather forecast integration for outdoor frost & rain alerts
+ * 3. 30-minute memory + AsyncStorage weather advisory cache per location & language
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import i18n from '@/i18n';
 import type {
   LightExposure,
   PlantType,
@@ -37,12 +41,89 @@ export interface WeatherCareAdvisory {
   hasFrostAlert: boolean;
   hasHeavyRainDelay: boolean;
   recommendedPushbackDays: number;
+  fromCache?: boolean;
   alerts: {
     kind: 'frost' | 'rain' | 'clear';
     title: string;
     message: string;
     urgency: 'immediate' | 'soon' | 'routine';
   }[];
+}
+
+export const WEATHER_CACHE_TTL_MS = 30 * 60 * 1000;
+const WEATHER_STORAGE_PREFIX = 'floralog_weather_v1:';
+
+interface CachedWeatherEntry {
+  advisory: WeatherCareAdvisory;
+  cachedAtMs: number;
+}
+
+const memoryWeatherCache = new Map<string, CachedWeatherEntry>();
+
+function buildWeatherCacheKey(
+  latitude: number,
+  longitude: number,
+  language: string = i18n.language || 'en'
+): string {
+  const lang = language.startsWith('ru') ? 'ru' : 'en';
+  return `${latitude.toFixed(2)},${longitude.toFixed(2)}:${lang}`;
+}
+
+export function clearWeatherAdvisoryCache(): void {
+  memoryWeatherCache.clear();
+}
+
+export async function getCachedWeatherAdvisory(
+  latitude: number,
+  longitude: number,
+  nowMs: number = Date.now()
+): Promise<WeatherCareAdvisory | null> {
+  const key = buildWeatherCacheKey(latitude, longitude);
+  const inMem = memoryWeatherCache.get(key);
+  if (inMem && nowMs - inMem.cachedAtMs < WEATHER_CACHE_TTL_MS) {
+    return { ...inMem.advisory, fromCache: true };
+  }
+
+  try {
+    const raw = await AsyncStorage.getItem(`${WEATHER_STORAGE_PREFIX}${key}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedWeatherEntry;
+    if (
+      parsed &&
+      parsed.advisory &&
+      typeof parsed.cachedAtMs === 'number' &&
+      nowMs - parsed.cachedAtMs < WEATHER_CACHE_TTL_MS
+    ) {
+      memoryWeatherCache.set(key, parsed);
+      return { ...parsed.advisory, fromCache: true };
+    }
+  } catch {
+    // Ignore cache read/parse failures
+  }
+
+  return null;
+}
+
+async function saveWeatherAdvisoryCache(
+  latitude: number,
+  longitude: number,
+  advisory: WeatherCareAdvisory,
+  nowMs: number = Date.now()
+): Promise<void> {
+  const key = buildWeatherCacheKey(latitude, longitude);
+  const entry: CachedWeatherEntry = {
+    advisory: { ...advisory, fromCache: false },
+    cachedAtMs: nowMs,
+  };
+  memoryWeatherCache.set(key, entry);
+  try {
+    await AsyncStorage.setItem(
+      `${WEATHER_STORAGE_PREFIX}${key}`,
+      JSON.stringify(entry)
+    );
+  } catch {
+    // Non-fatal if storage is full or unavailable
+  }
 }
 
 export function getBotanicalSeason(
@@ -81,14 +162,6 @@ const POT_MATERIAL_MULTIPLIER: Record<PotMaterial, number> = {
   plastic_nursery: 1.1,
   ceramic_glazed: 1.15,
   glass_vessel: 1.0,
-};
-
-const POT_MATERIAL_LABEL: Record<PotMaterial, string> = {
-  terracotta: 'Porous terracotta dries faster',
-  fabric_grow_bag: 'Breathable fabric bag dries faster',
-  plastic_nursery: 'Plastic nursery pot retains moisture longer',
-  ceramic_glazed: 'Glazed ceramic retains moisture longer',
-  glass_vessel: 'Glass propagation vessel',
 };
 
 const SEASON_MULTIPLIER: Record<BotanicalSeason, number> = {
@@ -136,8 +209,8 @@ export function computeAdaptiveWateringInterval(
       suggestedIntervalDays: suggested,
       currentIntervalDays: params.currentIntervalDays,
       season,
-      factors: ['Water propagation reservoir refresh cycle'],
-      summary: `Keep water refreshed every ${suggested} days to maintain dissolved oxygen.`,
+      factors: [i18n.t('adaptiveCareEngine.propFactor')],
+      summary: i18n.t('adaptiveCareEngine.propSummary', { days: suggested }),
     };
   }
 
@@ -146,27 +219,19 @@ export function computeAdaptiveWateringInterval(
   // 1. Season factor
   const seasonMult = SEASON_MULTIPLIER[season];
   multiplier *= seasonMult;
-  if (season === 'winter') {
-    factors.push('Winter dormancy slows transpiration (+35% dry-back)');
-  } else if (season === 'summer') {
-    factors.push('Summer warmth & active growth increase uptake (-15%)');
-  } else if (season === 'spring') {
-    factors.push('Spring active growth flush (-5%)');
-  } else {
-    factors.push('Autumn cooling slows evaporation (+5%)');
-  }
+  factors.push(i18n.t(`adaptiveCareEngine.seasonFactors.${season}`));
 
   // 2. Pot material factor
   const potMult = POT_MATERIAL_MULTIPLIER[params.potMaterial] ?? 1.0;
   multiplier *= potMult;
-  factors.push(POT_MATERIAL_LABEL[params.potMaterial]);
+  factors.push(i18n.t(`adaptiveCareEngine.potFactors.${params.potMaterial}`));
 
   // 3. Indoor vs Outdoor factor
   if (!params.isIndoor && season !== 'winter') {
     multiplier *= 0.85;
-    factors.push('Outdoor airflow & sun accelerate evaporation (-15%)');
+    factors.push(i18n.t('adaptiveCareEngine.outdoorFactor'));
   } else if (params.isIndoor) {
-    factors.push('Indoor climate-buffered evaporation');
+    factors.push(i18n.t('adaptiveCareEngine.indoorFactor'));
   }
 
   // 4. Light exposure factor
@@ -182,12 +247,24 @@ export function computeAdaptiveWateringInterval(
   const suggestedIntervalDays = Math.max(minFloor, rawSuggested);
 
   const delta = suggestedIntervalDays - params.currentIntervalDays;
+  const localizedSeason = i18n.t(`adaptiveCareEngine.seasons.${season}`);
   const summary =
     delta === 0
-      ? `Your ${params.currentIntervalDays}-day interval is already optimal for ${season}.`
+      ? i18n.t('adaptiveCareEngine.summaryOptimal', {
+          current: params.currentIntervalDays,
+          season: localizedSeason,
+        })
       : delta > 0
-        ? `Consider extending from ${params.currentIntervalDays}d to ${suggestedIntervalDays}d for ${season} conditions.`
-        : `Consider shortening from ${params.currentIntervalDays}d to ${suggestedIntervalDays}d for ${season} conditions.`;
+        ? i18n.t('adaptiveCareEngine.summaryExtend', {
+            current: params.currentIntervalDays,
+            suggested: suggestedIntervalDays,
+            season: localizedSeason,
+          })
+        : i18n.t('adaptiveCareEngine.summaryShorten', {
+            current: params.currentIntervalDays,
+            suggested: suggestedIntervalDays,
+            season: localizedSeason,
+          });
 
   return {
     suggestedIntervalDays,
@@ -223,9 +300,11 @@ export function analyzeWeatherForecast(
     const minTempF = Math.round((minTempC * 9) / 5 + 32);
     alerts.push({
       kind: 'frost',
-      title: `Frost Alert (${minTempC.toFixed(1)}°C / ${minTempF}°F)`,
-      message:
-        'Overnight temperatures drop below 3°C (37°F). Move tender outdoor specimens indoors or cover with frost cloth tonight.',
+      title: i18n.t('adaptiveCareEngine.weather.frostTitle', {
+        tempC: minTempC.toFixed(1),
+        tempF: minTempF,
+      }),
+      message: i18n.t('adaptiveCareEngine.weather.frostMessage'),
       urgency: 'immediate',
     });
   }
@@ -233,8 +312,12 @@ export function analyzeWeatherForecast(
   if (hasHeavyRainDelay) {
     alerts.push({
       kind: 'rain',
-      title: `Rain-Adaptive Delay (${totalPrecipitationMm.toFixed(1)} mm forecast)`,
-      message: `Significant rainfall expected over the next 72 hours. Push outdoor watering back by ${recommendedPushbackDays} days to avoid waterlogging.`,
+      title: i18n.t('adaptiveCareEngine.weather.rainTitle', {
+        mm: totalPrecipitationMm.toFixed(1),
+      }),
+      message: i18n.t('adaptiveCareEngine.weather.rainMessage', {
+        days: recommendedPushbackDays,
+      }),
       urgency: 'soon',
     });
   }
@@ -242,8 +325,11 @@ export function analyzeWeatherForecast(
   if (alerts.length === 0) {
     alerts.push({
       kind: 'clear',
-      title: 'Mild Outdoor Forecast',
-      message: `Lows around ${minTempC.toFixed(1)}°C with ${totalPrecipitationMm.toFixed(1)} mm rain expected. Follow your normal watering cadence.`,
+      title: i18n.t('adaptiveCareEngine.weather.clearTitle'),
+      message: i18n.t('adaptiveCareEngine.weather.clearMessage', {
+        tempC: minTempC.toFixed(1),
+        mm: totalPrecipitationMm.toFixed(1),
+      }),
       urgency: 'routine',
     });
   }
@@ -256,6 +342,7 @@ export function analyzeWeatherForecast(
     hasFrostAlert,
     hasHeavyRainDelay,
     recommendedPushbackDays,
+    fromCache: false,
     alerts,
   };
 }
@@ -315,8 +402,14 @@ export async function searchWeatherLocations(
 
 export async function fetchOutdoorWeatherAdvisory(
   latitude: number,
-  longitude: number
+  longitude: number,
+  options: { forceRefresh?: boolean } = {}
 ): Promise<WeatherCareAdvisory> {
+  if (!options.forceRefresh) {
+    const cached = await getCachedWeatherAdvisory(latitude, longitude);
+    if (cached) return cached;
+  }
+
   const url =
     `https://api.open-meteo.com/v1/forecast` +
     `?latitude=${encodeURIComponent(latitude)}` +
@@ -337,5 +430,7 @@ export async function fetchOutdoorWeatherAdvisory(
     throw new Error('Missing daily forecast data from Open-Meteo.');
   }
 
-  return analyzeWeatherForecast(json.daily);
+  const advisory = analyzeWeatherForecast(json.daily);
+  await saveWeatherAdvisoryCache(latitude, longitude, advisory);
+  return advisory;
 }

@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import type { UserPlant } from '@/types/plant';
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
@@ -52,16 +53,16 @@ export function buildDefaultWateringCopy(
   const isSucculent = plant.species.plantType === 'succulent';
 
   const title = isPropagation
-    ? 'Refreshed Propagation Water'
+    ? i18n.t('careLogDefaults.waterPropTitle')
     : isSucculent
-      ? 'Deep Soak & Dry Watering'
-      : 'Thorough Watering';
+      ? i18n.t('careLogDefaults.waterSucculentTitle')
+      : i18n.t('careLogDefaults.waterDefaultTitle');
 
   const baseNote = isPropagation
-    ? 'Replaced reservoir water with fresh oxygenated room-temperature water.'
+    ? i18n.t('careLogDefaults.waterPropNotes')
     : isSucculent
-      ? 'Verified 100% dry gritty mix before deep drenching until runoff.'
-      : 'Watered thoroughly until excess drained freely from bottom hole.';
+      ? i18n.t('careLogDefaults.waterSucculentNotes')
+      : i18n.t('careLogDefaults.waterDefaultNotes');
 
   return {
     title,

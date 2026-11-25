@@ -700,6 +700,19 @@
       "testSentToast": "Test care reminder scheduled (arriving in ~2s)! 🌿",
       "grantPermissionToast": "Please grant notification permissions to receive reminders."
     },
+    "locationClimate": {
+      "eyebrow": "LOCATION & CLIMATE",
+      "currentCity": "Current Location",
+      "hemisphereLabel": "Hemisphere",
+      "northOption": "Northern",
+      "southOption": "Southern",
+      "searchPlaceholder": "Search city (e.g., London, Berlin, Moscow)...",
+      "searching": "Searching cities...",
+      "noCitiesFound": "No matching cities found.",
+      "updatedToast": "Location updated to {{city}}.",
+      "hemisphereToast": "Hemisphere set to {{hemisphere}}.",
+      "footnote": "Used for seasonal watering adjustments and outdoor frost & rain forecasts (Open-Meteo)."
+    },
     "roomPresets": {
       "eyebrow": "ROOM PRESETS",
       "addSpot": "Add Spot",
@@ -783,5 +796,72 @@
     "testNativeBodyWithPlants_one": "{{count}} plant is being monitored ({{names}}). You'll be notified right on time!",
     "testNativeBodyWithPlants_other": "{{count}} plants are being monitored ({{names}}). You'll be notified right on time!",
     "testNativeBodyEmpty": "Local plant care notifications are configured and ready!"
+  },
+  "adaptiveCareEngine": {
+    "seasons": {
+      "spring": "spring",
+      "summer": "summer",
+      "autumn": "autumn",
+      "winter": "winter"
+    },
+    "propFactor": "Water propagation reservoir refresh cycle",
+    "propSummary": "Keep water refreshed every {{days}} days to maintain dissolved oxygen.",
+    "seasonFactors": {
+      "winter": "Winter dormancy slows transpiration (+35% dry-back)",
+      "summer": "Summer warmth & active growth increase uptake (-15%)",
+      "spring": "Spring active growth flush (-5%)",
+      "autumn": "Autumn cooling slows evaporation (+5%)"
+    },
+    "potFactors": {
+      "terracotta": "Porous terracotta dries faster",
+      "fabric_grow_bag": "Breathable fabric bag dries faster",
+      "plastic_nursery": "Plastic nursery pot retains moisture longer",
+      "ceramic_glazed": "Glazed ceramic retains moisture longer",
+      "glass_vessel": "Glass propagation vessel"
+    },
+    "outdoorFactor": "Outdoor airflow & sun accelerate evaporation (-15%)",
+    "indoorFactor": "Indoor climate-buffered evaporation",
+    "summaryOptimal": "Your {{current}}-day interval is already optimal for {{season}}.",
+    "summaryExtend": "Consider extending from {{current}}d to {{suggested}}d for {{season}} conditions.",
+    "summaryShorten": "Consider shortening from {{current}}d to {{suggested}}d for {{season}} conditions.",
+    "weather": {
+      "frostTitle": "Frost Alert ({{tempC}}°C / {{tempF}}°F)",
+      "frostMessage": "Overnight temperatures drop below 3°C (37°F). Move tender outdoor specimens indoors or cover with frost cloth tonight.",
+      "rainTitle": "Rain-Adaptive Delay ({{mm}} mm forecast)",
+      "rainMessage": "Significant rainfall expected over the next 72 hours. Push outdoor watering back by {{days}} days to avoid waterlogging.",
+      "clearTitle": "Mild Outdoor Forecast",
+      "clearMessage": "Lows around {{tempC}}°C with {{mm}} mm rain expected. Follow your normal watering cadence.",
+      "cachedLabel": "Cached · updated {{time}}"
+    }
+  },
+  "careLogDefaults": {
+    "waterPropTitle": "Refreshed Propagation Water",
+    "waterSucculentTitle": "Deep Soak & Dry Watering",
+    "waterDefaultTitle": "Thorough Watering",
+    "waterPropNotes": "Replaced reservoir water with fresh oxygenated room-temperature water.",
+    "waterSucculentNotes": "Verified 100% dry gritty mix before deep drenching until runoff.",
+    "waterDefaultNotes": "Watered thoroughly until excess drained freely from bottom hole.",
+    "batchPrefix": "Batch care: ",
+    "fullGardenPrefix": "Full garden care: ",
+    "fertilizeTitle": "Diluted Nutrient Feed",
+    "fertilizeNotes": "Applied balanced liquid fertilizer per care schedule.",
+    "rotateTitle": "Rotated Pot 90°",
+    "rotateNotes": "Rotated container for balanced light exposure."
+  },
+  "errors": {
+    "networkOffline": "You appear to be offline. Please check your internet connection and try again.",
+    "invalidCredentials": "Incorrect email or password. Please try again.",
+    "emailNotConfirmed": "Please confirm your email address using the link we sent before signing in.",
+    "userAlreadyExists": "An account with this email already exists. Try signing in instead.",
+    "weakPassword": "Please choose a stronger password (at least 6 characters).",
+    "rateLimited": "Too many attempts right now. Please wait a moment and try again.",
+    "sessionExpired": "Your session expired. Please sign in again.",
+    "googleUnavailable": "Google Sign-In is unavailable on this device right now.",
+    "googlePlayServices": "Google Play Services is unavailable or out of date on this device.",
+    "syncOffline": "Offline — changes saved locally",
+    "syncFailed": "Could not sync right now. Your changes are safely saved on this device.",
+    "genericAuth": "Something went wrong. Please try again.",
+    "genericProfile": "Could not update your profile right now. Please try again.",
+    "genericDeleteAccount": "Unable to delete your account right now. Please try again."
   }
 }
