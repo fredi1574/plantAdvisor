@@ -8,6 +8,8 @@ import type { Session, Subscription, User } from '@supabase/supabase-js';
 import { Platform, TurboModuleRegistry } from 'react-native';
 import { create } from 'zustand';
 
+import i18n from '@/i18n';
+import { toFriendlyErrorMessage } from '@/services/errorMessages';
 import {
   clearLocalAuthSession,
   deleteLocalAccount,
@@ -168,8 +170,9 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       try {
         const res = await signInLocally(normalizedEmail, password);
         if (!res.ok) {
-          set({ isLoading: false, authError: res.error });
-          return { ok: false, error: res.error };
+          const msg = toFriendlyErrorMessage(res.error, 'auth');
+          set({ isLoading: false, authError: msg });
+          return { ok: false, error: msg };
         }
         set({
           session: res.session.session,
@@ -180,8 +183,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
         });
         return { ok: true };
       } catch (err) {
-        const msg =
-          err instanceof Error ? err.message : 'Unable to sign in right now.';
+        const msg = toFriendlyErrorMessage(err, 'auth');
         set({ isLoading: false, authError: msg });
         return { ok: false, error: msg };
       }
@@ -194,7 +196,10 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       });
 
       if (error || !data.user) {
-        const msg = error?.message || 'Invalid email or password.';
+        const msg = toFriendlyErrorMessage(
+          error ?? 'Invalid login credentials',
+          'auth'
+        );
         set({ isLoading: false, authError: msg });
         return { ok: false, error: msg };
       }
@@ -211,8 +216,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       void usePlantStore.getState().syncWithSupabase();
       return { ok: true };
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : 'Unable to sign in right now.';
+      const msg = toFriendlyErrorMessage(err, 'auth');
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }
@@ -240,10 +244,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
         });
         return { ok: true, needsEmailConfirmation: false };
       } catch (err) {
-        const msg =
-          err instanceof Error
-            ? err.message
-            : 'Unable to create account right now.';
+        const msg = toFriendlyErrorMessage(err, 'auth');
         set({ isLoading: false, authError: msg });
         return { ok: false, error: msg };
       }
@@ -261,8 +262,9 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       });
 
       if (error) {
-        set({ isLoading: false, authError: error.message });
-        return { ok: false, error: error.message };
+        const msg = toFriendlyErrorMessage(error, 'auth');
+        set({ isLoading: false, authError: msg });
+        return { ok: false, error: msg };
       }
 
       if (data.user && !data.session) {
@@ -286,10 +288,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
 
       return { ok: true, needsEmailConfirmation: false };
     } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : 'Unable to create account right now.';
+      const msg = toFriendlyErrorMessage(err, 'auth');
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }
@@ -299,24 +298,21 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     set({ isLoading: true, authError: null });
 
     if (!supabase) {
-      const msg = 'Google Sign-In requires Supabase cloud configuration.';
+      const msg = i18n.t('errors.googleUnavailable');
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }
 
     const googleMod = getGoogleSigninModule();
     if (!googleMod) {
-      const msg =
-        Platform.OS === 'web'
-          ? 'Google Sign-In is only available on mobile devices.'
-          : 'Google Sign-In requires an EAS build or development build (not supported in Expo Go).';
+      const msg = i18n.t('errors.googleUnavailable');
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }
 
     const webClientId = ensureGoogleConfigured(googleMod);
     if (!webClientId) {
-      const msg = 'Google Sign-In is not configured yet.';
+      const msg = i18n.t('errors.googleUnavailable');
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }
@@ -345,7 +341,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       });
 
       if (error || !data.user) {
-        const msg = error?.message || 'Unable to sign in with Google.';
+        const msg = toFriendlyErrorMessage(error, 'auth');
         set({ isLoading: false, authError: msg });
         return { ok: false, error: msg };
       }
@@ -372,15 +368,13 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
           return { ok: false, cancelled: true };
         }
         if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-          const msg =
-            'Google Play Services is unavailable or out of date on this device.';
+          const msg = i18n.t('errors.googlePlayServices');
           set({ isLoading: false, authError: msg });
           return { ok: false, error: msg };
         }
       }
 
-      const msg =
-        err instanceof Error ? err.message : 'Unable to sign in with Google.';
+      const msg = toFriendlyErrorMessage(err, 'auth');
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }
@@ -412,8 +406,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
         });
         return { ok: true };
       } catch (err) {
-        const msg =
-          err instanceof Error ? err.message : 'Could not update profile.';
+        const msg = toFriendlyErrorMessage(err, 'profile');
         set({ isLoading: false, authError: msg });
         return { ok: false, error: msg };
       }
@@ -431,8 +424,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       }
       return { ok: true };
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : 'Could not update profile.';
+      const msg = toFriendlyErrorMessage(err, 'profile');
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }
@@ -471,10 +463,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       });
       return { ok: true };
     } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : 'Unable to delete your account right now.';
+      const msg = toFriendlyErrorMessage(err, 'delete_account');
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }

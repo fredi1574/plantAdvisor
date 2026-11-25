@@ -1,4 +1,6 @@
 import { SEED_NOTEBOOK_ENTRIES } from '@/constants/seedData';
+import i18n from '@/i18n';
+import { toFriendlyErrorMessage } from '@/services/errorMessages';
 import { triggerLightHaptic, triggerSuccessHaptic } from '@/services/haptics';
 import { syncAllPlantNotifications } from '@/services/notificationService';
 import {
@@ -89,7 +91,7 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
           return {
             pendingOps: nextOps,
             pendingSyncCount: nextOps.length,
-            syncError: pRes.error || eRes.error || 'Sync failed',
+            syncError: toFriendlyErrorMessage(pRes.error || eRes.error, 'sync'),
           };
         });
       }
@@ -368,8 +370,8 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
         get().logCareEvent({
           plantId,
           eventType: 'fertilize',
-          title: 'Diluted Nutrient Feed',
-          notes: 'Applied balanced liquid fertilizer per care schedule.',
+          title: i18n.t('careLogDefaults.fertilizeTitle'),
+          notes: i18n.t('careLogDefaults.fertilizeNotes'),
         });
         return;
       }
@@ -377,21 +379,25 @@ export const createCareLogSlice: PlantSliceCreator<CareLogSlice> = (
       get().logCareEvent({
         plantId,
         eventType: 'note',
-        title: 'Rotated Pot 90°',
-        notes: 'Rotated container for balanced light exposure.',
+        title: i18n.t('careLogDefaults.rotateTitle'),
+        notes: i18n.t('careLogDefaults.rotateNotes'),
       });
     },
 
     waterAllNeedingWater: () => {
       const needing = get().plants.filter((p) => doesPlantNeedWatering(p));
-      return waterPlantBatch(needing, 'log-water-batch', 'Batch care: ');
+      return waterPlantBatch(
+        needing,
+        'log-water-batch',
+        i18n.t('careLogDefaults.batchPrefix')
+      );
     },
 
     waterAllPlants: () => {
       return waterPlantBatch(
         get().plants,
         'log-water-all',
-        'Full garden care: '
+        i18n.t('careLogDefaults.fullGardenPrefix')
       );
     },
   };

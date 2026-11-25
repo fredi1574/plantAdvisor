@@ -1,4 +1,6 @@
 import { SEED_NOTEBOOK_ENTRIES, SEED_PLANTS } from '@/constants/seedData';
+import i18n from '@/i18n';
+import { toFriendlyErrorMessage } from '@/services/errorMessages';
 import {
   cancelAllGardenNotifications,
   syncAllPlantNotifications,
@@ -102,7 +104,7 @@ export const createSyncSlice: PlantSliceCreator<SyncSlice> = (set, get) => ({
       if (get().pendingOps.length === 0 && syncedAny) {
         set({ lastSyncedAt: new Date().toISOString(), syncError: null });
       } else if (lastError) {
-        set({ syncError: lastError });
+        set({ syncError: toFriendlyErrorMessage(lastError, 'sync') });
       }
     } finally {
       set({ isSyncing: false });
@@ -165,7 +167,7 @@ export const createSyncSlice: PlantSliceCreator<SyncSlice> = (set, get) => ({
       } else {
         set({
           ownerUserId: userId,
-          syncError: 'Offline — changes saved locally',
+          syncError: i18n.t('errors.syncOffline'),
         });
       }
     } finally {
