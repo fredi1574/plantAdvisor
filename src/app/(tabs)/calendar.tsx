@@ -32,6 +32,7 @@ export default function CalendarScreen() {
   const completeScheduledCareTask = usePlantStore(
     (s) => s.completeScheduledCareTask
   );
+  const snoozePlantWatering = usePlantStore((s) => s.snoozePlantWatering);
   const waterAllNeedingWater = usePlantStore((s) => s.waterAllNeedingWater);
   const undoWatering = usePlantStore((s) => s.undoWatering);
 
@@ -64,6 +65,26 @@ export default function CalendarScreen() {
           : undefined,
       });
     }
+  };
+
+  const handleSnoozeTask = (task: ProjectedPlantCareTask) => {
+    const undoSnapshot = snoozePlantWatering(task.plant.id, 2);
+    showToast(
+      t('schedule.snoozedToast', { name: task.plant.nickname, days: 2 }),
+      {
+        action: undoSnapshot
+          ? {
+              label: t('common.undo'),
+              onPress: () => {
+                undoWatering(undoSnapshot);
+                showToast(
+                  t('schedule.undoSnoozedToast', { name: task.plant.nickname })
+                );
+              },
+            }
+          : undefined,
+      }
+    );
   };
 
   const handleWaterAllDueToday = () => {
@@ -141,6 +162,7 @@ export default function CalendarScreen() {
             plants={plants}
             entries={entries}
             onCompleteTask={handleCompleteTask}
+            onSnoozeTask={handleSnoozeTask}
             onWaterAllDueToday={handleWaterAllDueToday}
           />
         </View>

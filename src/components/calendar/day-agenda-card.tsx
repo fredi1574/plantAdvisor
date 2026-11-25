@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import {
   CheckCircle2,
+  Clock,
   Droplets,
   FlaskConical,
   RotateCw,
@@ -29,6 +30,7 @@ interface DayAgendaCardProps {
   schedule: DayCareSchedule;
   plantLookup: Record<string, UserPlant>;
   onCompleteTask: (task: ProjectedPlantCareTask) => void;
+  onSnoozeTask?: (task: ProjectedPlantCareTask) => void;
   onWaterAllDueToday?: () => void;
 }
 
@@ -39,6 +41,7 @@ export function DayAgendaCard({
   schedule,
   plantLookup,
   onCompleteTask,
+  onSnoozeTask,
   onWaterAllDueToday,
 }: DayAgendaCardProps) {
   const { t } = useTranslation();
@@ -118,6 +121,9 @@ export function DayAgendaCard({
               <AgendaTaskItem
                 task={task}
                 onComplete={() => onCompleteTask(task)}
+                onSnooze={
+                  onSnoozeTask ? () => onSnoozeTask(task) : undefined
+                }
               />
             </AnimatedEntrance>
           ))}
@@ -165,9 +171,11 @@ export function DayAgendaCard({
 function AgendaTaskItem({
   task,
   onComplete,
+  onSnooze,
 }: {
   task: ProjectedPlantCareTask;
   onComplete: () => void;
+  onSnooze?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const palette = usePalette();
@@ -244,25 +252,44 @@ function AgendaTaskItem({
         </View>
       </Pressable>
 
-      <SpringPressable
-        onPress={onComplete}
-        style={[
-          styles.markActionBtn,
-          { backgroundColor: buttonBg },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={`${buttonLabel} for ${plant.nickname}`}>
-        {taskKind === 'fertilize' ? (
-          <FlaskConical size={14} color={palette.textInverse} />
-        ) : taskKind === 'rotate' ? (
-          <RotateCw size={14} color={palette.textInverse} />
-        ) : (
-          <Droplets size={14} color={palette.textInverse} />
+      <View style={styles.taskActionsRow}>
+        {taskKind === 'water' && (isDueToday || isOverdue) && onSnooze && (
+          <SpringPressable
+            onPress={onSnooze}
+            style={[
+              styles.snoozeBtn,
+              {
+                backgroundColor: palette.bgSubtle,
+                borderColor: palette.borderSubtle,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Snooze watering for ${plant.nickname} by 2 days`}>
+            <Clock size={12} color={palette.textSecondary} />
+            <Text
+              style={[styles.snoozeBtnText, { color: palette.textSecondary }]}>
+              {t('schedule.snoozeBtn')}
+            </Text>
+          </SpringPressable>
         )}
-        <Text style={[styles.markActionBtnText, { color: palette.textInverse }]}>
-          {buttonLabel}
-        </Text>
-      </SpringPressable>
+
+        <SpringPressable
+          onPress={onComplete}
+          style={[styles.markActionBtn, { backgroundColor: buttonBg }]}
+          accessibilityRole="button"
+          accessibilityLabel={`${buttonLabel} for ${plant.nickname}`}>
+          {taskKind === 'fertilize' ? (
+            <FlaskConical size={14} color={palette.textInverse} />
+          ) : taskKind === 'rotate' ? (
+            <RotateCw size={14} color={palette.textInverse} />
+          ) : (
+            <Droplets size={14} color={palette.textInverse} />
+          )}
+          <Text style={[styles.markActionBtnText, { color: palette.textInverse }]}>
+            {buttonLabel}
+          </Text>
+        </SpringPressable>
+      </View>
     </View>
   );
 }
@@ -369,6 +396,24 @@ const styles = StyleSheet.create({
     borderWidth: BorderWidth.hairline,
   },
   actionPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  taskActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  snoozeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm + Spacing.half,
+    borderRadius: Radius.md,
+    borderWidth: BorderWidth.hairline,
+  },
+  snoozeBtnText: {
     fontSize: 11,
     fontWeight: '700',
   },

@@ -496,6 +496,13 @@ function EditPlantFormSheet({
       </View>
 
       <SwitchRow
+        label={t('scan.identify.indoorLabel')}
+        description={t('scan.identify.indoorDesc')}
+        value={isIndoor}
+        onValueChange={setIsIndoor}
+      />
+
+      <SwitchRow
         label={t('editPlant.drainageLabel')}
         description={t('editPlant.drainageDesc')}
         value={hasDrainageHole}

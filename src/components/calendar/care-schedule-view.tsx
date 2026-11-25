@@ -20,6 +20,7 @@ interface CareScheduleViewProps {
   plants: UserPlant[];
   entries: NotebookEntry[];
   onCompleteTask: (task: ProjectedPlantCareTask) => void;
+  onSnoozeTask?: (task: ProjectedPlantCareTask) => void;
   onWaterAllDueToday?: () => void;
 }
 
@@ -30,6 +31,7 @@ export function CareScheduleView({
   plants,
   entries,
   onCompleteTask,
+  onSnoozeTask,
   onWaterAllDueToday,
 }: CareScheduleViewProps) {
   const { i18n } = useTranslation();
@@ -99,6 +101,7 @@ export function CareScheduleView({
             schedule={selectedDaySchedule}
             plantLookup={plantLookup}
             onCompleteTask={onCompleteTask}
+            onSnoozeTask={onSnoozeTask}
             onWaterAllDueToday={onWaterAllDueToday}
           />
         </AnimatedEntrance>

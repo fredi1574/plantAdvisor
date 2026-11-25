@@ -20,6 +20,7 @@ import {
 } from '@/components/modals/legal-info-modal';
 import { AppearanceCard } from '@/components/profile/appearance-card';
 import { GuestCloudCard } from '@/components/profile/guest-cloud-card';
+import { LocationClimateCard } from '@/components/profile/location-climate-card';
 import { NotificationsCard } from '@/components/profile/notifications-card';
 import { ProfileOverviewCard } from '@/components/profile/profile-overview-card';
 import { RoomPresetsSection } from '@/components/profile/room-presets-section';
@@ -115,6 +116,7 @@ export default function ProfileScreen() {
 
           <AppearanceCard onShowToast={showToast} />
           <NotificationsCard onShowToast={showToast} />
+          <LocationClimateCard onShowToast={showToast} />
           <RoomPresetsSection onShowToast={showToast} />
 
           <View style={styles.section}>
