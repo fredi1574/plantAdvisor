@@ -17,8 +17,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { getLatestRootLengthCm } from '@/components/garden/propagation-readiness-bar';
 import { EditLogModal } from '@/components/modals/edit-log-modal';
 import { EditPlantModal } from '@/components/modals/edit-plant-modal';
+import { GraduatePropagationModal } from '@/components/modals/graduate-propagation-modal';
 import { CareLogSection } from '@/components/plant-detail/care-log-section';
 import { GrowthTrendChart } from '@/components/plant-detail/growth-trend-chart';
 import { PlantAdaptiveCareCard } from '@/components/plant-detail/plant-adaptive-care-card';
@@ -27,6 +29,7 @@ import {
   PlantHeroCard,
   PlantOverviewSpecs,
 } from '@/components/plant-detail/plant-hero-card';
+import { PropagationGraduationCard } from '@/components/plant-detail/propagation-graduation-card';
 import { VisualProgressGallery } from '@/components/plant-detail/visual-progress-gallery';
 import {
   AnimatedEntrance,
@@ -75,6 +78,7 @@ export default function PlantDetailNotebookScreen() {
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [tabBarWidth, setTabBarWidth] = useState(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isGraduateModalOpen, setIsGraduateModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<NotebookEntry | null>(null);
   const {
     message: feedbackMessage,
@@ -128,6 +132,14 @@ export default function PlantDetailNotebookScreen() {
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ),
     [healthAssessments, plant]
+  );
+
+  const latestRootLengthCm = useMemo(
+    () =>
+      plant?.species.plantType === 'propagation'
+        ? getLatestRootLengthCm(plantEntries, plant.id)
+        : null,
+    [plant, plantEntries]
   );
 
   if (!plant) {
@@ -339,6 +351,13 @@ export default function PlantDetailNotebookScreen() {
 
             {activeTab === 'overview' && (
               <AnimatedEntrance key="tab-overview" style={styles.tabPanel}>
+                {plant.species.plantType === 'propagation' && (
+                  <PropagationGraduationCard
+                    rootLengthCm={latestRootLengthCm}
+                    onPressGraduate={() => setIsGraduateModalOpen(true)}
+                  />
+                )}
+
                 <PlantOverviewSpecs plant={plant} />
 
                 <VisualProgressGallery
@@ -454,6 +473,18 @@ export default function PlantDetailNotebookScreen() {
           )
         }
         onRequestDelete={handleDeleteLogEntry}
+      />
+
+      <GraduatePropagationModal
+        plant={plant}
+        visible={isGraduateModalOpen}
+        latestRootLengthCm={latestRootLengthCm}
+        onClose={() => setIsGraduateModalOpen(false)}
+        onGraduated={(name) =>
+          showToast(
+            `${t('plantDetail.graduation.graduatedToast', { name })} 🪴`
+          )
+        }
       />
     </SafeAreaView>
   );

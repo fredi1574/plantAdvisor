@@ -48,6 +48,18 @@ export interface UpdatePlantPayload {
   plantType?: PlantType;
 }
 
+export interface GraduatePropagationPayload {
+  plantType: Exclude<PlantType, 'propagation'>;
+  potMaterial: PotMaterial;
+  hasDrainageHole: boolean;
+  location: string;
+  lightExposure: LightExposure;
+  isIndoor: boolean;
+  customWateringIntervalDays: number;
+  rootLengthCm?: number | null;
+  notes?: string;
+}
+
 export interface LogCareEventPayload {
   plantId: string;
   eventType: CareEventType;
@@ -156,6 +168,10 @@ export interface PlantSlice {
   plants: UserPlant[];
   addPlant: (payload: AddPlantPayload) => UserPlant;
   updatePlant: (plantId: string, payload: UpdatePlantPayload) => void;
+  graduatePropagation: (
+    plantId: string,
+    payload: GraduatePropagationPayload
+  ) => NotebookEntry | null;
   deletePlant: (plantId: string) => void;
 }
 

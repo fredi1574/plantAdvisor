@@ -1,4 +1,6 @@
 import { SEED_PLANTS } from '@/constants/seedData';
+import i18n from '@/i18n';
+import { triggerSuccessHaptic } from '@/services/haptics';
 import { cancelPlantReminder } from '@/services/notificationService';
 import {
   DEFAULT_FALLBACK_PHOTO,
@@ -209,6 +211,89 @@ export const createPlantSlice: PlantSliceCreator<PlantSlice> = (set, get) => ({
         await get().flushPendingSync();
       })();
     }
+  },
+
+  graduatePropagation: (plantId, payload) => {
+    const existing = get().plants.find((p) => p.id === plantId);
+    if (!existing) return null;
+
+    const nowIso = new Date().toISOString();
+    const nextInterval =
+      !Number.isNaN(payload.customWateringIntervalDays) &&
+      payload.customWateringIntervalDays >= 1
+        ? Math.round(payload.customWateringIntervalDays)
+        : existing.customWateringIntervalDays;
+    const nextLocation = payload.location.trim() || existing.location;
+    const potLabel = i18n.t(`plantOptions.potMaterial.${payload.potMaterial}`);
+    const hasRootMeasurement =
+      typeof payload.rootLengthCm === 'number' &&
+      !Number.isNaN(payload.rootLengthCm);
+
+    const defaultNotes = hasRootMeasurement
+      ? i18n.t('plantDetail.graduation.logDefaultNotesWithRoots', {
+          roots: (payload.rootLengthCm as number).toFixed(1),
+          pot: potLabel,
+          location: nextLocation,
+        })
+      : i18n.t('plantDetail.graduation.logDefaultNotes', {
+          pot: potLabel,
+          location: nextLocation,
+        });
+
+    const milestoneEntry: NotebookEntry = {
+      id: createEntityId('log-grad'),
+      plantId,
+      eventType: 'repot',
+      timestamp: nowIso,
+      title: i18n.t('plantDetail.graduation.logTitle'),
+      notes: payload.notes?.trim() || defaultNotes,
+      metrics: hasRootMeasurement
+        ? { rootLengthCm: payload.rootLengthCm as number }
+        : undefined,
+    };
+
+    const updatedPlant: UserPlant = {
+      ...existing,
+      location: nextLocation,
+      isIndoor: payload.isIndoor,
+      lightExposure: payload.lightExposure,
+      hasDrainageHole: payload.hasDrainageHole,
+      potMaterial: payload.potMaterial,
+      customWateringIntervalDays: nextInterval,
+      lastWateredAt: nowIso,
+      species: {
+        ...existing.species,
+        plantType: payload.plantType,
+      },
+    };
+
+    set((state) => {
+      let nextOps = mergePendingOps(state.pendingOps, {
+        kind: 'upsert_plant',
+        id: plantId,
+      });
+      nextOps = mergePendingOps(nextOps, {
+        kind: 'upsert_entry',
+        id: milestoneEntry.id,
+      });
+
+      return {
+        plants: state.plants.map((p) => (p.id === plantId ? updatedPlant : p)),
+        entries: [milestoneEntry, ...state.entries],
+        hasGuestEdits: state.ownerUserId === null ? true : state.hasGuestEdits,
+        pendingOps: nextOps,
+        pendingSyncCount: nextOps.length,
+      };
+    });
+
+    triggerSuccessHaptic();
+
+    void (async () => {
+      await reschedulePlantAndDigest(get, updatedPlant);
+      await get().flushPendingSync();
+    })();
+
+    return milestoneEntry;
   },
 
   deletePlant: (plantId) => {

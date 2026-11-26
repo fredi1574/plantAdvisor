@@ -610,6 +610,24 @@
       "taprootAlmost": "Taproot {{current}} / {{target}} cm — almost ready for soil transition",
       "taprootDeveloping": "Taproot {{current}} / {{target}} cm — developing root system"
     },
+    "graduation": {
+      "eyebrow": "PROPAGATION GRADUATION",
+      "cardTitleReady": "Ready to Pot Into Soil!",
+      "cardTitleProgress": "Propagation Bench Progress",
+      "cardHintReady": "Roots reached {{current}} cm (target {{target}} cm). Move this cutting into its permanent pot.",
+      "cardHintProgress": "Log root length as it grows toward {{target}} cm, or graduate it to soil whenever you're ready.",
+      "graduateBtn": "Graduate to Pot",
+      "modalTitle": "Graduate to Permanent Pot",
+      "saveLabel": "Confirm & Pot Up",
+      "summaryBanner": "Moves \"{{name}}\" out of propagation into a permanent container and logs a repot milestone.",
+      "newCategory": "New Botanical Category",
+      "notesLabel": "Potting Notes (Optional)",
+      "notesPlaceholder": "e.g., Potted into chunky aroid mix with perlite...",
+      "logTitle": "Graduated from Propagation to Pot",
+      "logDefaultNotes": "Transitioned from propagation into a {{pot}} container at {{location}}.",
+      "logDefaultNotesWithRoots": "Transitioned from propagation at {{roots}} cm roots into a {{pot}} container at {{location}}.",
+      "graduatedToast": "Graduated \"{{name}}\" to its new pot!"
+    },
     "healthCard": {
       "title": "AI Health & Condition Assessment",
       "meta": "Analyzed photo + {{count}} care logs • Adjusted water cycle: {{days}}d",

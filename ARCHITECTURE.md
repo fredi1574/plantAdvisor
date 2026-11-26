@@ -39,10 +39,10 @@ plantAdvisor/
 │   │   ├── forms/                   # Shared plant environment controls (RoomPresetBar & PlantEnvironmentFields)
 │   │   ├── garden/                  # GardenControlsCard, GardenEmptyState, GardenFeedSections, SwipeablePlantCard,
 │   │   │                            #   PlantGridCard, PlantStatusPhoto, PropagationReadinessBar, PetSafetyBadge
-│   │   ├── modals/                  # OnboardingModal, EditPlantModal, EditLogModal, CareMetricsFields,
-│   │   │                            #   AiLimitModal, DeleteAccountModal, LegalInfoModal
-│   │   ├── plant-detail/            # PlantHeroCard, GrowthTrendChart, VisualProgressGallery, PlantAdaptiveCareCard,
-│   │   │                            #   PlantHealthAssessmentCard (+ FollowUp & History), CareLogSection (+ Composer & SwipeableLogItem)
+│   │   ├── modals/                  # OnboardingModal, EditPlantModal, EditLogModal, GraduatePropagationModal,
+│   │   │                            #   CareMetricsFields, AiLimitModal, DeleteAccountModal, LegalInfoModal
+│   │   ├── plant-detail/            # PlantHeroCard, PropagationGraduationCard, GrowthTrendChart, VisualProgressGallery,
+│   │   │                            #   PlantAdaptiveCareCard, PlantHealthAssessmentCard (+ FollowUp & History), CareLogSection (+ Composer & SwipeableLogItem)
 │   │   ├── profile/                 # GuestCloudCard, ProfileOverviewCard, AppearanceCard, NotificationsCard, RoomPresetsSection
 │   │   └── scan/                    # PhotoCaptureCard, PlantSelectorField, IdentifyPlantFlow,
 │   │                                #   HealthDiagnosisFlow (+ MultiAnglePicker & ResultPanel)
