@@ -19,6 +19,7 @@ import {
   type LegalDocumentType,
 } from '@/components/modals/legal-info-modal';
 import { AppearanceCard } from '@/components/profile/appearance-card';
+import { ConservatorySection } from '@/components/profile/conservatory-section';
 import { GuestCloudCard } from '@/components/profile/guest-cloud-card';
 import { LocationClimateCard } from '@/components/profile/location-climate-card';
 import { NotificationsCard } from '@/components/profile/notifications-card';
@@ -113,6 +114,8 @@ export default function ProfileScreen() {
               onShowToast={showToast}
             />
           )}
+
+          <ConservatorySection />
 
           <AppearanceCard onShowToast={showToast} />
           <NotificationsCard onShowToast={showToast} />
