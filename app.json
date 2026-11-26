@@ -43,7 +43,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "FloraLog uses your photo library to identify plants and diagnose leaf health."
+          "photosPermission": "FloraLog uses your photo library to identify plants and diagnose leaf health.",
+          "cameraPermission": "FloraLog uses your camera to snap photos of your plants for AI identification and health scans."
         }
       ],
       [
