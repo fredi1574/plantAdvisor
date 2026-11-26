@@ -5,6 +5,7 @@
  */
 
 import type { Session, Subscription, User } from '@supabase/supabase-js';
+import * as Linking from 'expo-linking';
 import { Platform, TurboModuleRegistry } from 'react-native';
 import { create } from 'zustand';
 
@@ -51,6 +52,7 @@ interface AuthStoreState {
     error?: string;
   }>;
   signInWithGoogle: () => Promise<{ ok: boolean; cancelled?: boolean; error?: string }>;
+  resetPasswordForEmail: (email: string) => Promise<{ ok: boolean; error?: string }>;
   updateProfile: (updates: {
     displayName?: string;
     avatarUrl?: string;
@@ -374,6 +376,38 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
         }
       }
 
+      const msg = toFriendlyErrorMessage(err, 'auth');
+      set({ isLoading: false, authError: msg });
+      return { ok: false, error: msg };
+    }
+  },
+
+  resetPasswordForEmail: async (email) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    set({ isLoading: true, authError: null });
+
+    if (!supabase) {
+      const msg = i18n.t('auth.resetRequiresCloud');
+      set({ isLoading: false, authError: msg });
+      return { ok: false, error: msg };
+    }
+
+    try {
+      const redirectTo = Linking.createURL('/auth');
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        normalizedEmail,
+        { redirectTo }
+      );
+
+      if (error) {
+        const msg = toFriendlyErrorMessage(error, 'auth');
+        set({ isLoading: false, authError: msg });
+        return { ok: false, error: msg };
+      }
+
+      set({ isLoading: false, authError: null });
+      return { ok: true };
+    } catch (err) {
       const msg = toFriendlyErrorMessage(err, 'auth');
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
