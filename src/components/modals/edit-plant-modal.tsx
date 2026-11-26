@@ -1,6 +1,5 @@
 import { Image } from 'expo-image';
 import {
-  BookmarkPlus,
   Camera,
   Image as ImageIcon,
   Minus,
@@ -11,20 +10,16 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { SpringPressable } from '@/components/ui/animated-wrappers';
+import {
+  PlantEnvironmentFields,
+  RoomPresetBar,
+} from '@/components/forms/plant-environment-fields';
 import { BotanicalInput } from '@/components/ui/botanical-input';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 import { Chip } from '@/components/ui/chip';
-import { SwitchRow } from '@/components/ui/switch-row';
-import {
-  LIGHT_EXPOSURE_OPTIONS,
-  PLANT_TYPE_OPTIONS,
-  POT_MATERIAL_OPTIONS,
-} from '@/constants/plantOptions';
+import { PLANT_TYPE_OPTIONS } from '@/constants/plantOptions';
 import { BorderWidth, Radius, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
-import { localizeLocation } from '@/i18n/plantDisplay';
-import { triggerLightHaptic } from '@/services/haptics';
 import { pickPlantImage } from '@/services/imagePicker';
 import { usePlantStore } from '@/store/usePlantStore';
 import type {
@@ -78,11 +73,9 @@ function EditPlantFormSheet({
   onSaved,
   onRequestDelete,
 }: EditPlantFormSheetProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const palette = usePalette();
   const updatePlant = usePlantStore((s) => s.updatePlant);
-  const roomPresets = usePlantStore((s) => s.roomPresets);
-  const addRoomPreset = usePlantStore((s) => s.addRoomPreset);
 
   const [nickname, setNickname] = useState(plant.nickname);
   const [commonName, setCommonName] = useState(plant.species.commonName);
@@ -286,73 +279,19 @@ function EditPlantFormSheet({
         </View>
       </View>
 
-      {roomPresets.length > 0 && (
-        <View style={styles.fieldGroup}>
-          <View style={styles.presetHeaderRow}>
-            <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-              {t('editPlant.roomPresets')}
-            </Text>
-            <SpringPressable
-              onPress={() => {
-                const trimmed = location.trim();
-                if (!trimmed) return;
-                triggerLightHaptic();
-                addRoomPreset({
-                  name: trimmed,
-                  lightExposure,
-                  isIndoor,
-                });
-              }}
-              disabled={!location.trim()}
-              accessibilityRole="button"
-              accessibilityLabel="Save current location as room preset"
-              style={[
-                styles.savePresetBtn,
-                {
-                  backgroundColor: palette.primarySoft,
-                  borderColor: palette.primaryBorder,
-                },
-                !location.trim() && { opacity: 0.45 },
-              ]}>
-              <BookmarkPlus size={12} color={palette.primary} />
-              <Text
-                style={[styles.savePresetBtnText, { color: palette.primary }]}>
-                {t('editPlant.saveSpot')}
-              </Text>
-            </SpringPressable>
-          </View>
-          <View style={styles.presetChipsRow}>
-            {roomPresets.map((preset) => {
-              const isSelected =
-                location.trim().toLowerCase() ===
-                  preset.name.trim().toLowerCase() &&
-                lightExposure === preset.lightExposure &&
-                isIndoor === preset.isIndoor;
-
-              return (
-                <Chip
-                  key={preset.id}
-                  label={`${localizeLocation(preset.name, i18n.language)} • ${
-                    preset.isIndoor
-                      ? t('plantDetail.hero.indoor')
-                      : t('plantDetail.hero.outdoor')
-                  }`}
-                  variant="subtle"
-                  size="sm"
-                  selected={isSelected}
-                  selectedStyle="solid"
-                  onPress={() => {
-                    triggerLightHaptic();
-                    setLocation(preset.name);
-                    setLightExposure(preset.lightExposure);
-                    setIsIndoor(preset.isIndoor);
-                  }}
-                />
-              );
-            })}
-          </View>
-        </View>
-      )}
+      <RoomPresetBar
+        label={t('editPlant.roomPresets')}
+        hideWhenEmpty
+        chipGap={Spacing.xs + 2}
+        location={location}
+        lightExposure={lightExposure}
+        isIndoor={isIndoor}
+        onApplyPreset={(preset) => {
+          setLocation(preset.name);
+          setLightExposure(preset.lightExposure);
+          setIsIndoor(preset.isIndoor);
+        }}
+      />
 
       <View style={styles.twoColRow}>
         <View style={[styles.fieldGroup, styles.locationCol]}>
@@ -459,54 +398,16 @@ function EditPlantFormSheet({
         </View>
       </View>
 
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          {t('editPlant.lightExposure')}
-        </Text>
-        <View style={styles.chipRow}>
-          {LIGHT_EXPOSURE_OPTIONS.map((le) => (
-            <Chip
-              key={le.key}
-              label={t(`plantOptions.lightExposure.${le.key}`)}
-              variant="subtle"
-              selected={lightExposure === le.key}
-              selectedStyle="solid"
-              onPress={() => setLightExposure(le.key)}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.fieldGroup}>
-        <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-          {t('editPlant.potMaterial')}
-        </Text>
-        <View style={styles.chipRow}>
-          {POT_MATERIAL_OPTIONS.map((pm) => (
-            <Chip
-              key={pm.key}
-              label={t(`plantOptions.potMaterial.${pm.key}`)}
-              variant="subtle"
-              selected={potMaterial === pm.key}
-              selectedStyle="solid"
-              onPress={() => setPotMaterial(pm.key)}
-            />
-          ))}
-        </View>
-      </View>
-
-      <SwitchRow
-        label={t('scan.identify.indoorLabel')}
-        description={t('scan.identify.indoorDesc')}
-        value={isIndoor}
-        onValueChange={setIsIndoor}
-      />
-
-      <SwitchRow
-        label={t('editPlant.drainageLabel')}
-        description={t('editPlant.drainageDesc')}
-        value={hasDrainageHole}
-        onValueChange={setHasDrainageHole}
+      <PlantEnvironmentFields
+        lightExposure={lightExposure}
+        onChangeLightExposure={setLightExposure}
+        potMaterial={potMaterial}
+        onChangePotMaterial={setPotMaterial}
+        isIndoor={isIndoor}
+        onChangeIsIndoor={setIsIndoor}
+        hasDrainageHole={hasDrainageHole}
+        onChangeHasDrainageHole={setHasDrainageHole}
+        drainageDescription={t('editPlant.drainageDesc')}
       />
     </BottomSheetModal>
   );
@@ -559,30 +460,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 12,
     fontWeight: '700',
-  },
-  presetHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  savePresetBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.full,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-  },
-  savePresetBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  presetChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.xs + 2,
   },
   italicInput: {
     fontStyle: 'italic',

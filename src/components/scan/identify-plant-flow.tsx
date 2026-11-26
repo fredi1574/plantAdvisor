@@ -1,9 +1,13 @@
 import { router } from 'expo-router';
-import { BookmarkPlus, CheckCircle2, Sparkles } from 'lucide-react-native';
+import { CheckCircle2, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import {
+  PlantEnvironmentFields,
+  RoomPresetBar,
+} from '@/components/forms/plant-environment-fields';
 import { PetSafetyBadge } from '@/components/garden/pet-safety-badge';
 import {
   AnimatedEntrance,
@@ -11,17 +15,11 @@ import {
 } from '@/components/ui/animated-wrappers';
 import { BotanicalInput } from '@/components/ui/botanical-input';
 import { AiScanShimmerCard } from '@/components/ui/botanical-shimmer';
-import { Chip } from '@/components/ui/chip';
 import { SucculentGuardrailBanner } from '@/components/ui/status-badges';
 import { SurfaceCard } from '@/components/ui/surface-card';
-import { SwitchRow } from '@/components/ui/switch-row';
-import {
-  LIGHT_EXPOSURE_OPTIONS,
-  POT_MATERIAL_OPTIONS,
-} from '@/constants/plantOptions';
 import { BorderWidth, Radius, Spacing, Typography } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-theme';
-import { localizeCommonName, localizeLocation } from '@/i18n/plantDisplay';
+import { localizeCommonName } from '@/i18n/plantDisplay';
 import { AiQuotaExceededError, identifyPlant } from '@/services/aiPlantService';
 import { triggerLightHaptic, triggerSuccessHaptic } from '@/services/haptics';
 import { usePlantStore } from '@/store/usePlantStore';
@@ -100,8 +98,6 @@ export function IdentifyPlantFlow({
   const { t, i18n } = useTranslation();
   const palette = usePalette();
   const addPlant = usePlantStore((s) => s.addPlant);
-  const roomPresets = usePlantStore((s) => s.roomPresets);
-  const addRoomPreset = usePlantStore((s) => s.addRoomPreset);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -345,79 +341,21 @@ export function IdentifyPlantFlow({
               />
             </View>
 
-            <View style={styles.fieldGroup}>
-              <View style={styles.fieldLabelRow}>
-                <Text
-                  style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                  {t('editPlant.location')}
-                </Text>
-                <SpringPressable
-                  onPress={() => {
-                    const trimmed = form.location.trim();
-                    if (!trimmed) return;
-                    triggerLightHaptic();
-                    addRoomPreset({
-                      name: trimmed,
-                      lightExposure: form.lightExposure,
-                      isIndoor: form.isIndoor,
-                    });
-                  }}
-                  disabled={!form.location.trim()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Save current location as room preset"
-                  style={[
-                    styles.savePresetBtn,
-                    {
-                      backgroundColor: palette.primarySoft,
-                      borderColor: palette.primaryBorder,
-                    },
-                    !form.location.trim() && { opacity: 0.45 },
-                  ]}>
-                  <BookmarkPlus size={12} color={palette.primary} />
-                  <Text
-                    style={[
-                      styles.savePresetBtnText,
-                      { color: palette.primary },
-                    ]}>
-                    {t('editPlant.saveSpot')}
-                  </Text>
-                </SpringPressable>
-              </View>
-              {roomPresets.length > 0 && (
-                <View style={styles.presetRow}>
-                  {roomPresets.map((preset) => {
-                    const isActivePreset =
-                      form.location.trim().toLowerCase() ===
-                        preset.name.trim().toLowerCase() &&
-                      form.lightExposure === preset.lightExposure &&
-                      form.isIndoor === preset.isIndoor;
-
-                    return (
-                      <Chip
-                        key={preset.id}
-                        label={`${localizeLocation(preset.name, i18n.language)} • ${
-                          preset.isIndoor
-                            ? t('plantDetail.hero.indoor')
-                            : t('plantDetail.hero.outdoor')
-                        }`}
-                        variant="subtle"
-                        size="sm"
-                        selected={isActivePreset}
-                        selectedStyle="solid"
-                        onPress={() => {
-                          triggerLightHaptic();
-                          setForm((prev) => ({
-                            ...prev,
-                            location: preset.name,
-                            lightExposure: preset.lightExposure,
-                            isIndoor: preset.isIndoor,
-                          }));
-                        }}
-                      />
-                    );
-                  })}
-                </View>
-              )}
+            <RoomPresetBar
+              label={t('editPlant.location')}
+              labelSize="md"
+              chipGap={Spacing.sm}
+              location={form.location}
+              lightExposure={form.lightExposure}
+              isIndoor={form.isIndoor}
+              onApplyPreset={(preset) => {
+                setForm((prev) => ({
+                  ...prev,
+                  location: preset.name,
+                  lightExposure: preset.lightExposure,
+                  isIndoor: preset.isIndoor,
+                }));
+              }}>
               <BotanicalInput
                 surface="surface"
                 compact={false}
@@ -426,60 +364,26 @@ export function IdentifyPlantFlow({
                 placeholder={t('editPlant.locationPlaceholder')}
                 style={styles.textInput}
               />
-            </View>
+            </RoomPresetBar>
 
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                {t('editPlant.lightExposure')}
-              </Text>
-              <View style={styles.presetRow}>
-                {LIGHT_EXPOSURE_OPTIONS.map((opt) => (
-                  <Chip
-                    key={opt.key}
-                    label={t(`plantOptions.lightExposure.${opt.key}`)}
-                    variant="subtle"
-                    size="md"
-                    selected={form.lightExposure === opt.key}
-                    selectedStyle="solid"
-                    onPress={() => updateForm('lightExposure', opt.key)}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <SwitchRow
-              label={t('scan.identify.indoorLabel')}
-              description={t('scan.identify.indoorDesc')}
-              value={form.isIndoor}
-              onValueChange={(val) => updateForm('isIndoor', val)}
-              contained={false}
-            />
-
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: palette.textPrimary }]}>
-                {t('editPlant.potMaterial')}
-              </Text>
-              <View style={styles.presetRow}>
-                {POT_MATERIAL_OPTIONS.slice(0, 4).map((pm) => (
-                  <Chip
-                    key={pm.key}
-                    label={t(`plantOptions.potMaterial.${pm.key}`)}
-                    variant="subtle"
-                    size="md"
-                    selected={form.potMaterial === pm.key}
-                    selectedStyle="solid"
-                    onPress={() => updateForm('potMaterial', pm.key)}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <SwitchRow
-              label={t('editPlant.drainageLabel')}
-              description={t('scan.identify.drainageDesc')}
-              value={form.hasDrainageHole}
-              onValueChange={(val) => updateForm('hasDrainageHole', val)}
-              contained={false}
+            <PlantEnvironmentFields
+              lightExposure={form.lightExposure}
+              onChangeLightExposure={(val) => updateForm('lightExposure', val)}
+              potMaterial={form.potMaterial}
+              onChangePotMaterial={(val) => updateForm('potMaterial', val)}
+              isIndoor={form.isIndoor}
+              onChangeIsIndoor={(val) => updateForm('isIndoor', val)}
+              hasDrainageHole={form.hasDrainageHole}
+              onChangeHasDrainageHole={(val) =>
+                updateForm('hasDrainageHole', val)
+              }
+              maxPotOptions={4}
+              chipSize="md"
+              chipGap={Spacing.sm}
+              labelSize="md"
+              switchContained={false}
+              indoorBeforePot
+              drainageDescription={t('scan.identify.drainageDesc')}
             />
 
             <SpringPressable
@@ -593,39 +497,11 @@ const styles = StyleSheet.create({
   careSpecLabel: {
     fontWeight: '700',
   },
-  formDivider: {
-    height: BorderWidth.hairline,
-    marginVertical: Spacing.xs,
-  },
   fieldGroup: {
     gap: 6,
-  },
-  fieldLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
   },
   fieldLabel: {
     fontSize: 13,
     fontWeight: '700',
-  },
-  savePresetBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.full,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-  },
-  savePresetBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  presetRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
   },
 });
