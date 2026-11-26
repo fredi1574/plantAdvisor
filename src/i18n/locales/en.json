@@ -45,6 +45,13 @@
     "rememberedPasswordPrompt": "Remembered your password?",
     "backToSignInLink": "Back to sign in",
     "resetRequiresCloud": "Password reset requires a connected Supabase cloud account.",
+    "newPasswordTitle": "Set New Password",
+    "newPasswordSubtitle": "Choose a new password for your FloraLog account",
+    "newPasswordPlaceholder": "New password (min. 6 chars)",
+    "confirmPasswordPlaceholder": "Confirm new password",
+    "passwordMismatchError": "Passwords do not match.",
+    "updatePasswordSubmit": "Update Password",
+    "cancelRecoveryPrompt": "Changed your mind?",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service"
   },
@@ -779,6 +786,99 @@
       "signOutMessage": "Sign out of your FloraLog cloud account?",
       "deleteAccount": "Delete Account",
       "deleteAccountSubtitle": "Permanently remove your cloud account and all synced data"
+    }
+  },
+  "conservatory": {
+    "eyebrow": "CONSERVATORY",
+    "rankEyebrow": "STEWARDSHIP RANK",
+    "maxRankReached": "Highest botanical stewardship title reached",
+    "nextRankProgress": "{{points}} notes to {{nextRank}}",
+    "stewardshipPoints": "{{score}} stewardship notes",
+    "stats": {
+      "rhythmLabel": "Care Rhythm",
+      "rhythmValue_one": "{{count}} wk",
+      "rhythmValue_other": "{{count}} wks",
+      "onScheduleLabel": "On Schedule",
+      "sealsLabel": "Seals Earned"
+    },
+    "tabs": {
+      "seals": "Botanical Seals",
+      "herbarium": "Herbarium"
+    },
+    "sealEarned": "Earned",
+    "sealProgress": "{{current}} / {{target}}",
+    "sealHint": "Tap any seal to view its botanical criteria.",
+    "ranks": {
+      "seedling_keeper": {
+        "title": "Seedling Keeper",
+        "subtitle": "Tending the first quiet roots of your collection."
+      },
+      "windowsill_tender": {
+        "title": "Windowsill Tender",
+        "subtitle": "Building steady care rhythm across rooms and seasons."
+      },
+      "propagation_alchemist": {
+        "title": "Propagation Alchemist",
+        "subtitle": "Rooting cuttings, tracking growth, and reading leaf signals."
+      },
+      "botanical_chronicler": {
+        "title": "Botanical Chronicler",
+        "subtitle": "Curating a rich field journal of living specimens."
+      },
+      "conservatory_curator": {
+        "title": "Conservatory Curator",
+        "subtitle": "Master steward of a thriving, diverse botanical sanctuary."
+      }
+    },
+    "seals": {
+      "first_roots": {
+        "title": "First Roots",
+        "description": "Cultivate at least 3 living specimens in your conservatory."
+      },
+      "family_collector": {
+        "title": "Botanical Atlas",
+        "description": "Collect plants spanning 3 distinct botanical families."
+      },
+      "garden_harmony": {
+        "title": "Garden in Harmony",
+        "description": "Keep 3 or more plants on schedule with zero overdue waterings."
+      },
+      "dry_back_discipline": {
+        "title": "Dry-Back Discipline",
+        "description": "Log 3 mindful succulent waterings respecting full dry-back intervals."
+      },
+      "chronicle_keeper": {
+        "title": "Chronicle Keeper",
+        "description": "Record 5 notebook entries with progress photos or growth measurements."
+      },
+      "root_whisperer": {
+        "title": "Root Whisperer",
+        "description": "Grow propagation roots to 5 cm or graduate a cutting into soil."
+      },
+      "plant_medic": {
+        "title": "Plant Medic",
+        "description": "Complete 3 recommended actions from AI health assessments."
+      },
+      "comeback_story": {
+        "title": "Revival Arc",
+        "description": "Guide a stressed or critical specimen back to thriving across health scans."
+      }
+    },
+    "herbarium": {
+      "familiesSummary_one": "{{count}} botanical family documented",
+      "familiesSummary_other": "{{count}} botanical families documented",
+      "specimenCount_one": "{{count}} specimen",
+      "specimenCount_other": "{{count}} specimens",
+      "ageDays_one": "{{count}} day in care",
+      "ageDays_other": "{{count}} days in care",
+      "typesLabel": "Specimen Types",
+      "emptyTitle": "Your herbarium is awaiting its first plate",
+      "emptyBody": "Add or identify a plant to press its botanical profile into your field guide."
+    },
+    "toasts": {
+      "sealEarned": "Botanical Seal earned · {{title}}",
+      "rankPromoted": "Conservatory Rank · {{title}}",
+      "viewAction": "View"
     }
   },
   "syncBanner": {

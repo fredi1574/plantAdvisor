@@ -4,6 +4,7 @@ import {
   render,
   screen,
 } from '@testing-library/react-native';
+import { router } from 'expo-router';
 import React from 'react';
 
 import SignInScreen from '@/app/auth';
@@ -18,11 +19,17 @@ jest.mock('expo-router', () => ({
 
 describe('SignInScreen Forgot Password flow', () => {
   const originalReset = useAuthStore.getState().resetPasswordForEmail;
+  const originalUpdatePassword = useAuthStore.getState().updatePassword;
+  const originalCancelRecovery = useAuthStore.getState().cancelPasswordRecovery;
 
   afterEach(async () => {
+    jest.clearAllMocks();
     await act(async () => {
       useAuthStore.setState({
         resetPasswordForEmail: originalReset,
+        updatePassword: originalUpdatePassword,
+        cancelPasswordRecovery: originalCancelRecovery,
+        isPasswordRecovery: false,
         authError: null,
         isLoading: false,
       });
@@ -79,5 +86,49 @@ describe('SignInScreen Forgot Password flow', () => {
     expect(
       screen.getByText('Please enter a valid email address.')
     ).toBeTruthy();
+  });
+
+  it('renders Set New Password mode during password recovery, validates match, and updates password', async () => {
+    const mockUpdate = jest.fn(async () => ({ ok: true }));
+    const mockCancel = jest.fn(async () => undefined);
+
+    await act(async () => {
+      useAuthStore.setState({
+        isPasswordRecovery: true,
+        updatePassword: mockUpdate,
+        cancelPasswordRecovery: mockCancel,
+        authError: null,
+        isLoading: false,
+      });
+    });
+
+    await render(<SignInScreen />);
+
+    expect(screen.getByText('Set New Password')).toBeTruthy();
+
+    await fireEvent.changeText(
+      screen.getByPlaceholderText('New password (min. 6 chars)'),
+      'botanical123'
+    );
+    await fireEvent.changeText(
+      screen.getByPlaceholderText('Confirm new password'),
+      'different123'
+    );
+    await fireEvent.press(screen.getByText('Update Password'));
+
+    expect(screen.getByText('Passwords do not match.')).toBeTruthy();
+    expect(mockUpdate).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(
+      screen.getByPlaceholderText('Confirm new password'),
+      'botanical123'
+    );
+    await fireEvent.press(screen.getByText('Update Password'));
+
+    expect(mockUpdate).toHaveBeenCalledWith('botanical123');
+    expect(router.replace).toHaveBeenCalledWith('/(tabs)');
+
+    await fireEvent.press(screen.getByText('Back to sign in'));
+    expect(mockCancel).toHaveBeenCalledTimes(1);
   });
 });

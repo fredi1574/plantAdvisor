@@ -15,12 +15,17 @@ export default function SignInScreen() {
   const signInWithEmail = useAuthStore((s) => s.signInWithEmail);
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle);
   const resetPasswordForEmail = useAuthStore((s) => s.resetPasswordForEmail);
+  const updatePassword = useAuthStore((s) => s.updatePassword);
+  const cancelPasswordRecovery = useAuthStore((s) => s.cancelPasswordRecovery);
+  const isPasswordRecovery = useAuthStore((s) => s.isPasswordRecovery);
   const isLoading = useAuthStore((s) => s.isLoading);
   const authError = useAuthStore((s) => s.authError);
   const clearError = useAuthStore((s) => s.clearError);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isResetMode, setIsResetMode] = useState(false);
   const [resetSentEmail, setResetSentEmail] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -62,6 +67,27 @@ export default function SignInScreen() {
     }
   };
 
+  const handleUpdatePassword = async () => {
+    setLocalError(null);
+    clearError();
+
+    if (newPassword.length < 6) {
+      setLocalError(t('auth.shortPasswordError'));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setLocalError(t('auth.passwordMismatchError'));
+      return;
+    }
+
+    const result = await updatePassword(newPassword);
+    if (result.ok) {
+      setNewPassword('');
+      setConfirmPassword('');
+      router.replace('/(tabs)');
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setLocalError(null);
     clearError();
@@ -78,37 +104,72 @@ export default function SignInScreen() {
     clearError();
   };
 
+  const screenTitle = isPasswordRecovery
+    ? t('auth.newPasswordTitle')
+    : isResetMode
+      ? t('auth.resetTitle')
+      : t('auth.signInTitle');
+
+  const screenSubtitle = isPasswordRecovery
+    ? t('auth.newPasswordSubtitle')
+    : isResetMode
+      ? t('auth.resetSubtitle')
+      : t('auth.signInSubtitle');
+
+  const submitLabel = isPasswordRecovery
+    ? t('auth.updatePasswordSubmit')
+    : isResetMode
+      ? t('auth.resetSubmit')
+      : t('auth.signInSubmit');
+
+  const footerPrompt = isPasswordRecovery
+    ? t('auth.cancelRecoveryPrompt')
+    : isResetMode
+      ? t('auth.rememberedPasswordPrompt')
+      : t('auth.noAccountPrompt');
+
+  const footerActionLabel =
+    isPasswordRecovery || isResetMode
+      ? t('auth.backToSignInLink')
+      : t('auth.createAccountLink');
+
   return (
     <AuthScreenShell
-      title={isResetMode ? t('auth.resetTitle') : t('auth.signInTitle')}
-      subtitle={
-        isResetMode ? t('auth.resetSubtitle') : t('auth.signInSubtitle')
-      }
-      compactLogo={isResetMode}
+      title={screenTitle}
+      subtitle={screenSubtitle}
+      compactLogo={isPasswordRecovery || isResetMode}
       errorMessage={localError || authError}
       successMessage={
-        resetSentEmail
+        !isPasswordRecovery && resetSentEmail
           ? t('auth.resetSent', { email: resetSentEmail })
           : null
       }
-      submitLabel={
-        isResetMode ? t('auth.resetSubmit') : t('auth.signInSubmit')
-      }
+      submitLabel={submitLabel}
       isLoading={isLoading}
-      onSubmit={() =>
-        void (isResetMode ? handleResetPassword() : handleSignIn())
+      onSubmit={() => {
+        if (isPasswordRecovery) {
+          void handleUpdatePassword();
+        } else if (isResetMode) {
+          void handleResetPassword();
+        } else {
+          void handleSignIn();
+        }
+      }}
+      onGooglePress={
+        isPasswordRecovery || isResetMode
+          ? undefined
+          : () => void handleGoogleSignIn()
       }
-      onGooglePress={isResetMode ? undefined : () => void handleGoogleSignIn()}
-      footerPrompt={
-        isResetMode
-          ? t('auth.rememberedPasswordPrompt')
-          : t('auth.noAccountPrompt')
-      }
-      footerActionLabel={
-        isResetMode ? t('auth.backToSignInLink') : t('auth.createAccountLink')
-      }
+      footerPrompt={footerPrompt}
+      footerActionLabel={footerActionLabel}
       onFooterAction={() => {
-        if (isResetMode) {
+        if (isPasswordRecovery) {
+          setLocalError(null);
+          setNewPassword('');
+          setConfirmPassword('');
+          setIsResetMode(false);
+          void cancelPasswordRecovery();
+        } else if (isResetMode) {
           toggleResetMode(false);
         } else {
           setLocalError(null);
@@ -117,46 +178,73 @@ export default function SignInScreen() {
         }
       }}>
       <View style={styles.inputsStack}>
-        <AuthIconInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder={t('auth.emailPlaceholder')}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType={isResetMode ? 'go' : 'next'}
-          onSubmitEditing={
-            isResetMode ? () => void handleResetPassword() : undefined
-          }
-          renderIcon={(color) => <Mail size={16} color={color} />}
-        />
-
-        {!isResetMode && (
+        {isPasswordRecovery ? (
           <>
             <AuthIconInput
-              value={password}
-              onChangeText={setPassword}
-              placeholder={t('auth.passwordPlaceholder')}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder={t('auth.newPasswordPlaceholder')}
               isPassword
               autoCapitalize="none"
-              returnKeyType="go"
-              onSubmitEditing={() => void handleSignIn()}
+              returnKeyType="next"
               renderIcon={(color) => <Lock size={16} color={color} />}
             />
 
-            <Pressable
-              onPress={() => toggleResetMode(true)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t('auth.forgotPasswordLink')}
-              style={({ pressed }) => [
-                styles.forgotBtn,
-                pressed && { opacity: 0.7 },
-              ]}>
-              <Text style={[styles.forgotText, { color: palette.primary }]}>
-                {t('auth.forgotPasswordLink')}
-              </Text>
-            </Pressable>
+            <AuthIconInput
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder={t('auth.confirmPasswordPlaceholder')}
+              isPassword
+              autoCapitalize="none"
+              returnKeyType="go"
+              onSubmitEditing={() => void handleUpdatePassword()}
+              renderIcon={(color) => <Lock size={16} color={color} />}
+            />
+          </>
+        ) : (
+          <>
+            <AuthIconInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder={t('auth.emailPlaceholder')}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType={isResetMode ? 'go' : 'next'}
+              onSubmitEditing={
+                isResetMode ? () => void handleResetPassword() : undefined
+              }
+              renderIcon={(color) => <Mail size={16} color={color} />}
+            />
+
+            {!isResetMode && (
+              <>
+                <AuthIconInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder={t('auth.passwordPlaceholder')}
+                  isPassword
+                  autoCapitalize="none"
+                  returnKeyType="go"
+                  onSubmitEditing={() => void handleSignIn()}
+                  renderIcon={(color) => <Lock size={16} color={color} />}
+                />
+
+                <Pressable
+                  onPress={() => toggleResetMode(true)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('auth.forgotPasswordLink')}
+                  style={({ pressed }) => [
+                    styles.forgotBtn,
+                    pressed && { opacity: 0.7 },
+                  ]}>
+                  <Text style={[styles.forgotText, { color: palette.primary }]}>
+                    {t('auth.forgotPasswordLink')}
+                  </Text>
+                </Pressable>
+              </>
+            )}
           </>
         )}
       </View>

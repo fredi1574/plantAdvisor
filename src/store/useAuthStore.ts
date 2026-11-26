@@ -27,6 +27,7 @@ import {
 } from '@/services/supabase';
 import { usePlantStore } from '@/store/usePlantStore';
 import type { UserProfile } from '@/types/plant';
+import { parseAuthCallbackUrl } from '@/utils/authDeepLink';
 
 export interface SignUpPayload {
   email: string;
@@ -40,8 +41,15 @@ interface AuthStoreState {
   profile: UserProfile | null;
   isInitialized: boolean;
   isLoading: boolean;
+  isPasswordRecovery: boolean;
   authError: string | null;
   initializeAuth: () => Promise<void>;
+  handleAuthDeepLink: (url: string) => Promise<{
+    ok: boolean;
+    handled: boolean;
+    isRecovery?: boolean;
+    error?: string;
+  }>;
   signInWithEmail: (
     email: string,
     password: string
@@ -53,6 +61,8 @@ interface AuthStoreState {
   }>;
   signInWithGoogle: () => Promise<{ ok: boolean; cancelled?: boolean; error?: string }>;
   resetPasswordForEmail: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  updatePassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
+  cancelPasswordRecovery: () => Promise<void>;
   updateProfile: (updates: {
     displayName?: string;
     avatarUrl?: string;
@@ -101,6 +111,7 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   profile: null,
   isInitialized: false,
   isLoading: false,
+  isPasswordRecovery: false,
   authError: null,
 
   initializeAuth: async () => {
@@ -140,15 +151,23 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
 
       if (!authSubscription) {
         const { data } = supabase.auth.onAuthStateChange(
-          (_event, nextSession) => {
+          (event, nextSession) => {
             const nextUser = nextSession?.user ?? null;
+            const nextRecovery =
+              event === 'PASSWORD_RECOVERY'
+                ? true
+                : event === 'SIGNED_OUT'
+                  ? false
+                  : get().isPasswordRecovery;
+
             set({
               session: nextSession,
               user: nextUser,
               profile: nextUser ? get().profile : null,
+              isPasswordRecovery: nextRecovery,
             });
 
-            if (nextUser) {
+            if (nextUser && !nextRecovery) {
               void (async () => {
                 const profile = await fetchOrCreateUserProfile(nextUser);
                 set({ profile });
@@ -161,6 +180,74 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       }
     } catch {
       set({ isInitialized: true });
+    }
+  },
+
+  handleAuthDeepLink: async (url) => {
+    const parsed = parseAuthCallbackUrl(url);
+    if (!parsed) {
+      return { ok: true, handled: false };
+    }
+
+    if (parsed.errorDescription) {
+      const msg = toFriendlyErrorMessage(parsed.errorDescription, 'auth');
+      set({ authError: msg, isPasswordRecovery: false });
+      return { ok: false, handled: true, error: msg };
+    }
+
+    if (!supabase) {
+      return { ok: false, handled: true, error: i18n.t('auth.resetRequiresCloud') };
+    }
+
+    set({ isLoading: true, authError: null });
+    try {
+      if (parsed.code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(
+          parsed.code
+        );
+        if (error) {
+          const msg = toFriendlyErrorMessage(error, 'auth');
+          set({ isLoading: false, authError: msg });
+          return { ok: false, handled: true, error: msg };
+        }
+        const isRecovery = parsed.isRecovery || get().isPasswordRecovery;
+        set({
+          session: data.session ?? get().session,
+          user: data.user ?? data.session?.user ?? get().user,
+          isPasswordRecovery: isRecovery,
+          isLoading: false,
+          authError: null,
+        });
+        return { ok: true, handled: true, isRecovery };
+      }
+
+      if (parsed.accessToken && parsed.refreshToken) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: parsed.accessToken,
+          refresh_token: parsed.refreshToken,
+        });
+        if (error) {
+          const msg = toFriendlyErrorMessage(error, 'auth');
+          set({ isLoading: false, authError: msg });
+          return { ok: false, handled: true, error: msg };
+        }
+        const isRecovery = parsed.isRecovery || get().isPasswordRecovery;
+        set({
+          session: data.session ?? get().session,
+          user: data.user ?? data.session?.user ?? get().user,
+          isPasswordRecovery: isRecovery,
+          isLoading: false,
+          authError: null,
+        });
+        return { ok: true, handled: true, isRecovery };
+      }
+
+      set({ isLoading: false });
+      return { ok: true, handled: false };
+    } catch (err) {
+      const msg = toFriendlyErrorMessage(err, 'auth');
+      set({ isLoading: false, authError: msg });
+      return { ok: false, handled: true, error: msg };
     }
   },
 
@@ -412,6 +499,59 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       set({ isLoading: false, authError: msg });
       return { ok: false, error: msg };
     }
+  },
+
+  updatePassword: async (newPassword) => {
+    set({ isLoading: true, authError: null });
+
+    if (!supabase) {
+      const msg = i18n.t('auth.resetRequiresCloud');
+      set({ isLoading: false, authError: msg });
+      return { ok: false, error: msg };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        const msg = toFriendlyErrorMessage(error, 'auth');
+        set({ isLoading: false, authError: msg });
+        return { ok: false, error: msg };
+      }
+
+      const activeUser = data.user ?? get().user;
+      const profile = activeUser
+        ? await fetchOrCreateUserProfile(activeUser)
+        : get().profile;
+
+      set({
+        user: activeUser,
+        profile,
+        isPasswordRecovery: false,
+        isLoading: false,
+        authError: null,
+      });
+
+      if (activeUser) {
+        void usePlantStore.getState().syncWithSupabase(activeUser.id);
+      }
+
+      return { ok: true };
+    } catch (err) {
+      const msg = toFriendlyErrorMessage(err, 'auth');
+      set({ isLoading: false, authError: msg });
+      return { ok: false, error: msg };
+    }
+  },
+
+  cancelPasswordRecovery: async () => {
+    set({ isPasswordRecovery: false, authError: null });
+    if (supabase) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+    }
+    set({ session: null, user: null, profile: null });
   },
 
   updateProfile: async (updates) => {

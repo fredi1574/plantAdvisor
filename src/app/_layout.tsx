@@ -21,6 +21,7 @@ import {
   PlusJakartaSans_700Bold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { useFonts } from 'expo-font';
+import * as Linking from 'expo-linking';
 import { addNotificationResponseReceivedListener } from 'expo-notifications';
 import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -30,6 +31,7 @@ import { AppState, Platform, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AppErrorBoundary } from '@/components/ui/app-error-boundary';
+import { ConservatoryMilestoneToast } from '@/components/ui/conservatory-milestone-toast';
 import { BotanicalSplashScreen } from '@/components/ui/splash-screen';
 import { useIsDark, usePalette } from '@/hooks/use-theme';
 import { initializeNotifications } from '@/services/notificationService';
@@ -47,7 +49,9 @@ export default function RootLayout() {
   const palette = usePalette();
   const isDark = useIsDark();
   const initializeAuth = useAuthStore((s) => s.initializeAuth);
+  const handleAuthDeepLink = useAuthStore((s) => s.handleAuthDeepLink);
   const isInitialized = useAuthStore((s) => s.isInitialized);
+  const isPasswordRecovery = useAuthStore((s) => s.isPasswordRecovery);
   useLanguageStore((s) => s.preference);
   const session = useAuthStore((s) => s.session);
   const user = useAuthStore((s) => s.user);
@@ -68,7 +72,7 @@ export default function RootLayout() {
   const [showSplashOverlay, setShowSplashOverlay] = useState(true);
 
   const isAppReady = isInitialized && (fontsLoaded || Boolean(fontError));
-  const isAuthenticated = Boolean(session && user);
+  const isAuthenticated = Boolean(session && user) && !isPasswordRecovery;
 
   useEffect(() => {
     void initializeAuth();
@@ -77,6 +81,22 @@ export default function RootLayout() {
       // Ignore if already hidden
     });
   }, [initializeAuth]);
+
+  useEffect(() => {
+    void Linking.getInitialURL().then((initialUrl) => {
+      if (initialUrl) {
+        void handleAuthDeepLink(initialUrl);
+      }
+    });
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      if (url) {
+        void handleAuthDeepLink(url);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [handleAuthDeepLink]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -144,6 +164,8 @@ export default function RootLayout() {
           </Stack.Protected>
         </Stack>
       )}
+
+      {isAuthenticated && !showSplashOverlay && <ConservatoryMilestoneToast />}
 
       {showSplashOverlay && (
         <BotanicalSplashScreen

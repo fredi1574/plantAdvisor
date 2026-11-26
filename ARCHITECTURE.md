@@ -56,6 +56,7 @@ plantAdvisor/
 │   │   └── plant.ts                 # Strict TypeScript domain models & AI schemas
 │   ├── utils/
 │   │   ├── watering.ts              # Pure watering countdown, date-key & default copy helpers
+│   │   ├── authDeepLink.ts          # Supabase Auth PKCE & recovery deep-link URL parser
 │   │   └── ids.ts                   # Collision-safe client entity ID generator
 │   ├── services/
 │   │   ├── ai/                      # Modular AI service (schemas, guardrails, quota, mockEngine, client)

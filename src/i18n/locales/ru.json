@@ -45,6 +45,13 @@
     "rememberedPasswordPrompt": "Вспомнили пароль?",
     "backToSignInLink": "Вернуться ко входу",
     "resetRequiresCloud": "Сброс пароля доступен только при подключённом облаке Supabase.",
+    "newPasswordTitle": "Новый пароль",
+    "newPasswordSubtitle": "Придумайте новый пароль для вашего аккаунта FloraLog",
+    "newPasswordPlaceholder": "Новый пароль (мин. 6 символов)",
+    "confirmPasswordPlaceholder": "Повторите новый пароль",
+    "passwordMismatchError": "Пароли не совпадают.",
+    "updatePasswordSubmit": "Обновить пароль",
+    "cancelRecoveryPrompt": "Передумали?",
     "privacyPolicy": "Политика конфиденциальности",
     "termsOfService": "Условия использования"
   },
@@ -794,6 +801,103 @@
       "signOutMessage": "Выйти из облачного аккаунта FloraLog?",
       "deleteAccount": "Удалить аккаунт",
       "deleteAccountSubtitle": "Безвозвратно удалить облачный аккаунт и все синхронизированные данные"
+    }
+  },
+  "conservatory": {
+    "eyebrow": "ОРАНЖЕРЕЯ",
+    "rankEyebrow": "ЗВАНИЕ САДОВОДА",
+    "maxRankReached": "Достигнуто высшее звание хранителя оранжереи",
+    "nextRankProgress": "Ещё {{points}} до звания «{{nextRank}}»",
+    "stewardshipPoints": "{{score}} очков мастерства",
+    "stats": {
+      "rhythmLabel": "Ритм ухода",
+      "rhythmValue_one": "{{count}} нед.",
+      "rhythmValue_few": "{{count}} нед.",
+      "rhythmValue_many": "{{count}} нед.",
+      "onScheduleLabel": "По графику",
+      "sealsLabel": "Печати"
+    },
+    "tabs": {
+      "seals": "Ботанические печати",
+      "herbarium": "Гербарий"
+    },
+    "sealEarned": "Получено",
+    "sealProgress": "{{current}} / {{target}}",
+    "sealHint": "Нажмите на печать, чтобы посмотреть условия получения.",
+    "ranks": {
+      "seedling_keeper": {
+        "title": "Хранитель ростков",
+        "subtitle": "Забота о первых спокойных корнях вашей коллекции."
+      },
+      "windowsill_tender": {
+        "title": "Смотритель подоконника",
+        "subtitle": "Устойчивый ритм ухода в комнатах и по сезонам."
+      },
+      "propagation_alchemist": {
+        "title": "Мастер черенкования",
+        "subtitle": "Укоренение черенков, замеры роста и чуткость к листьям."
+      },
+      "botanical_chronicler": {
+        "title": "Ботанический летописец",
+        "subtitle": "Богатый полевой дневник наблюдений за живой коллекцией."
+      },
+      "conservatory_curator": {
+        "title": "Куратор оранжереи",
+        "subtitle": "Мастер-хранитель цветущего и разнообразного сада."
+      }
+    },
+    "seals": {
+      "first_roots": {
+        "title": "Первые корни",
+        "description": "Соберите не менее 3 живых растений в своей оранжерее."
+      },
+      "family_collector": {
+        "title": "Ботанический атлас",
+        "description": "Соберите растения из 3 разных ботанических семейств."
+      },
+      "garden_harmony": {
+        "title": "Сад в гармонии",
+        "description": "Удерживайте от 3 растений в графике без просроченных поливов."
+      },
+      "dry_back_discipline": {
+        "title": "Дисциплина просушки",
+        "description": "Запишите 3 бережных полива суккулентов с полной просушкой грунта."
+      },
+      "chronicle_keeper": {
+        "title": "Хранитель летописи",
+        "description": "Добавьте 5 записей дневника с фотографиями или замерами роста."
+      },
+      "root_whisperer": {
+        "title": "Заклинатель корней",
+        "description": "Вырастите корни черенка до 5 см или пересадите черенок в грунт."
+      },
+      "plant_medic": {
+        "title": "Целитель растений",
+        "description": "Выполните 3 рекомендации из ИИ-оценок здоровья растений."
+      },
+      "comeback_story": {
+        "title": "История спасения",
+        "description": "Помогите ослабленному растению вернуться к состоянию «Процветает»."
+      }
+    },
+    "herbarium": {
+      "familiesSummary_one": "Задокументировано {{count}} семейство",
+      "familiesSummary_few": "Задокументировано {{count}} семейства",
+      "familiesSummary_many": "Задокументировано {{count}} семейств",
+      "specimenCount_one": "{{count}} экземпляр",
+      "specimenCount_few": "{{count}} экземпляра",
+      "specimenCount_many": "{{count}} экземпляров",
+      "ageDays_one": "{{count}} день в коллекции",
+      "ageDays_few": "{{count}} дня в коллекции",
+      "ageDays_many": "{{count}} дней в коллекции",
+      "typesLabel": "Типы растений",
+      "emptyTitle": "Гербарий ждёт первый образец",
+      "emptyBody": "Добавьте или распознайте растение, чтобы сохранить его ботаническую карточку."
+    },
+    "toasts": {
+      "sealEarned": "Ботаническая печать · {{title}}",
+      "rankPromoted": "Новое звание · {{title}}",
+      "viewAction": "Открыть"
     }
   },
   "syncBanner": {
