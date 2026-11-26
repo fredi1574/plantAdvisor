@@ -1,81 +1,43 @@
 import { router } from 'expo-router';
-import {
-  Droplets,
-  LayoutGrid,
-  LayoutList,
-  MapPin,
-  Sprout,
-} from 'lucide-react-native';
+import { Sprout } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   GardenControlsCard,
   type GardenFilterMode,
   type GardenSortMode,
-  type GardenStats,
 } from '@/components/garden/garden-controls-card';
 import { GardenEmptyState } from '@/components/garden/garden-empty-state';
-import { PlantGridCard } from '@/components/garden/plant-grid-card';
 import {
-  getLatestRootLengthCm,
-  PROPAGATION_READY_ROOT_CM,
-} from '@/components/garden/propagation-readiness-bar';
+  GardenContextBanners,
+  GardenLocationGroup,
+  GardenViewToggle,
+} from '@/components/garden/garden-feed-sections';
+import { PlantGridCard } from '@/components/garden/plant-grid-card';
 import { SwipeablePlantCard } from '@/components/garden/swipeable-plant-card';
 import { EditPlantModal } from '@/components/modals/edit-plant-modal';
 import { OnboardingModal } from '@/components/modals/onboarding-modal';
-import {
-  AnimatedEntrance,
-  SpringPressable,
-} from '@/components/ui/animated-wrappers';
+import { AnimatedEntrance } from '@/components/ui/animated-wrappers';
 import { BotanicalBackground } from '@/components/ui/botanical-background';
 import { FeedbackBanner } from '@/components/ui/feedback-banner';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SyncStatusBanner } from '@/components/ui/sync-status-banner';
-import {
-  BorderWidth,
-  BottomTabInset,
-  MaxContentWidth,
-  Radius,
-  Spacing,
-} from '@/constants/theme';
+import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { type GardenViewMode, useGardenFeed } from '@/hooks/use-garden-feed';
 import { usePalette } from '@/hooks/use-theme';
 import { useToast } from '@/hooks/use-toast';
-import { localizeLocation } from '@/i18n/plantDisplay';
 import { confirmAction } from '@/services/dialogs';
 import { triggerLightHaptic } from '@/services/haptics';
 import { countLocalOnlyPhotos } from '@/store/syncQueue';
 import { useAuthStore } from '@/store/useAuthStore';
-import {
-  doesPlantNeedWatering,
-  getDaysUntilNextWater,
-  usePlantStore,
-} from '@/store/usePlantStore';
-import type { HealthStatus, UserPlant } from '@/types/plant';
-
-type ViewMode = 'list' | 'grid';
-
-type GardenFeedItem =
-  | { kind: 'plant'; plant: UserPlant }
-  | { kind: 'location_group'; location: string; items: UserPlant[] };
-
-const HEALTH_PRIORITY: Record<HealthStatus, number> = {
-  critical: 0,
-  needs_attention: 1,
-  thriving: 2,
-};
+import { usePlantStore } from '@/store/usePlantStore';
+import type { UserPlant } from '@/types/plant';
 
 export default function MyGardenScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const palette = usePalette();
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
@@ -109,7 +71,7 @@ export default function MyGardenScreen() {
   );
 
   const [filter, setFilter] = useState<GardenFilterMode>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<GardenViewMode>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<GardenSortMode>('needs_water');
   const [groupByLocation, setGroupByLocation] = useState(false);
@@ -122,29 +84,27 @@ export default function MyGardenScreen() {
     dismissToast,
   } = useToast();
 
-  const isPropagationBench = filter === 'propagation';
+  const {
+    stats,
+    filteredPlants,
+    feedData,
+    isPropagationBench,
+    latestRootLengthByPlantId,
+    propagationReadyCount,
+    numColumns,
+  } = useGardenFeed({
+    plants,
+    entries,
+    filter,
+    searchQuery,
+    sortBy,
+    groupByLocation,
+    viewMode,
+  });
 
-  const latestRootLengthByPlantId = useMemo(() => {
-    const map = new Map<string, number | null>();
-    if (!isPropagationBench) return map;
-    for (const plant of plants) {
-      if (plant.species.plantType === 'propagation') {
-        map.set(plant.id, getLatestRootLengthCm(entries, plant.id));
-      }
-    }
-    return map;
-  }, [entries, isPropagationBench, plants]);
-
-  const propagationReadyCount = useMemo(() => {
-    if (!isPropagationBench) return 0;
-    let ready = 0;
-    for (const rootCm of latestRootLengthByPlantId.values()) {
-      if (rootCm !== null && rootCm >= PROPAGATION_READY_ROOT_CM) {
-        ready += 1;
-      }
-    }
-    return ready;
-  }, [isPropagationBench, latestRootLengthByPlantId]);
+  const openPlantDetail = (plantId: string) => {
+    router.push(`/plant/${plantId}`);
+  };
 
   const handleQuickWater = (plant: UserPlant) => {
     const undoSnapshot = waterPlantNow(plant.id);
@@ -183,37 +143,6 @@ export default function MyGardenScreen() {
     (user?.user_metadata?.full_name as string)?.trim() ||
     user?.email?.split('@')[0]?.trim() ||
     t('common.gardener');
-
-  const stats: GardenStats = useMemo(() => {
-    let needsWaterCount = 0;
-    let needsAttentionCount = 0;
-    let succulentCount = 0;
-    let propagationCount = 0;
-    let foliageCount = 0;
-    let floweringCount = 0;
-
-    for (const plant of plants) {
-      if (doesPlantNeedWatering(plant)) needsWaterCount += 1;
-      const health = plant.latestHealthAssessment?.healthStatus;
-      if (health === 'needs_attention' || health === 'critical') {
-        needsAttentionCount += 1;
-      }
-      if (plant.species.plantType === 'succulent') succulentCount += 1;
-      else if (plant.species.plantType === 'propagation') propagationCount += 1;
-      else if (plant.species.plantType === 'foliage') foliageCount += 1;
-      else if (plant.species.plantType === 'flowering') floweringCount += 1;
-    }
-
-    return {
-      total: plants.length,
-      needsWaterCount,
-      needsAttentionCount,
-      succulentCount,
-      propagationCount,
-      foliageCount,
-      floweringCount,
-    };
-  }, [plants]);
 
   const handleWaterAllThirsty = () => {
     if (stats.needsWaterCount === 0) return;
@@ -256,82 +185,6 @@ export default function MyGardenScreen() {
     });
   };
 
-  const filteredPlants = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const list = plants.filter((plant) => {
-      if (q) {
-        const matchesQuery =
-          plant.nickname.toLowerCase().includes(q) ||
-          plant.species.commonName.toLowerCase().includes(q) ||
-          plant.species.scientificName.toLowerCase().includes(q) ||
-          plant.location.toLowerCase().includes(q);
-        if (!matchesQuery) return false;
-      }
-      if (filter === 'needs_water') return doesPlantNeedWatering(plant);
-      if (filter === 'needs_attention') {
-        const status = plant.latestHealthAssessment?.healthStatus;
-        return status === 'needs_attention' || status === 'critical';
-      }
-      if (filter !== 'all') {
-        return plant.species.plantType === filter;
-      }
-      return true;
-    });
-
-    return [...list].sort((a, b) => {
-      if (sortBy === 'needs_water') {
-        return getDaysUntilNextWater(a) - getDaysUntilNextWater(b);
-      }
-      if (sortBy === 'health') {
-        const pa = a.latestHealthAssessment
-          ? HEALTH_PRIORITY[a.latestHealthAssessment.healthStatus]
-          : 3;
-        const pb = b.latestHealthAssessment
-          ? HEALTH_PRIORITY[b.latestHealthAssessment.healthStatus]
-          : 3;
-        if (pa !== pb) return pa - pb;
-        return getDaysUntilNextWater(a) - getDaysUntilNextWater(b);
-      }
-      if (sortBy === 'alpha') {
-        return a.nickname.localeCompare(b.nickname);
-      }
-      return (
-        new Date(b.acquiredAt).getTime() - new Date(a.acquiredAt).getTime()
-      );
-    });
-  }, [plants, filter, searchQuery, sortBy]);
-
-  const plantsByLocation = useMemo(() => {
-    const map = new Map<string, UserPlant[]>();
-    for (const plant of filteredPlants) {
-      const loc = plant.location.trim() || 'Unspecified Spot';
-      const existing = map.get(loc);
-      if (existing) {
-        existing.push(plant);
-      } else {
-        map.set(loc, [plant]);
-      }
-    }
-    return Array.from(map.entries()).map(([location, items]) => ({
-      location,
-      items,
-    }));
-  }, [filteredPlants]);
-
-  const feedData = useMemo<GardenFeedItem[]>(() => {
-    if (plants.length === 0 || filteredPlants.length === 0) return [];
-    if (groupByLocation) {
-      return plantsByLocation.map((group) => ({
-        kind: 'location_group',
-        location: group.location,
-        items: group.items,
-      }));
-    }
-    return filteredPlants.map((plant) => ({ kind: 'plant', plant }));
-  }, [plants.length, filteredPlants, groupByLocation, plantsByLocation]);
-
-  const numColumns = !groupByLocation && viewMode === 'grid' ? 2 : 1;
-
   const handleRefresh = () => {
     triggerLightHaptic();
     void (async () => {
@@ -343,98 +196,14 @@ export default function MyGardenScreen() {
     })();
   };
 
-  const renderGridBlock = (items: UserPlant[]) => {
-    const rows: UserPlant[][] = [];
-    for (let i = 0; i < items.length; i += 2) {
-      rows.push(items.slice(i, i + 2));
-    }
-
-    return (
-      <View style={styles.gridStack}>
-        {rows.map((row, rowIndex) => (
-          <AnimatedEntrance
-            key={row.map((p) => p.id).join('-')}
-            index={rowIndex}
-            animateLayout
-            style={styles.gridRow}>
-            {row.map((plant) => (
-              <PlantGridCard
-                key={plant.id}
-                plant={plant}
-                onPress={() => router.push(`/plant/${plant.id}`)}
-                onWaterNow={() => handleQuickWater(plant)}
-                onLongPress={() => setEditingPlant(plant)}
-                showPropagationProgress={isPropagationBench}
-                latestRootLengthCm={
-                  latestRootLengthByPlantId.get(plant.id) ?? null
-                }
-              />
-            ))}
-            {row.length === 1 && <View style={styles.gridSpacer} />}
-          </AnimatedEntrance>
-        ))}
-      </View>
-    );
-  };
-
-  const renderListHeader = () => (
+  const listHeader = (
     <View style={styles.headerStack}>
       <ScreenHeader
         eyebrow={t('garden.eyebrow')}
         title={t('garden.welcome', { name: userName })}
         icon={<Sprout size={16} color={palette.primary} />}
         rightSlot={
-          <View style={styles.headerControls}>
-            <View
-              style={[
-                styles.viewToggleGroup,
-                {
-                  backgroundColor: palette.bgSurface,
-                  borderColor: palette.borderSubtle,
-                },
-              ]}>
-              <Pressable
-                onPress={() => setViewMode('list')}
-                style={[
-                  styles.viewToggleBtn,
-                  viewMode === 'list' && {
-                    backgroundColor: palette.primary,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: viewMode === 'list' }}
-                accessibilityLabel="List view">
-                <LayoutList
-                  size={16}
-                  color={
-                    viewMode === 'list'
-                      ? palette.textInverse
-                      : palette.textSecondary
-                  }
-                />
-              </Pressable>
-              <Pressable
-                onPress={() => setViewMode('grid')}
-                style={[
-                  styles.viewToggleBtn,
-                  viewMode === 'grid' && {
-                    backgroundColor: palette.primary,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityState={{ selected: viewMode === 'grid' }}
-                accessibilityLabel="Two-column grid view">
-                <LayoutGrid
-                  size={16}
-                  color={
-                    viewMode === 'grid'
-                      ? palette.textInverse
-                      : palette.textSecondary
-                  }
-                />
-              </Pressable>
-            </View>
-          </View>
+          <GardenViewToggle viewMode={viewMode} onChange={setViewMode} />
         }
       />
 
@@ -451,65 +220,13 @@ export default function MyGardenScreen() {
         onToggleGroupByLocation={() => setGroupByLocation((prev) => !prev)}
       />
 
-      {filter === 'needs_water' && filteredPlants.length > 0 && (
-        <View
-          style={[
-            styles.thirstyBanner,
-            {
-              backgroundColor: palette.waterAlertBg,
-              borderColor: palette.waterAlertBorder,
-            },
-          ]}>
-          <View style={styles.thirstyBannerLeft}>
-            <Droplets size={15} color={palette.waterBlue} />
-            <Text
-              style={[
-                styles.thirstyBannerText,
-                { color: palette.waterAlertText },
-              ]}>
-              {t('garden.thirstyBanner', { count: filteredPlants.length })}
-            </Text>
-          </View>
-          <SpringPressable
-            onPress={handleWaterAllThirsty}
-            accessibilityRole="button"
-            accessibilityLabel="Water all thirsty plants"
-            style={[
-              styles.waterAllBtn,
-              { backgroundColor: palette.waterBlue },
-            ]}>
-            <Droplets size={13} color={palette.textInverse} />
-            <Text
-              style={[
-                styles.waterAllBtnText,
-                { color: palette.textInverse },
-              ]}>
-              {t('garden.waterAllBtn')}
-            </Text>
-          </SpringPressable>
-        </View>
-      )}
-
-      {isPropagationBench && filteredPlants.length > 0 && (
-        <View
-          style={[
-            styles.propBenchBanner,
-            {
-              backgroundColor: palette.primarySoft,
-              borderColor: palette.primaryBorder,
-            },
-          ]}>
-          <Sprout size={15} color={palette.primary} />
-          <Text
-            style={[styles.propBenchText, { color: palette.textPrimary }]}>
-            {t('garden.propBenchBanner', {
-              ready: propagationReadyCount,
-              total: filteredPlants.length,
-              target: PROPAGATION_READY_ROOT_CM,
-            })}
-          </Text>
-        </View>
-      )}
+      <GardenContextBanners
+        filter={filter}
+        filteredCount={filteredPlants.length}
+        isPropagationBench={isPropagationBench}
+        propagationReadyCount={propagationReadyCount}
+        onWaterAllThirsty={handleWaterAllThirsty}
+      />
     </View>
   );
 
@@ -537,9 +254,7 @@ export default function MyGardenScreen() {
           void (async () => {
             await syncWithSupabase();
             const latestError = usePlantStore.getState().syncError;
-            showToast(
-              latestError ? latestError : t('garden.syncedToast')
-            );
+            showToast(latestError ? latestError : t('garden.syncedToast'));
           })();
         }}
       />
@@ -563,7 +278,7 @@ export default function MyGardenScreen() {
             colors={[palette.primary]}
           />
         }
-        ListHeaderComponent={renderListHeader()}
+        ListHeaderComponent={listHeader}
         ListHeaderComponentStyle={styles.maxWidthWrap}
         ListEmptyComponent={
           <View style={styles.maxWidthWrap}>
@@ -586,51 +301,18 @@ export default function MyGardenScreen() {
         renderItem={({ item, index }) => {
           if (item.kind === 'location_group') {
             return (
-              <View style={[styles.maxWidthWrap, styles.locationGroup]}>
-                <View style={styles.locationHeaderRow}>
-                  <MapPin size={14} color={palette.primary} />
-                  <Text
-                    style={[
-                      styles.locationTitle,
-                      { color: palette.textPrimary },
-                    ]}>
-                    {localizeLocation(item.location, i18n.language)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.locationCount,
-                      { color: palette.textMuted },
-                    ]}>
-                    ({item.items.length})
-                  </Text>
-                </View>
-
-                {viewMode === 'grid' ? (
-                  renderGridBlock(item.items)
-                ) : (
-                  <View style={styles.listStack}>
-                    {item.items.map((plant, idx) => (
-                      <AnimatedEntrance
-                        key={plant.id}
-                        index={idx}
-                        animateLayout>
-                        <SwipeablePlantCard
-                          plant={plant}
-                          onPress={() => router.push(`/plant/${plant.id}`)}
-                          onWaterNow={() => handleQuickWater(plant)}
-                          onSnooze={() => handleSnoozePlant(plant)}
-                          onEdit={setEditingPlant}
-                          onDelete={handleDeletePlant}
-                          showPropagationProgress={isPropagationBench}
-                          latestRootLengthCm={
-                            latestRootLengthByPlantId.get(plant.id) ?? null
-                          }
-                        />
-                      </AnimatedEntrance>
-                    ))}
-                  </View>
-                )}
-              </View>
+              <GardenLocationGroup
+                location={item.location}
+                items={item.items}
+                viewMode={viewMode}
+                isPropagationBench={isPropagationBench}
+                latestRootLengthByPlantId={latestRootLengthByPlantId}
+                onOpenPlant={openPlantDetail}
+                onQuickWater={handleQuickWater}
+                onSnooze={handleSnoozePlant}
+                onEdit={setEditingPlant}
+                onDelete={handleDeletePlant}
+              />
             );
           }
 
@@ -639,7 +321,7 @@ export default function MyGardenScreen() {
               <View style={styles.gridItemCell}>
                 <PlantGridCard
                   plant={item.plant}
-                  onPress={() => router.push(`/plant/${item.plant.id}`)}
+                  onPress={() => openPlantDetail(item.plant.id)}
                   onWaterNow={() => handleQuickWater(item.plant)}
                   onLongPress={() => setEditingPlant(item.plant)}
                   showPropagationProgress={isPropagationBench}
@@ -656,7 +338,7 @@ export default function MyGardenScreen() {
               <AnimatedEntrance index={index} animateLayout>
                 <SwipeablePlantCard
                   plant={item.plant}
-                  onPress={() => router.push(`/plant/${item.plant.id}`)}
+                  onPress={() => openPlantDetail(item.plant.id)}
                   onWaterNow={() => handleQuickWater(item.plant)}
                   onSnooze={() => handleSnoozePlant(item.plant)}
                   onEdit={setEditingPlant}
@@ -727,102 +409,5 @@ const styles = StyleSheet.create({
   },
   gridItemCell: {
     flex: 1,
-  },
-  headerControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  viewToggleGroup: {
-    flexDirection: 'row',
-    borderRadius: Radius.md,
-    borderWidth: BorderWidth.hairline,
-    padding: Spacing.half,
-    gap: Spacing.half,
-  },
-  viewToggleBtn: {
-    width: 32,
-    height: 30,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  listStack: {
-    gap: Spacing.md,
-  },
-  gridStack: {
-    gap: Spacing.md,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  gridSpacer: {
-    flex: 1,
-  },
-  locationGroups: {
-    gap: Spacing.lg,
-  },
-  locationGroup: {
-    gap: Spacing.sm,
-  },
-  locationHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  locationTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  locationCount: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  propBenchBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  propBenchText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  thirstyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-    borderWidth: BorderWidth.hairline,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  thirstyBannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flex: 1,
-  },
-  thirstyBannerText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  waterAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 7,
-    borderRadius: Radius.full,
-  },
-  waterAllBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
   },
 });
