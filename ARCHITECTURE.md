@@ -36,7 +36,8 @@ plantAdvisor/
 │   │   │                            #   BotanicalIllustrations, BotanicalShimmer, BotanicalBackground)
 │   │   ├── auth/                    # AuthScreenShell & AuthIconInput
 │   │   ├── calendar/                # CareScheduleView, DayAgendaCard & CareMonthCalendar
-│   │   ├── garden/                  # GardenControlsCard, GardenEmptyState, SwipeablePlantCard,
+│   │   ├── forms/                   # Shared plant environment controls (RoomPresetBar & PlantEnvironmentFields)
+│   │   ├── garden/                  # GardenControlsCard, GardenEmptyState, GardenFeedSections, SwipeablePlantCard,
 │   │   │                            #   PlantGridCard, PlantStatusPhoto, PropagationReadinessBar, PetSafetyBadge
 │   │   ├── modals/                  # OnboardingModal, EditPlantModal, EditLogModal, CareMetricsFields,
 │   │   │                            #   AiLimitModal, DeleteAccountModal, LegalInfoModal
@@ -49,7 +50,7 @@ plantAdvisor/
 │   │   ├── theme.ts                 # Light & Dark palettes, Cyrillic-aware font tokens, spacing & shadows
 │   │   ├── plantOptions.ts          # Shared plant type, pot material, light & soil moisture option lists
 │   │   └── seedData.ts              # Initial seeded conservatory specimens & timeline logs
-│   ├── hooks/                       # use-theme, use-color-scheme, use-toast
+│   ├── hooks/                       # use-theme, use-color-scheme, use-toast, use-garden-feed
 │   ├── i18n/                        # i18next setup, en/ru locale bundles & plantDisplay helpers
 │   ├── types/
 │   │   └── plant.ts                 # Strict TypeScript domain models & AI schemas
