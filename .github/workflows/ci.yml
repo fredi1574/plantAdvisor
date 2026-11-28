@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
-    branches: [main]
+    branches: [master, main]
 
 jobs:
   check:
@@ -27,6 +27,8 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Lint
+        env:
+          EXPO_NO_TELEMETRY: '1'
         run: npx expo lint
 
       - name: Run unit tests
